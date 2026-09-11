@@ -13,4 +13,7 @@ COPY models/ ./models/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form (not exec form) so $PORT actually expands - platforms like
+# Render assign a port via this env var and health-check against it;
+# falls back to 8000 for local `docker run` where PORT isn't set.
+CMD uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}
