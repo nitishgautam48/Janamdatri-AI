@@ -79,6 +79,31 @@ export function scopedRemove(base) {
   }
 }
 
+const MAX_HISTORY = 20;
+
+// Mirrors the vanilla-JS app's saveToHistory() - always written locally
+// even for a logged-in account (whose real history lives server-side),
+// since local history is also what a few features fall back to reading
+// synchronously (e.g. the last known weight below) without an extra
+// network round trip.
+export function appendHistoryEntry(result) {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  history.unshift({ timestamp: new Date().toISOString(), severityLevel: result.severity.level, mri: result.mri, result });
+  scopedSet(KEYS.HISTORY, history.slice(0, MAX_HISTORY));
+}
+
+export function lastKnownWeight() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  for (const entry of history) {
+    if (entry.result && entry.result.weightInput != null) return entry.result.weightInput;
+  }
+  return null;
+}
+
+export function loadSavedEpds() {
+  return scopedGet(KEYS.EPDS);
+}
+
 export const KEYS = {
   HISTORY: "janamdatri_history",
   GUIDE: "janamdatri_last_guide",
