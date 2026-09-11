@@ -2018,6 +2018,24 @@
         </div>`).join("");
     }
 
+    const snapshotEl = $("#report-snapshot");
+    const discussNoteEl = $("#report-discuss-note");
+    if (!data.findings || data.findings.length === 0) {
+      snapshotEl.innerHTML = "";
+      discussNoteEl.textContent = "";
+    } else {
+      snapshotEl.innerHTML = data.findings.map((f) => `
+        <div class="snapshot-tile">
+          <div class="snapshot-label">${f.label}</div>
+          <div class="snapshot-value">${f.value}</div>
+          ${vitalStatusPill(null, !f.flag)}
+        </div>`).join("");
+      const flaggedCount = data.findings.filter((f) => f.flag).length;
+      discussNoteEl.textContent = flaggedCount
+        ? `${flaggedCount} item${flaggedCount > 1 ? "s" : ""} to discuss with your provider - see details below.`
+        : "Nothing here shows an obvious flag, but always confirm with your provider.";
+    }
+
     const findingsEl = $("#report-findings");
     if (!data.findings || data.findings.length === 0) {
       findingsEl.innerHTML = `<p class="schedule-empty">No lab values were recognized in this report.</p>`;
