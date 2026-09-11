@@ -66,6 +66,22 @@ RULES = [
             "Emergency transport if convulsions present."
         ),
     },
+    {
+        # Anemia gets its own dedicated rule (distinct from pph_rule, which
+        # also reads the 'anemia' score but frames guidance around active
+        # bleeding) because anemia in pregnancy is, on its own, one of
+        # India's most common and consequential maternal health problems -
+        # NFHS-5 found roughly half of pregnant Indian women anemic. It
+        # deserves anemia-specific guidance even with no bleeding reported.
+        "id": "severe_anemia_rule",
+        "name": "Anemia in Pregnancy",
+        "conditions": ["anemia"],
+        "threshold": 0.35,
+        "intervention": (
+            "Facility evaluation for hemoglobin testing and iron therapy or transfusion; "
+            "anemia sharply increases the risk from even modest blood loss at delivery."
+        ),
+    },
 ]
 
 

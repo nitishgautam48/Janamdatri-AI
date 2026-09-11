@@ -33,20 +33,28 @@ RUNG_INFO = {
 }
 
 PHRASES_BY_RUNG = {
+    # Bilingual (English + representative Hindi phrasing) - see
+    # text_analyzer.py's note on why one mixed list is enough.
     1: ["mild swelling", "feet are a little swollen", "occasional mild headache",
-        "slight fatigue", "a bit tired", "mild nausea"],
+        "slight fatigue", "a bit tired", "mild nausea",
+        "हल्की सूजन", "थोड़ी थकान"],
     2: ["persistent headache", "headache that wont go away", "less movement than usual",
-        "fewer kicks today", "mild spotting", "mild fever", "feeling feverish", "slight fever"],
+        "fewer kicks today", "mild spotting", "mild fever", "feeling feverish", "slight fever",
+        "लगातार सिरदर्द", "हल्का बुखार"],
     3: ["blurred vision", "vision is blurry", "seeing spots", "face is swollen",
-        "hands are swollen", "moderate bleeding", "high fever with chills", "high fever"],
+        "hands are swollen", "moderate bleeding", "high fever with chills", "high fever",
+        "धुंधला दिखना", "चेहरे पर सूजन", "तेज़ बुखार"],
     4: ["severe headache", "cant see properly", "severe abdominal pain", "heavy bleeding",
         "bleeding heavily", "soaked through a pad", "soaking a pad every hour",
         "baby stopped moving", "no movement since yesterday", "cant feel the baby move",
         "fast breathing", "difficulty breathing", "trouble breathing",
-        "foul smelling discharge", "discharge smells bad", "too weak to get out of bed"],
+        "foul smelling discharge", "discharge smells bad", "too weak to get out of bed",
+        "तेज़ सिरदर्द", "तेज़ पेट दर्द", "भारी रक्तस्राव", "बच्चा हिलना बंद हो गया",
+        "सांस लेने में तकलीफ़", "बदबूदार स्राव"],
     5: ["convulsions", "had a fit", "seizure", "lost consciousness", "blacked out",
         "fainted", "cold and clammy", "labor for more than a day", "stuck baby",
-        "baby not coming out", "bleeding and passed out"],
+        "baby not coming out", "bleeding and passed out",
+        "दौरा पड़ा", "बेहोश हो गई", "एक दिन से ज़्यादा प्रसव पीड़ा", "बच्चा अटक गया"],
 }
 
 

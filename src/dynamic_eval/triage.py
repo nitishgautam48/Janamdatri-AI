@@ -15,7 +15,7 @@ Any Critical/Severe result always means "seek facility care now",
 regardless of how confident the underlying score is.
 """
 
-from . import danger_ladder, expert_system, risk_formulation, text_analyzer
+from . import danger_ladder, expert_system, hemoglobin_rules, psych_eval, risk_formulation, text_analyzer
 
 LEVEL_ORDER = ["Minimal", "Mild", "Moderate", "Severe", "Critical"]
 META = {
@@ -61,15 +61,29 @@ def _rung_level(rung: int) -> str:
     return "Minimal"
 
 
-def synthesize(ml_result: dict = None, text: str = "", history: dict = None) -> dict:
+def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
+                hemoglobin: float = None, epds_responses: list = None) -> dict:
     history = history or {}
 
     text_result = text_analyzer.analyze(text) if text else None
-    text_scores = text_result["scores"] if text_result else {}
+    text_scores = dict(text_result["scores"]) if text_result else {}
+
+    # Hemoglobin is an optional, separate deterministic input (the ML
+    # model was never trained on it - see hemoglobin_rules.py) blended
+    # into the same 'anemia' category via worst-signal-wins, same as
+    # every other physical signal in this pipeline.
+    hb_result = None
+    if hemoglobin is not None:
+        hb_result = hemoglobin_rules.score(hemoglobin)
+        text_scores["anemia"] = max(text_scores.get("anemia", 0.0), hb_result["score"])
 
     risk_formulation_result = risk_formulation.assess(text, history)
     ladder_result = danger_ladder.classify(text)
     expert_rules = expert_system.apply_rules(text_scores)
+
+    psych_result = None
+    if epds_responses is not None:
+        psych_result = psych_eval.score(epds_responses)
 
     base_mri = _mri_from_ml(ml_result)
     adjusted_mri = min(round(base_mri * risk_formulation_result["multiplier"]), 100)
@@ -94,6 +108,15 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None) -> 
         level = worst_rule["severity"]
         escalated_by = worst_rule["id"]
 
+    # Psychological screening escalates the SAME overall severity scale -
+    # a self-harm-flagged EPDS result is exactly as urgent as a physical
+    # danger sign, and must never be hidden behind a good physical result.
+    if psych_result:
+        psych_level = psych_eval.severity_for(psych_result)
+        if LEVEL_ORDER.index(psych_level) > LEVEL_ORDER.index(level):
+            level = psych_level
+            escalated_by = "self_harm_risk" if psych_result["selfHarmFlagged"] else "psychological_screening"
+
     display_mri = max(adjusted_mri, TIER_FLOOR[level]) if level != original_level else adjusted_mri
 
     return {
@@ -101,20 +124,23 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None) -> 
         "severity": {"level": level, "escalatedBy": escalated_by, **META[level]},
         "mlPrediction": ml_result,
         "textAnalysis": text_result,
+        "hemoglobinAssessment": hb_result,
         "dangerLadder": ladder_result,
         "riskFormulation": risk_formulation_result,
         "activeExpertRules": [r for r in expert_rules if r["activated"]],
-        "recommendations": _generate_recommendations(level, expert_rules, ladder_result),
+        "psychologicalEvaluation": psych_result,
+        "recommendations": _generate_recommendations(level, expert_rules, ladder_result, psych_result),
         "methodology": (
             "Combines a machine-learning risk classifier trained on the UCI Maternal Health Risk "
             "dataset (vitals only) with a rule-based dynamic-evaluation layer covering symptoms the "
-            "dataset never recorded (bleeding, fetal movement, labor progress). Not a diagnosis - a "
-            "Critical/Severe result always means seek facility care now."
+            "dataset never recorded (bleeding, fetal movement, labor progress, anemia by hemoglobin, "
+            "perinatal mental health via EPDS). Not a diagnosis - a Critical/Severe result always "
+            "means seek facility (or, for a self-harm flag, mental health) care now."
         ),
     }
 
 
-def _generate_recommendations(level: str, expert_rules: list, ladder_result: dict) -> list:
+def _generate_recommendations(level: str, expert_rules: list, ladder_result: dict, psych_result: dict = None) -> list:
     recs = []
 
     if level == "Critical":
@@ -135,6 +161,20 @@ def _generate_recommendations(level: str, expert_rules: list, ladder_result: dic
             f"Danger sign identified: {ladder_result['rungLabel']} - "
             "this is one of the WHO recognized emergency signs in pregnancy"
         )
+
+    if psych_result:
+        if psych_result["selfHarmFlagged"]:
+            recs.append(
+                "🚨 Thoughts of self-harm were reported - please talk to someone you trust right now "
+                "and contact the KIRAN mental health helpline: 1800-599-0019 (toll-free, 24x7)"
+            )
+        elif psych_result["classification"] in ("Probable depression", "High symptom burden"):
+            recs.append(
+                "Perinatal mental health screening suggests further evaluation - talk to your ANC "
+                "provider or a counselor about how you've been feeling"
+            )
+        elif psych_result["classification"] == "Possible depression":
+            recs.append("Consider mentioning your mood or anxiety to your ANC provider at the next visit")
 
     if len(recs) == 1:
         recs.append("No danger signs identified from the information provided - keep attending scheduled ANC visits")

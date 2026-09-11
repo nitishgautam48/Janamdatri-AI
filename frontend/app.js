@@ -1,24 +1,163 @@
 (() => {
-  const GAUGE_ARC_LENGTH = 283; // approx length of the semicircle path used in the SVG
+  const GAUGE_ARC_LENGTH = 283;
   const HISTORY_KEY = "janamdatri_history";
+  const EPDS_KEY = "janamdatri_last_epds";
+  const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  // ---------------- Navigation ----------------
+  // ==================================================================
+  // i18n
+  // ==================================================================
+
+  const TRANSLATIONS = {
+    en: {
+      tagline: "Maternal Risk Triage",
+      "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.psych": "Mental Health",
+      "nav.history": "History", "nav.help": "Helplines",
+      emergencyBtn: "🚨 Call 108",
+      disclaimer: "⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.",
+      "section.vitals": "1 · Vitals", includeVitals: "Include vitals",
+      "field.age": "Age (years)", "field.sbp": "Systolic BP", "field.dbp": "Diastolic BP",
+      "field.bs": "Blood Sugar (mmol/L)", "field.temp": "Body Temp (°F)", "field.hr": "Heart Rate (bpm)",
+      "section.anemia": "1b · Anemia Check",
+      "anemia.sub": "If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.",
+      "field.hb": "Hemoglobin (g/dL)",
+      "section.symptoms": "2 · Symptoms",
+      "symptoms.sub": "Tap any that apply — they'll be added to the description below, or type your own.",
+      "symptoms.placeholder": "Describe how you're feeling in your own words…",
+      "section.history": "3 · History", "history.sub": "Optional — helps weigh background risk factors.",
+      "history.past": "Past pregnancy history",
+      "hist.csection": "Prior C-section", "hist.preeclampsia": "Prior pre-eclampsia",
+      "hist.pph": "Prior postpartum hemorrhage", "hist.stillbirth": "Prior stillbirth/loss",
+      "hist.hypertension": "Chronic hypertension", "hist.diabetes": "Pre-existing diabetes",
+      "history.current": "Current pregnancy care",
+      "hist.anc": "Regular ANC visits", "hist.ifa": "Taking iron/folic supplements",
+      "hist.institutional": "Planning institutional delivery", "hist.birthplan": "Has a birth preparedness plan",
+      "hist.family": "Supportive family", "hist.noanc": "No ANC visits so far",
+      includeEpds: "Include my saved Mental Health Check (EPDS) score in this assessment",
+      runAssessment: "Run Assessment",
+      riskGauge: "Risk Gauge", mlPrediction: "ML Prediction", dangerLadder: "Danger-Sign Ladder",
+      riskFactors: "Risk Factors", static: "Static", dynamic: "Dynamic", protective: "Protective",
+      anemiaGrading: "Anemia Grading (India)", psychEval: "Psychological Evaluation (EPDS)",
+      activeRules: "Active Expert Rules", recommendations: "Recommendations",
+      newAssessment: "New Assessment", readAloud: "Read Aloud", printReport: "Print Report",
+      "guide.title": "Pregnancy Guide",
+      "guide.sub": "Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.",
+      "guide.byLmp": "By last menstrual period (LMP)", "guide.byWeek": "By current week",
+      "guide.lmpLabel": "Last menstrual period date", "guide.weekLabel": "Current gestational week",
+      "guide.getGuide": "Get My Guide", "guide.nutrition": "Nutrition Tips",
+      "guide.dangerSigns": "Watch For (Danger Signs)", "guide.ancSchedule": "ANC Visit Schedule",
+      "guide.schemes": "Government Schemes",
+      "psych.title": "Mental Health Check",
+      "psych.sub": "The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've felt over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a diagnosis.",
+      "psych.score": "Score My Mood", "psych.result": "Your Result",
+      "history.title": "Assessment History", clear: "Clear",
+      "history.stored": "Stored only in this browser (not sent anywhere).",
+      "help.title": "Helplines", "help.ambulance": "Emergency Ambulance",
+      "help.transport": "Pregnancy Emergency Transport", "help.national": "National Health Helpline",
+      "help.women": "Women's Helpline", "help.child": "Child Helpline",
+      "help.mental": "Mental Health Helpline (1800-599-0019)", "help.schemes": "Government Schemes",
+      footer: "Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.",
+    },
+    hi: {
+      tagline: "मातृ जोखिम मूल्यांकन",
+      "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.psych": "मानसिक स्वास्थ्य",
+      "nav.history": "इतिहास", "nav.help": "हेल्पलाइन",
+      emergencyBtn: "🚨 108 पर कॉल करें",
+      disclaimer: "⚠️ यह केवल एक जांच सहायता है — निदान नहीं। <strong>गंभीर</strong> या <strong>अति गंभीर</strong> परिणाम का मतलब है तुरंत अस्पताल जाएं।",
+      "section.vitals": "1 · महत्वपूर्ण संकेत", includeVitals: "Vitals शामिल करें",
+      "field.age": "आयु (वर्ष)", "field.sbp": "सिस्टोलिक बीपी", "field.dbp": "डायस्टोलिक बीपी",
+      "field.bs": "ब्लड शुगर (mmol/L)", "field.temp": "शरीर का तापमान (°F)", "field.hr": "हृदय गति (bpm)",
+      "section.anemia": "1b · एनीमिया जांच",
+      "anemia.sub": "यदि आपके पास हाल की हीमोग्लोबिन (Hb) रिपोर्ट है, तो भारत-विशिष्ट एनीमिया ग्रेडिंग के लिए यहां दर्ज करें।",
+      "field.hb": "हीमोग्लोबिन (g/dL)",
+      "section.symptoms": "2 · लक्षण",
+      "symptoms.sub": "जो लागू हो उसे टैप करें — यह नीचे विवरण में जुड़ जाएगा, या अपने शब्दों में लिखें।",
+      "symptoms.placeholder": "आप कैसा महसूस कर रही हैं, अपने शब्दों में बताएं…",
+      "section.history": "3 · इतिहास", "history.sub": "वैकल्पिक — पृष्ठभूमि जोखिम कारकों का आकलन करने में मदद करता है।",
+      "history.past": "पिछली गर्भावस्था का इतिहास",
+      "hist.csection": "पहले सिजेरियन हुआ था", "hist.preeclampsia": "पहले प्री-एक्लेम्पसिया हुआ था",
+      "hist.pph": "पहले प्रसवोत्तर रक्तस्राव हुआ था", "hist.stillbirth": "पहले मृत जन्म/गर्भपात हुआ था",
+      "hist.hypertension": "पुराना उच्च रक्तचाप", "hist.diabetes": "पहले से मधुमेह",
+      "history.current": "वर्तमान गर्भावस्था देखभाल",
+      "hist.anc": "नियमित एएनसी जांच", "hist.ifa": "आयरन/फोलिक सप्लीमेंट ले रही हूं",
+      "hist.institutional": "संस्थागत प्रसव की योजना", "hist.birthplan": "प्रसव-तैयारी योजना है",
+      "hist.family": "सहायक परिवार", "hist.noanc": "अभी तक कोई एएनसी जांच नहीं",
+      includeEpds: "मेरा सहेजा गया मानसिक स्वास्थ्य (EPDS) स्कोर इस मूल्यांकन में शामिल करें",
+      runAssessment: "मूल्यांकन करें",
+      riskGauge: "जोखिम गेज", mlPrediction: "एआई पूर्वानुमान", dangerLadder: "खतरे के संकेत सीढ़ी",
+      riskFactors: "जोखिम कारक", static: "स्थिर", dynamic: "गतिशील", protective: "सुरक्षात्मक",
+      anemiaGrading: "एनीमिया ग्रेडिंग (भारत)", psychEval: "मानसिक मूल्यांकन (EPDS)",
+      activeRules: "सक्रिय विशेषज्ञ नियम", recommendations: "सिफारिशें",
+      newAssessment: "नया मूल्यांकन", readAloud: "ज़ोर से पढ़ें", printReport: "रिपोर्ट प्रिंट करें",
+      "guide.title": "गर्भावस्था गाइड",
+      "guide.sub": "साप्ताहिक एएनसी यात्रा कार्यक्रम, पोषण सुझाव, और खतरे के संकेत — भारत के RCH कार्यक्रम के अनुसार।",
+      "guide.byLmp": "अंतिम मासिक धर्म तिथि (LMP) से", "guide.byWeek": "वर्तमान सप्ताह से",
+      "guide.lmpLabel": "अंतिम मासिक धर्म तिथि", "guide.weekLabel": "वर्तमान गर्भावधि सप्ताह",
+      "guide.getGuide": "मेरी गाइड प्राप्त करें", "guide.nutrition": "पोषण सुझाव",
+      "guide.dangerSigns": "ध्यान दें (खतरे के संकेत)", "guide.ancSchedule": "एएनसी यात्रा कार्यक्रम",
+      "guide.schemes": "सरकारी योजनाएं",
+      "psych.title": "मानसिक स्वास्थ्य जांच",
+      "psych.sub": "एडिनबर्ग प्रसवोत्तर अवसाद स्केल (EPDS) — पिछले 7 दिनों में आप कैसा महसूस कर रही हैं, इसके लिए एक मान्य 10-प्रश्न जांच उपकरण। यह एक जांच सहायता है, निदान नहीं।",
+      "psych.score": "मेरा मूड स्कोर करें", "psych.result": "आपका परिणाम",
+      "history.title": "मूल्यांकन इतिहास", clear: "साफ़ करें",
+      "history.stored": "केवल इस ब्राउज़र में संग्रहीत (कहीं भेजा नहीं जाता)।",
+      "help.title": "हेल्पलाइन", "help.ambulance": "आपातकालीन एम्बुलेंस",
+      "help.transport": "गर्भावस्था आपातकालीन परिवहन", "help.national": "राष्ट्रीय स्वास्थ्य हेल्पलाइन",
+      "help.women": "महिला हेल्पलाइन", "help.child": "चाइल्ड हेल्पलाइन",
+      "help.mental": "मानसिक स्वास्थ्य हेल्पलाइन (1800-599-0019)", "help.schemes": "सरकारी योजनाएं",
+      footer: "यूसीआई मातृ स्वास्थ्य जोखिम डेटासेट पर प्रशिक्षित एआई मॉडल और शारीरिक व मानसिक (EPDS) जोखिम को कवर करने वाली नियम-आधारित प्रणाली का संयोजन। यह निदान नहीं है।",
+    },
+  };
+
+  let currentLang = localStorage.getItem(LANG_KEY) || "en";
+
+  function applyTranslations() {
+    const dict = TRANSLATIONS[currentLang];
+    $$("[data-i18n]").forEach((el) => {
+      const key = el.dataset.i18n;
+      if (dict[key] !== undefined) el.innerHTML = dict[key];
+    });
+    $$("[data-i18n-placeholder]").forEach((el) => {
+      const key = el.dataset.i18nPlaceholder;
+      if (dict[key] !== undefined) el.placeholder = dict[key];
+    });
+    $$(".chip").forEach((chip) => {
+      const label = currentLang === "hi" ? chip.dataset.labelHi : chip.dataset.labelEn;
+      if (label) chip.textContent = label;
+    });
+    $("#lang-toggle").textContent = currentLang === "hi" ? "English" : "हिंदी";
+    document.documentElement.lang = currentLang;
+  }
+
+  $("#lang-toggle").addEventListener("click", () => {
+    currentLang = currentLang === "hi" ? "en" : "hi";
+    localStorage.setItem(LANG_KEY, currentLang);
+    applyTranslations();
+  });
+
+  applyTranslations();
+
+  // ==================================================================
+  // Navigation
+  // ==================================================================
 
   function showView(id) {
     $$(".view").forEach((v) => v.classList.toggle("active", v.id === id));
     $$(".navlink").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === id));
-    if (id === "history-view") renderHistory();
   }
 
-  $$(".navlink").forEach((btn) => {
-    btn.addEventListener("click", () => showView(btn.dataset.view));
-  });
+  $$(".navlink").forEach((btn) => btn.addEventListener("click", () => {
+    showView(btn.dataset.view);
+    if (btn.dataset.view === "history-view") renderHistory();
+  }));
 
-  // ---------------- Vitals enable toggle ----------------
+  // ==================================================================
+  // Vitals enable toggle
+  // ==================================================================
 
   const vitalsEnable = $("#vitals-enable");
   const vitalsGrid = $("#vitals-grid");
@@ -31,19 +170,20 @@
   vitalsEnable.addEventListener("change", syncVitalsEnabled);
   syncVitalsEnabled();
 
-  // ---------------- Symptom chips ----------------
+  // ==================================================================
+  // Symptom chips (bilingual)
+  // ==================================================================
 
   const symptomText = $("#symptom-text");
 
   $$(".chip").forEach((chip) => {
     chip.addEventListener("click", () => {
-      const phrase = chip.dataset.phrase;
+      const phrase = currentLang === "hi" ? chip.dataset.phraseHi : chip.dataset.phraseEn;
       const current = symptomText.value;
-      const already = current.toLowerCase().includes(phrase.toLowerCase());
+      const already = current.includes(phrase);
 
       if (already) {
-        const re = new RegExp("\\.?\\s*" + phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-        symptomText.value = current.replace(re, "").trim();
+        symptomText.value = current.replace(phrase, "").replace(/\.\s*\./g, ".").trim();
         chip.classList.remove("selected");
       } else {
         symptomText.value = current ? current.trim().replace(/\.?$/, ". ") + phrase : phrase;
@@ -52,7 +192,9 @@
     });
   });
 
-  // ---------------- Form submit ----------------
+  // ==================================================================
+  // Main assessment form submit
+  // ==================================================================
 
   const form = $("#assess-form");
   const submitBtn = $("#submit-btn");
@@ -61,7 +203,9 @@
   function setLoading(loading) {
     submitBtn.disabled = loading;
     submitBtn.querySelector(".spinner").hidden = !loading;
-    submitBtn.querySelector(".btn-label").textContent = loading ? "Assessing…" : "Run Assessment";
+    submitBtn.querySelector(".btn-label").textContent = loading
+      ? (currentLang === "hi" ? "आकलन हो रहा है…" : "Assessing…")
+      : TRANSLATIONS[currentLang].runAssessment;
   }
 
   function collectHistoryFlags() {
@@ -84,6 +228,11 @@
     };
   }
 
+  function syncEpdsIncludeVisibility() {
+    const saved = loadSavedEpds();
+    $("#epds-include-section").hidden = !saved;
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorMsg.hidden = true;
@@ -91,9 +240,17 @@
     const text = symptomText.value.trim();
     const vitals = collectVitals();
     const history = collectHistoryFlags();
+    const hbVal = $("#v-hb").value;
+    const hemoglobin = hbVal ? Number(hbVal) : null;
 
-    if (!text && !vitals) {
-      errorMsg.textContent = "Enable vitals and/or describe symptoms before running an assessment.";
+    const savedEpds = loadSavedEpds();
+    const includeEpds = savedEpds && $("#include-epds").checked;
+    const epdsResponses = includeEpds ? savedEpds.responses : null;
+
+    if (!text && !vitals && hemoglobin === null && !epdsResponses) {
+      errorMsg.textContent = currentLang === "hi"
+        ? "मूल्यांकन चलाने से पहले Vitals, लक्षण, हीमोग्लोबिन या EPDS में से कुछ दर्ज करें।"
+        : "Provide vitals, symptoms, hemoglobin, or an EPDS score before running an assessment.";
       errorMsg.hidden = false;
       return;
     }
@@ -103,7 +260,7 @@
       const res = await fetch("/assess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text || null, vitals, history }),
+        body: JSON.stringify({ text: text || null, vitals, history, hemoglobin, epdsResponses }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.detail || "Assessment failed.");
@@ -119,20 +276,21 @@
     }
   });
 
-  // ---------------- Rendering ----------------
+  // ==================================================================
+  // Result rendering
+  // ==================================================================
 
   const SEVERITY_COLOR = {
-    Critical: "#d63031",
-    Severe: "#e17055",
-    Moderate: "#e0a300",
-    Mild: "#00b894",
-    Minimal: "#00b894",
+    Critical: "#d63031", Severe: "#e17055", Moderate: "#e0a300", Mild: "#00b894", Minimal: "#00b894",
   };
 
-  function renderResult(data) {
-    const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules, recommendations } = data;
+  let lastResult = null;
 
-    // Severity banner
+  function renderResult(data) {
+    lastResult = data;
+    const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules,
+      recommendations, hemoglobinAssessment, psychologicalEvaluation } = data;
+
     const banner = $("#severity-banner");
     banner.className = "severity-banner level-" + severity.level.toLowerCase();
     $("#severity-emoji").textContent = severity.emoji;
@@ -140,14 +298,12 @@
     $("#severity-sub").textContent =
       `Maternal Risk Index: ${mri}` + (severity.escalatedBy ? ` · escalated by: ${severity.escalatedBy.replace(/_/g, " ")}` : "");
 
-    // Gauge
     const frac = Math.max(0, Math.min(mri, 100)) / 100;
     const fill = $("#gauge-fill");
     fill.style.stroke = SEVERITY_COLOR[severity.level] || "#00b894";
     fill.style.strokeDasharray = `${frac * GAUGE_ARC_LENGTH} ${GAUGE_ARC_LENGTH}`;
     $("#gauge-value").textContent = mri;
 
-    // ML bars
     const mlBars = $("#ml-bars");
     mlBars.innerHTML = "";
     if (mlPrediction) {
@@ -164,14 +320,14 @@
         mlBars.appendChild(row);
       });
       $("#ml-footnote").textContent =
-        `Trained model — test accuracy ${(mlPrediction.modelTestAccuracy * 100).toFixed(1)}%, macro F1 ${mlPrediction.modelTestMacroF1.toFixed(2)}`;
+        `Trained model — test accuracy ${(mlPrediction.modelTestAccuracy * 100).toFixed(1)}%, ` +
+        `5-fold CV F1 ${mlPrediction.modelCvMacroF1Mean != null ? mlPrediction.modelCvMacroF1Mean.toFixed(2) : mlPrediction.modelTestMacroF1.toFixed(2)}`;
     } else {
       $("#ml-model-name").textContent = "not used";
       mlBars.innerHTML = `<p class="footnote">No vitals were provided — ML prediction skipped.</p>`;
       $("#ml-footnote").textContent = "";
     }
 
-    // Danger ladder
     const ladder = $("#ladder");
     ladder.innerHTML = "";
     for (let r = 1; r <= 5; r++) {
@@ -184,13 +340,36 @@
       ? `${dangerLadder.description} (matched: "${dangerLadder.matchedPhrase}")`
       : "No danger-sign phrase matched in the symptom text.";
 
-    // Risk factor tags
     $("#rf-multiplier").textContent = `×${riskFormulation.multiplier.toFixed(2)}`;
     fillTags("#tags-static", riskFormulation.staticRiskFactors, "static-tag");
     fillTags("#tags-dynamic", riskFormulation.dynamicRiskFactors, "dynamic-tag");
     fillTags("#tags-protective", riskFormulation.protectiveFactors, "protective-tag");
 
-    // Expert rules
+    // Hemoglobin / anemia card
+    const hbCard = $("#hb-card");
+    if (hemoglobinAssessment) {
+      hbCard.hidden = false;
+      $("#hb-content").innerHTML = `
+        <div class="epds-total-display"><span class="big">${hemoglobinAssessment.hemoglobin}</span><span>g/dL</span></div>
+        <p><strong>${hemoglobinAssessment.grade}</strong></p>
+        <p class="footnote">${hemoglobinAssessment.methodology}</p>`;
+    } else {
+      hbCard.hidden = true;
+    }
+
+    // Psychological evaluation card
+    const psychCard = $("#psych-card");
+    if (psychologicalEvaluation) {
+      psychCard.hidden = false;
+      const p = psychologicalEvaluation;
+      $("#psych-content").innerHTML = `
+        <div class="epds-total-display"><span class="big">${p.total}</span><span>/ ${p.maxScore}</span></div>
+        <p><strong>${p.classification}</strong></p>
+        ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out to the KIRAN helpline (1800-599-0019) or someone you trust now.</div>` : ""}`;
+    } else {
+      psychCard.hidden = true;
+    }
+
     const rulesList = $("#rules-list");
     rulesList.innerHTML = "";
     activeExpertRules.forEach((rule) => {
@@ -205,7 +384,6 @@
       rulesList.appendChild(card);
     });
 
-    // Recommendations
     const recsList = $("#recs-list");
     recsList.innerHTML = "";
     recommendations.forEach((rec) => {
@@ -230,8 +408,6 @@
     });
   }
 
-  // ---------------- New assessment / print ----------------
-
   $("#new-assessment-btn").addEventListener("click", () => {
     $("#results").hidden = true;
     $$(".chip.selected").forEach((c) => c.classList.remove("selected"));
@@ -241,29 +417,30 @@
 
   $("#print-btn").addEventListener("click", () => window.print());
 
-  // ---------------- History (localStorage) ----------------
+  $("#read-aloud-btn").addEventListener("click", () => {
+    if (!lastResult || !("speechSynthesis" in window)) return;
+    const { severity, recommendations } = lastResult;
+    const text = `${severity.level}. ` + recommendations.slice(0, 3).join(". ");
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = currentLang === "hi" ? "hi-IN" : "en-IN";
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  });
+
+  // ==================================================================
+  // History (localStorage)
+  // ==================================================================
 
   function loadHistory() {
-    try {
-      return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
   }
 
   function saveToHistory(result) {
     try {
       const history = loadHistory();
-      history.unshift({
-        timestamp: new Date().toISOString(),
-        severityLevel: result.severity.level,
-        mri: result.mri,
-        result,
-      });
+      history.unshift({ timestamp: new Date().toISOString(), severityLevel: result.severity.level, mri: result.mri, result });
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
-    } catch {
-      // localStorage unavailable (private browsing etc.) - non-fatal, just skip persisting
-    }
+    } catch { /* localStorage unavailable - non-fatal */ }
   }
 
   function renderHistory() {
@@ -281,10 +458,7 @@
       row.className = "history-row";
       const date = new Date(entry.timestamp);
       row.innerHTML = `
-        <div>
-          <strong>${entry.severityLevel}</strong>
-          <div class="history-row-meta">${date.toLocaleString()}</div>
-        </div>
+        <div><strong>${entry.severityLevel}</strong><div class="history-row-meta">${date.toLocaleString()}</div></div>
         <div class="history-row-meta">MRI ${entry.mri}</div>`;
       row.addEventListener("click", () => {
         renderResult(entry.result);
@@ -300,4 +474,148 @@
     localStorage.removeItem(HISTORY_KEY);
     renderHistory();
   });
+
+  // ==================================================================
+  // Pregnancy Guide
+  // ==================================================================
+
+  $$('input[name="guide-mode"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      const mode = $('input[name="guide-mode"]:checked').value;
+      $("#guide-lmp-field").hidden = mode !== "lmp";
+      $("#guide-week-field").hidden = mode !== "week";
+    });
+  });
+
+  $("#guide-submit-btn").addEventListener("click", async () => {
+    const mode = $('input[name="guide-mode"]:checked').value;
+    const body = mode === "lmp" ? { lmp: $("#guide-lmp").value } : { week: Number($("#guide-week").value) };
+    if (mode === "lmp" && !body.lmp) return;
+
+    try {
+      const res = await fetch("/pregnancy-guide", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail);
+      renderGuide(payload.data);
+    } catch (err) {
+      alert(err.message || "Could not load pregnancy guide.");
+    }
+  });
+
+  function renderGuide(guide) {
+    $("#guide-results").hidden = false;
+    $("#guide-week-badge").textContent = `Week ${guide.week}`;
+    $("#guide-trimester").textContent = `Trimester ${guide.trimester}`;
+    $("#guide-due").textContent = guide.estimatedDueDate
+      ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go`
+      : `${guide.weeksUntilDue} weeks to go`;
+
+    $("#guide-nutrition").innerHTML = guide.nutrition.map((n) => `<li>${n}</li>`).join("");
+    $("#guide-danger").innerHTML = guide.dangerSigns.map((d) => `<li>${d}</li>`).join("");
+
+    $("#guide-anc-schedule").innerHTML = guide.ancSchedule.map((visit) => `
+      <div class="anc-visit ${visit.visit === guide.nextAncVisit.visit ? "next" : ""}">
+        <div class="anc-visit-head"><span>Visit ${visit.visit} — ${visit.window}</span>${visit.visit === guide.nextAncVisit.visit ? "<span>Next up</span>" : ""}</div>
+        <ul>${visit.checks.map((c) => `<li>${c}</li>`).join("")}</ul>
+      </div>`).join("");
+
+    $("#guide-schemes").innerHTML = Object.entries(guide.schemes).map(([name, desc]) => `
+      <div class="scheme-tile"><strong>${name}</strong><span>${desc}</span></div>`).join("");
+  }
+
+  // ==================================================================
+  // Mental Health Check (EPDS)
+  // ==================================================================
+
+  let epdsItemsCache = null;
+
+  async function loadEpdsItems() {
+    if (epdsItemsCache) return epdsItemsCache;
+    const res = await fetch("/psych-assess/items");
+    const payload = await res.json();
+    epdsItemsCache = payload.data;
+    return epdsItemsCache;
+  }
+
+  async function renderEpdsForm() {
+    const { items, options } = await loadEpdsItems();
+    const container = $("#epds-form");
+    container.innerHTML = items.map((item, i) => `
+      <div class="epds-question">
+        <div class="epds-question-text">${i + 1}. ${item}</div>
+        <div class="epds-options">
+          ${options[i].map((opt, val) => `
+            <label class="epds-option">
+              <input type="radio" name="epds-q${i}" value="${val}" />
+              <span>${opt}</span>
+            </label>`).join("")}
+        </div>
+      </div>`).join("");
+  }
+
+  $$('.navlink[data-view="psych-view"]').forEach((btn) => {
+    btn.addEventListener("click", () => { if (!$("#epds-form").children.length) renderEpdsForm(); });
+  });
+
+  $("#epds-submit-btn").addEventListener("click", async () => {
+    const responses = [];
+    for (let i = 0; i < 10; i++) {
+      const checked = document.querySelector(`input[name="epds-q${i}"]:checked`);
+      if (!checked) {
+        alert(currentLang === "hi" ? "कृपया सभी 10 प्रश्नों के उत्तर दें।" : "Please answer all 10 questions.");
+        return;
+      }
+      responses.push(Number(checked.value));
+    }
+
+    try {
+      const res = await fetch("/psych-assess", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ responses }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail);
+      renderEpdsResult(payload.data);
+      saveEpds(responses, payload.data);
+      syncEpdsIncludeVisibility();
+    } catch (err) {
+      alert(err.message || "Could not score EPDS.");
+    }
+  });
+
+  function renderEpdsResult(result) {
+    $("#epds-result-card").hidden = false;
+    $("#epds-result-content").innerHTML = `
+      <div class="epds-total-display"><span class="big">${result.total}</span><span>/ ${result.maxScore}</span></div>
+      <p><strong>${result.classification}</strong></p>
+      ${result.selfHarmFlagged ? `<div class="self-harm-alert">🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now, or call the KIRAN mental health helpline: 1800-599-0019 (toll-free, 24x7).</div>` : ""}
+      <p class="footnote">${result.methodology}</p>`;
+    $("#epds-result-card").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function saveEpds(responses, result) {
+    try {
+      localStorage.setItem(EPDS_KEY, JSON.stringify({ responses, result, savedAt: new Date().toISOString() }));
+    } catch { /* non-fatal */ }
+  }
+
+  function loadSavedEpds() {
+    try { return JSON.parse(localStorage.getItem(EPDS_KEY)); } catch { return null; }
+  }
+
+  syncEpdsIncludeVisibility();
+
+  // ==================================================================
+  // Helplines page - government schemes reference
+  // ==================================================================
+
+  const STATIC_SCHEMES = {
+    PMSMA: "Pradhan Mantri Surakshit Matritva Abhiyan - free ANC checkup on the 9th of every month at government health facilities, from the 2nd trimester.",
+    JSY: "Janani Suraksha Yojana - cash assistance for institutional delivery. Ask your ASHA worker about eligibility.",
+    PMMVY: "Pradhan Mantri Matru Vandana Yojana - cash incentive in installments for ANC registration, checkups, and institutional delivery of the first living child.",
+    AnemiaMuktBharat: "National programme for iron-folic acid supplementation and anemia screening/treatment during pregnancy.",
+  };
+  $("#help-schemes").innerHTML = Object.entries(STATIC_SCHEMES).map(([name, desc]) => `
+    <div class="scheme-tile"><strong>${name}</strong><span>${desc}</span></div>`).join("");
 })();

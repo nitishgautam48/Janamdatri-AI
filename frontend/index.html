@@ -15,22 +15,25 @@
       <span class="brand-mark">🤰</span>
       <div class="brand-text">
         <strong>Janamdatri AI</strong>
-        <span>Maternal Risk Triage</span>
+        <span data-i18n="tagline">Maternal Risk Triage</span>
       </div>
     </div>
     <nav class="topnav">
-      <button class="navlink active" data-view="assess-view">Assessment</button>
-      <button class="navlink" data-view="history-view">History</button>
-      <button class="navlink" data-view="help-view">Helplines</button>
+      <button class="navlink active" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
+      <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy Guide</button>
+      <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Health</button>
+      <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
+      <button class="navlink" data-view="help-view" data-i18n="nav.help">Helplines</button>
     </nav>
-    <a class="emergency-btn" href="tel:108">🚨 Call 108</a>
+    <button class="lang-toggle" id="lang-toggle" type="button">हिंदी</button>
+    <a class="emergency-btn" href="tel:108" data-i18n="emergencyBtn">🚨 Call 108</a>
   </div>
 </header>
 
 <main class="app-shell">
 
-  <div class="disclaimer-banner">
-    ⚠️ Screening aid only — not a diagnosis. A <strong>Critical</strong> or <strong>Severe</strong> result always means seek facility care now.
+  <div class="disclaimer-banner" data-i18n="disclaimer">
+    ⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.
   </div>
 
   <!-- ========================= ASSESSMENT VIEW ========================= -->
@@ -40,85 +43,103 @@
 
       <div class="form-section">
         <div class="section-head">
-          <h2>1 · Vitals</h2>
+          <h2><span data-i18n="section.vitals">1 · Vitals</span></h2>
           <label class="toggle">
             <input type="checkbox" id="vitals-enable" checked />
-            <span>Include vitals</span>
+            <span data-i18n="includeVitals">Include vitals</span>
           </label>
         </div>
         <div class="vitals-grid" id="vitals-grid">
           <div class="field">
-            <label for="v-age">Age (years)</label>
+            <label for="v-age" data-i18n="field.age">Age (years)</label>
             <input type="number" id="v-age" min="12" max="60" value="28" />
           </div>
           <div class="field">
-            <label for="v-sbp">Systolic BP <span class="hint">normal &lt;120</span></label>
+            <label for="v-sbp"><span data-i18n="field.sbp">Systolic BP</span> <span class="hint">normal &lt;120</span></label>
             <input type="number" id="v-sbp" min="60" max="220" value="120" />
           </div>
           <div class="field">
-            <label for="v-dbp">Diastolic BP <span class="hint">normal &lt;80</span></label>
+            <label for="v-dbp"><span data-i18n="field.dbp">Diastolic BP</span> <span class="hint">normal &lt;80</span></label>
             <input type="number" id="v-dbp" min="40" max="160" value="80" />
           </div>
           <div class="field">
-            <label for="v-bs">Blood Sugar (mmol/L) <span class="hint">normal ~6-7</span></label>
+            <label for="v-bs"><span data-i18n="field.bs">Blood Sugar (mmol/L)</span> <span class="hint">normal ~6-7</span></label>
             <input type="number" step="0.1" id="v-bs" min="2" max="25" value="7" />
           </div>
           <div class="field">
-            <label for="v-temp">Body Temp (°F) <span class="hint">normal ~98</span></label>
+            <label for="v-temp"><span data-i18n="field.temp">Body Temp (°F)</span> <span class="hint">normal ~98</span></label>
             <input type="number" step="0.1" id="v-temp" min="90" max="110" value="98" />
           </div>
           <div class="field">
-            <label for="v-hr">Heart Rate (bpm)</label>
+            <label for="v-hr" data-i18n="field.hr">Heart Rate (bpm)</label>
             <input type="number" id="v-hr" min="40" max="180" value="76" />
           </div>
         </div>
       </div>
 
       <div class="form-section">
-        <h2>2 · Symptoms</h2>
-        <p class="section-sub">Tap any that apply — they'll be added to the description below, or type your own.</p>
-        <div class="chip-row" id="symptom-chips">
-          <button type="button" class="chip" data-phrase="severe headache">Severe headache</button>
-          <button type="button" class="chip" data-phrase="blurred vision">Blurred vision</button>
-          <button type="button" class="chip" data-phrase="heavy bleeding">Heavy bleeding</button>
-          <button type="button" class="chip" data-phrase="baby stopped moving">Baby stopped moving</button>
-          <button type="button" class="chip" data-phrase="convulsions">Convulsions / fits</button>
-          <button type="button" class="chip" data-phrase="high fever">High fever</button>
-          <button type="button" class="chip" data-phrase="severe abdominal pain">Severe abdominal pain</button>
-          <button type="button" class="chip" data-phrase="face is swollen">Facial swelling</button>
-          <button type="button" class="chip" data-phrase="labor for more than a day">Prolonged labor</button>
-          <button type="button" class="chip" data-phrase="foul smelling discharge">Foul-smelling discharge</button>
+        <div class="section-head">
+          <h2><span data-i18n="section.anemia">1b · Anemia Check</span> <span class="badge-soft">optional</span></h2>
         </div>
-        <textarea id="symptom-text" rows="4" placeholder="Describe how you're feeling in your own words…"></textarea>
+        <p class="section-sub" data-i18n="anemia.sub">If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
+        <div class="field" style="max-width:220px">
+          <label for="v-hb" data-i18n="field.hb">Hemoglobin (g/dL)</label>
+          <input type="number" step="0.1" id="v-hb" min="2" max="18" placeholder="e.g. 10.5" />
+        </div>
       </div>
 
       <div class="form-section">
-        <h2>3 · History</h2>
-        <p class="section-sub">Optional — helps weigh background risk factors.</p>
+        <h2 data-i18n="section.symptoms">2 · Symptoms</h2>
+        <p class="section-sub" data-i18n="symptoms.sub">Tap any that apply — they'll be added to the description below, or type your own.</p>
+        <div class="chip-row" id="symptom-chips">
+          <button type="button" class="chip" data-phrase-en="severe headache" data-phrase-hi="तेज़ सिरदर्द" data-label-en="Severe headache" data-label-hi="तेज़ सिरदर्द">Severe headache</button>
+          <button type="button" class="chip" data-phrase-en="blurred vision" data-phrase-hi="धुंधला दिखना" data-label-en="Blurred vision" data-label-hi="धुंधला दिखना">Blurred vision</button>
+          <button type="button" class="chip" data-phrase-en="heavy bleeding" data-phrase-hi="भारी रक्तस्राव" data-label-en="Heavy bleeding" data-label-hi="भारी रक्तस्राव">Heavy bleeding</button>
+          <button type="button" class="chip" data-phrase-en="baby stopped moving" data-phrase-hi="बच्चा हिलना बंद हो गया" data-label-en="Baby stopped moving" data-label-hi="बच्चा हिलना बंद हो गया">Baby stopped moving</button>
+          <button type="button" class="chip" data-phrase-en="convulsions" data-phrase-hi="दौरा पड़ा" data-label-en="Convulsions / fits" data-label-hi="दौरा पड़ा">Convulsions / fits</button>
+          <button type="button" class="chip" data-phrase-en="high fever" data-phrase-hi="तेज़ बुखार" data-label-en="High fever" data-label-hi="तेज़ बुखार">High fever</button>
+          <button type="button" class="chip" data-phrase-en="severe abdominal pain" data-phrase-hi="तेज़ पेट दर्द" data-label-en="Severe abdominal pain" data-label-hi="तेज़ पेट दर्द">Severe abdominal pain</button>
+          <button type="button" class="chip" data-phrase-en="face is swollen" data-phrase-hi="चेहरे पर सूजन" data-label-en="Facial swelling" data-label-hi="चेहरे पर सूजन">Facial swelling</button>
+          <button type="button" class="chip" data-phrase-en="labor for more than a day" data-phrase-hi="एक दिन से ज़्यादा प्रसव पीड़ा" data-label-en="Prolonged labor" data-label-hi="लंबे समय से प्रसव पीड़ा">Prolonged labor</button>
+          <button type="button" class="chip" data-phrase-en="foul smelling discharge" data-phrase-hi="बदबूदार स्राव" data-label-en="Foul-smelling discharge" data-label-hi="बदबूदार स्राव">Foul-smelling discharge</button>
+        </div>
+        <textarea id="symptom-text" rows="4" data-i18n-placeholder="symptoms.placeholder" placeholder="Describe how you're feeling in your own words…"></textarea>
+      </div>
+
+      <div class="form-section">
+        <h2 data-i18n="section.history">3 · History</h2>
+        <p class="section-sub" data-i18n="history.sub">Optional — helps weigh background risk factors.</p>
         <div class="history-columns">
           <div class="history-col">
-            <h3>Past pregnancy history</h3>
-            <label class="check"><input type="checkbox" data-flag="prior_csection" /> Prior C-section</label>
-            <label class="check"><input type="checkbox" data-flag="prior_preeclampsia" /> Prior pre-eclampsia</label>
-            <label class="check"><input type="checkbox" data-flag="prior_pph" /> Prior postpartum hemorrhage</label>
-            <label class="check"><input type="checkbox" data-flag="prior_stillbirth_or_loss" /> Prior stillbirth/loss</label>
-            <label class="check"><input type="checkbox" data-flag="chronic_hypertension" /> Chronic hypertension</label>
-            <label class="check"><input type="checkbox" data-flag="pre_existing_diabetes" /> Pre-existing diabetes</label>
+            <h3 data-i18n="history.past">Past pregnancy history</h3>
+            <label class="check"><input type="checkbox" data-flag="prior_csection" /> <span data-i18n="hist.csection">Prior C-section</span></label>
+            <label class="check"><input type="checkbox" data-flag="prior_preeclampsia" /> <span data-i18n="hist.preeclampsia">Prior pre-eclampsia</span></label>
+            <label class="check"><input type="checkbox" data-flag="prior_pph" /> <span data-i18n="hist.pph">Prior postpartum hemorrhage</span></label>
+            <label class="check"><input type="checkbox" data-flag="prior_stillbirth_or_loss" /> <span data-i18n="hist.stillbirth">Prior stillbirth/loss</span></label>
+            <label class="check"><input type="checkbox" data-flag="chronic_hypertension" /> <span data-i18n="hist.hypertension">Chronic hypertension</span></label>
+            <label class="check"><input type="checkbox" data-flag="pre_existing_diabetes" /> <span data-i18n="hist.diabetes">Pre-existing diabetes</span></label>
           </div>
           <div class="history-col">
-            <h3>Current pregnancy care</h3>
-            <label class="check protective"><input type="checkbox" data-flag="regular_anc_visits" /> Regular ANC visits</label>
-            <label class="check protective"><input type="checkbox" data-flag="iron_folic_supplementation" /> Taking iron/folic supplements</label>
-            <label class="check protective"><input type="checkbox" data-flag="institutional_delivery_plan" /> Planning institutional delivery</label>
-            <label class="check protective"><input type="checkbox" data-flag="birth_preparedness_plan" /> Has a birth preparedness plan</label>
-            <label class="check protective"><input type="checkbox" data-flag="family_support" /> Supportive family</label>
-            <label class="check risk"><input type="checkbox" data-flag="no_antenatal_care" /> No ANC visits so far</label>
+            <h3 data-i18n="history.current">Current pregnancy care</h3>
+            <label class="check protective"><input type="checkbox" data-flag="regular_anc_visits" /> <span data-i18n="hist.anc">Regular ANC visits</span></label>
+            <label class="check protective"><input type="checkbox" data-flag="iron_folic_supplementation" /> <span data-i18n="hist.ifa">Taking iron/folic supplements</span></label>
+            <label class="check protective"><input type="checkbox" data-flag="institutional_delivery_plan" /> <span data-i18n="hist.institutional">Planning institutional delivery</span></label>
+            <label class="check protective"><input type="checkbox" data-flag="birth_preparedness_plan" /> <span data-i18n="hist.birthplan">Has a birth preparedness plan</span></label>
+            <label class="check protective"><input type="checkbox" data-flag="family_support" /> <span data-i18n="hist.family">Supportive family</span></label>
+            <label class="check risk"><input type="checkbox" data-flag="no_antenatal_care" /> <span data-i18n="hist.noanc">No ANC visits so far</span></label>
           </div>
         </div>
       </div>
 
+      <div class="form-section" id="epds-include-section" hidden>
+        <label class="check">
+          <input type="checkbox" id="include-epds" checked />
+          <span data-i18n="includeEpds">Include my saved Mental Health Check (EPDS) score in this assessment</span>
+        </label>
+      </div>
+
       <button type="submit" class="submit-btn" id="submit-btn">
-        <span class="btn-label">Run Assessment</span>
+        <span class="btn-label" data-i18n="runAssessment">Run Assessment</span>
         <span class="spinner" hidden></span>
       </button>
       <p class="error-msg" id="form-error" hidden></p>
@@ -137,7 +158,7 @@
       <div class="results-grid">
 
         <div class="card">
-          <h3>Risk Gauge</h3>
+          <h3 data-i18n="riskGauge">Risk Gauge</h3>
           <div class="gauge-wrap">
             <svg viewBox="0 0 200 110" class="gauge-svg">
               <path d="M10,100 A90,90 0 0,1 190,100" class="gauge-track" />
@@ -149,61 +170,145 @@
         </div>
 
         <div class="card">
-          <h3>ML Prediction <span class="badge-soft" id="ml-model-name">—</span></h3>
+          <h3><span data-i18n="mlPrediction">ML Prediction</span> <span class="badge-soft" id="ml-model-name">—</span></h3>
           <div id="ml-bars" class="ml-bars"></div>
           <p class="footnote" id="ml-footnote"></p>
         </div>
 
         <div class="card">
-          <h3>Danger-Sign Ladder</h3>
+          <h3 data-i18n="dangerLadder">Danger-Sign Ladder</h3>
           <div class="ladder" id="ladder"></div>
           <p class="ladder-desc" id="ladder-desc">No danger-sign phrase matched.</p>
         </div>
 
         <div class="card">
-          <h3>Risk Factors <span class="badge-soft" id="rf-multiplier">×1.0</span></h3>
+          <h3><span data-i18n="riskFactors">Risk Factors</span> <span class="badge-soft" id="rf-multiplier">×1.0</span></h3>
           <div class="tag-group">
-            <span class="tag-label">Static</span>
+            <span class="tag-label" data-i18n="static">Static</span>
             <div class="tags" id="tags-static"></div>
           </div>
           <div class="tag-group">
-            <span class="tag-label">Dynamic</span>
+            <span class="tag-label" data-i18n="dynamic">Dynamic</span>
             <div class="tags" id="tags-dynamic"></div>
           </div>
           <div class="tag-group">
-            <span class="tag-label">Protective</span>
+            <span class="tag-label" data-i18n="protective">Protective</span>
             <div class="tags" id="tags-protective"></div>
           </div>
+        </div>
+
+        <div class="card" id="hb-card" hidden>
+          <h3 data-i18n="anemiaGrading">Anemia Grading (India)</h3>
+          <div id="hb-content"></div>
+        </div>
+
+        <div class="card" id="psych-card" hidden>
+          <h3 data-i18n="psychEval">Psychological Evaluation (EPDS)</h3>
+          <div id="psych-content"></div>
         </div>
 
       </div>
 
       <div class="card">
-        <h3>Active Expert Rules</h3>
+        <h3 data-i18n="activeRules">Active Expert Rules</h3>
         <div id="rules-list" class="rules-list"></div>
       </div>
 
       <div class="card">
-        <h3>Recommendations</h3>
+        <h3 data-i18n="recommendations">Recommendations</h3>
         <ul id="recs-list" class="recs-list"></ul>
       </div>
 
       <div class="result-actions">
-        <button class="secondary-btn" id="new-assessment-btn">New Assessment</button>
-        <button class="secondary-btn" id="print-btn">Print Report</button>
+        <button class="secondary-btn" id="new-assessment-btn" data-i18n="newAssessment">New Assessment</button>
+        <button class="secondary-btn" id="read-aloud-btn">🔊 <span data-i18n="readAloud">Read Aloud</span></button>
+        <button class="secondary-btn" id="print-btn" data-i18n="printReport">Print Report</button>
       </div>
 
     </section>
+  </section>
+
+  <!-- ========================= PREGNANCY GUIDE VIEW ========================= -->
+  <section id="guide-view" class="view">
+    <div class="card">
+      <h2 data-i18n="guide.title">Pregnancy Guide</h2>
+      <p class="section-sub" data-i18n="guide.sub">Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.</p>
+
+      <div class="guide-input-row">
+        <label class="radio"><input type="radio" name="guide-mode" value="lmp" checked /> <span data-i18n="guide.byLmp">By last menstrual period (LMP)</span></label>
+        <label class="radio"><input type="radio" name="guide-mode" value="week" /> <span data-i18n="guide.byWeek">By current week</span></label>
+      </div>
+      <div class="guide-input-fields">
+        <div class="field" id="guide-lmp-field">
+          <label for="guide-lmp" data-i18n="guide.lmpLabel">Last menstrual period date</label>
+          <input type="date" id="guide-lmp" />
+        </div>
+        <div class="field" id="guide-week-field" hidden>
+          <label for="guide-week" data-i18n="guide.weekLabel">Current gestational week</label>
+          <input type="number" id="guide-week" min="0" max="42" value="20" />
+        </div>
+        <button class="submit-btn" id="guide-submit-btn" type="button" data-i18n="guide.getGuide">Get My Guide</button>
+      </div>
+    </div>
+
+    <div id="guide-results" hidden>
+      <div class="card guide-header-card">
+        <div class="guide-week-badge" id="guide-week-badge">Week 20</div>
+        <div>
+          <div class="guide-trimester" id="guide-trimester">Trimester 2</div>
+          <div class="guide-due" id="guide-due"></div>
+        </div>
+      </div>
+
+      <div class="results-grid">
+        <div class="card">
+          <h3 data-i18n="guide.nutrition">Nutrition Tips</h3>
+          <ul class="recs-list" id="guide-nutrition"></ul>
+        </div>
+        <div class="card">
+          <h3 data-i18n="guide.dangerSigns">Watch For (Danger Signs)</h3>
+          <ul class="recs-list danger" id="guide-danger"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="guide.ancSchedule">ANC Visit Schedule</h3>
+        <div id="guide-anc-schedule" class="anc-schedule"></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="guide.schemes">Government Schemes</h3>
+        <div id="guide-schemes" class="scheme-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= MENTAL HEALTH (EPDS) VIEW ========================= -->
+  <section id="psych-view" class="view">
+    <div class="card">
+      <h2 data-i18n="psych.title">Mental Health Check</h2>
+      <p class="section-sub" data-i18n="psych.sub">
+        The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've felt
+        over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a diagnosis.
+      </p>
+      <div id="epds-form"></div>
+      <button class="submit-btn" id="epds-submit-btn" type="button" data-i18n="psych.score">Score My Mood</button>
+    </div>
+
+    <div class="card" id="epds-result-card" hidden>
+      <h3 data-i18n="psych.result">Your Result</h3>
+      <div id="epds-result-content"></div>
+    </div>
   </section>
 
   <!-- ========================= HISTORY VIEW ========================= -->
   <section id="history-view" class="view">
     <div class="card">
       <div class="section-head">
-        <h2>Assessment History</h2>
-        <button class="link-btn" id="clear-history-btn">Clear</button>
+        <h2 data-i18n="history.title">Assessment History</h2>
+        <button class="link-btn" id="clear-history-btn" data-i18n="clear">Clear</button>
       </div>
-      <p class="section-sub">Stored only in this browser (not sent anywhere).</p>
+      <p class="section-sub" data-i18n="history.stored">Stored only in this browser (not sent anywhere).</p>
       <div id="history-list" class="history-list"></div>
     </div>
   </section>
@@ -211,23 +316,27 @@
   <!-- ========================= HELPLINES VIEW ========================= -->
   <section id="help-view" class="view">
     <div class="card">
-      <h2>Helplines</h2>
+      <h2 data-i18n="help.title">Helplines</h2>
       <div class="help-grid">
-        <a class="help-tile" href="tel:108"><strong>108</strong><span>Emergency Ambulance</span></a>
-        <a class="help-tile" href="tel:102"><strong>102</strong><span>Pregnancy Emergency Transport</span></a>
-        <a class="help-tile" href="tel:104"><strong>104</strong><span>National Health Helpline</span></a>
-        <a class="help-tile" href="tel:181"><strong>181</strong><span>Women's Helpline</span></a>
-        <a class="help-tile" href="tel:1098"><strong>1098</strong><span>Child Helpline</span></a>
-        <div class="help-tile static"><strong>ASHA/ANM</strong><span>Ask about JSY cash-assistance eligibility &amp; nearest 24×7 PHC/FRU</span></div>
+        <a class="help-tile" href="tel:108"><strong>108</strong><span data-i18n="help.ambulance">Emergency Ambulance</span></a>
+        <a class="help-tile" href="tel:102"><strong>102</strong><span data-i18n="help.transport">Pregnancy Emergency Transport</span></a>
+        <a class="help-tile" href="tel:104"><strong>104</strong><span data-i18n="help.national">National Health Helpline</span></a>
+        <a class="help-tile" href="tel:181"><strong>181</strong><span data-i18n="help.women">Women's Helpline</span></a>
+        <a class="help-tile" href="tel:1098"><strong>1098</strong><span data-i18n="help.child">Child Helpline</span></a>
+        <a class="help-tile" href="tel:1800-599-0019"><strong>KIRAN</strong><span data-i18n="help.mental">Mental Health Helpline (1800-599-0019)</span></a>
       </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="help.schemes">Government Schemes</h2>
+      <div id="help-schemes" class="scheme-grid"></div>
     </div>
   </section>
 
 </main>
 
-<footer class="app-footer">
+<footer class="app-footer" data-i18n="footer">
   Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset
-  with a rule-based danger-sign evaluation layer. Not a diagnosis.
+  with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.
 </footer>
 
 <script src="/static/app.js"></script>

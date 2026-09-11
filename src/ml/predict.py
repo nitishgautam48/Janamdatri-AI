@@ -7,8 +7,10 @@ needs scikit-learn's training-time dependencies loaded at request time.
 from pathlib import Path
 from functools import lru_cache
 
-import joblib
 import numpy as np
+import joblib
+
+from .features import BASE_FEATURES, add_engineered_features
 
 MODEL_PATH = Path(__file__).resolve().parents[2] / "models" / "risk_classifier.joblib"
 
@@ -20,24 +22,26 @@ class RiskClassifier:
                 f"No trained model found at {model_path}. Run `python -m src.ml.train` first."
             )
         bundle = joblib.load(model_path)
-        self.model = bundle["model"]
-        self.scaler = bundle["scaler"]
+        self.pipeline = bundle["pipeline"]
         self.features = bundle["features"]
         self.risk_order = bundle["risk_order"]
         self.model_name = bundle["model_name"]
         self.test_accuracy = bundle["test_accuracy"]
         self.test_macro_f1 = bundle["test_macro_f1"]
+        self.cv_macro_f1_mean = bundle.get("cv_macro_f1_mean")
+        self.cv_macro_f1_std = bundle.get("cv_macro_f1_std")
+        self.feature_importances = bundle.get("feature_importances")
 
     def predict(self, vitals: dict) -> dict:
-        missing = [f for f in self.features if vitals.get(f) is None]
+        missing = [f for f in BASE_FEATURES if vitals.get(f) is None]
         if missing:
             raise ValueError(f"Missing required vitals for ML prediction: {missing}")
 
-        row = np.array([[vitals[f] for f in self.features]], dtype=float)
-        row_scaled = self.scaler.transform(row)
+        enriched = add_engineered_features(vitals)
+        row = np.array([[enriched[f] for f in self.features]], dtype=float)
 
-        predicted_idx = int(self.model.predict(row_scaled)[0])
-        probabilities = self.model.predict_proba(row_scaled)[0]
+        predicted_idx = int(self.pipeline.predict(row)[0])
+        probabilities = self.pipeline.predict_proba(row)[0]
 
         return {
             "riskLevel": self.risk_order[predicted_idx],
@@ -47,6 +51,19 @@ class RiskClassifier:
             "modelName": self.model_name,
             "modelTestAccuracy": self.test_accuracy,
             "modelTestMacroF1": self.test_macro_f1,
+            "modelCvMacroF1Mean": self.cv_macro_f1_mean,
+            "modelCvMacroF1Std": self.cv_macro_f1_std,
+        }
+
+    def info(self) -> dict:
+        return {
+            "modelName": self.model_name,
+            "features": self.features,
+            "testAccuracy": self.test_accuracy,
+            "testMacroF1": self.test_macro_f1,
+            "cvMacroF1Mean": self.cv_macro_f1_mean,
+            "cvMacroF1Std": self.cv_macro_f1_std,
+            "featureImportances": self.feature_importances,
         }
 
 
