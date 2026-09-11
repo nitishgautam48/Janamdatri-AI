@@ -3,6 +3,7 @@
   const HISTORY_KEY = "janamdatri_history";
   const EPDS_KEY = "janamdatri_last_epds";
   const GUIDE_KEY = "janamdatri_last_guide";
+  const POSTPARTUM_GUIDE_KEY = "janamdatri_postpartum_guide";
   const NUTRITION_KEY = "janamdatri_last_nutrition";
   const REPORT_VITALS_LOG_KEY = "janamdatri_report_vitals_log";
   const EMERGENCY_BANNER_DISMISSED_KEY = "janamdatri_emergency_banner_dismissed_for";
@@ -212,6 +213,12 @@
       "profile.conditionsPlaceholder": "e.g. thyroid, diabetes, hypertension - leave blank if none",
       "profile.saveBtn": "Save My Profile", "profile.summaryTitle": "Current Profile",
       "profile.vaccinationLabel": "Td/TT Vaccination", "profile.vaccineDose1": "Dose 1 given", "profile.vaccineDose2": "Dose 2 given",
+      "profile.deliveryDateLabel": "Delivery date (only if you've already delivered)",
+      "profile.deliveryDateNote": "Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.",
+      "nav.postpartum": "Postpartum",
+      "postpartum.title": "Postpartum Care", "postpartum.sub": "Recovery, breastfeeding, and follow-up guidance for the 6 weeks after delivery - set your delivery date in My Pregnancy Profile to personalize this.",
+      "postpartum.recovery": "Recovery", "postpartum.breastfeeding": "Breastfeeding", "postpartum.mentalHealth": "Mental Well-being",
+      "postpartum.dangerSigns": "Warning Signs - Seek Care Now", "postpartum.pncSchedule": "Postnatal Check-up (PNC) Schedule",
       "home.weekNotSet": "Set your pregnancy week",
       "home.snapshotTitle": "Health Snapshot", "home.nutritionTitle": "Nutrition", "home.viewNutrition": "View Nutrition Analysis →",
       "home.todaysCare": "Today's Care", "home.thisWeek": "This Week", "home.urgentAlerts": "Urgent Alerts",
@@ -326,6 +333,12 @@
       "profile.conditionsPlaceholder": "उदा. थायरॉइड, मधुमेह, उच्च रक्तचाप - यदि कोई नहीं है तो खाली छोड़ें",
       "profile.saveBtn": "मेरी प्रोफ़ाइल सहेजें", "profile.summaryTitle": "वर्तमान प्रोफ़ाइल",
       "profile.vaccinationLabel": "Td/TT टीकाकरण", "profile.vaccineDose1": "पहली डोज़ दी गई", "profile.vaccineDose2": "दूसरी डोज़ दी गई",
+      "profile.deliveryDateLabel": "प्रसव तिथि (केवल यदि आप प्रसव करा चुकी हैं)",
+      "profile.deliveryDateNote": "इसे सेट करने से आपका होम डैशबोर्ड और इस सप्ताह गर्भावस्था-सप्ताह सामग्री के बजाय प्रसवोत्तर देखभाल दिखाएगा।",
+      "nav.postpartum": "प्रसवोत्तर",
+      "postpartum.title": "प्रसवोत्तर देखभाल", "postpartum.sub": "प्रसव के बाद 6 सप्ताह के लिए रिकवरी, स्तनपान, और फॉलो-अप मार्गदर्शन - इसे व्यक्तिगत बनाने के लिए मेरी गर्भावस्था प्रोफ़ाइल में अपनी प्रसव तिथि सेट करें।",
+      "postpartum.recovery": "रिकवरी", "postpartum.breastfeeding": "स्तनपान", "postpartum.mentalHealth": "मानसिक स्वास्थ्य",
+      "postpartum.dangerSigns": "चेतावनी संकेत - अभी सहायता लें", "postpartum.pncSchedule": "प्रसवोत्तर जांच (PNC) कार्यक्रम",
       "home.weekNotSet": "अपना गर्भावस्था सप्ताह सेट करें",
       "home.snapshotTitle": "स्वास्थ्य स्नैपशॉट", "home.nutritionTitle": "पोषण", "home.viewNutrition": "पोषण विश्लेषण देखें →",
       "home.todaysCare": "आज की देखभाल", "home.thisWeek": "इस सप्ताह", "home.urgentAlerts": "आपातकालीन चेतावनी",
@@ -518,6 +531,7 @@
     if (btn.dataset.view === "home-view") renderHome();
     if (btn.dataset.view === "assess-view") prefillPregnancyWeek();
     if (btn.dataset.view === "profile-view") prefillProfileForm();
+    if (btn.dataset.view === "postpartum-view") renderPostpartumView();
   }));
 
   // ==================================================================
@@ -560,6 +574,18 @@
 
   function loadLastGuide() {
     try { return JSON.parse(localStorage.getItem(scopedKey(GUIDE_KEY))); } catch { return null; }
+  }
+
+  function savePostpartumGuide(guide) {
+    try { localStorage.setItem(scopedKey(POSTPARTUM_GUIDE_KEY), JSON.stringify({ ...guide, savedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
+  }
+
+  function loadPostpartumGuide() {
+    try { return JSON.parse(localStorage.getItem(scopedKey(POSTPARTUM_GUIDE_KEY))); } catch { return null; }
+  }
+
+  function clearPostpartumGuide() {
+    try { localStorage.removeItem(scopedKey(POSTPARTUM_GUIDE_KEY)); } catch { /* non-fatal */ }
   }
 
   // Collapses the 5-level clinical severity scale into the simple
@@ -663,6 +689,8 @@
   // follow-up task that a fixed list could never know to add.
   function buildTodayCareTasks(history) {
     const guide = loadLastGuide();
+    const postpartumGuide = loadPostpartumGuide();
+    const isPostpartum = !!(postpartumGuide && postpartumGuide.isWithin6Weeks);
     const nutrition = loadSavedNutrition();
     const latest = history && history[0];
 
@@ -677,7 +705,11 @@
       tasks.push({ id: "nutrition_check", text: "Complete your nutrition check", manual: false, done: !!nutrition });
     }
 
-    if (guide && guide.nextAncVisit) {
+    if (isPostpartum) {
+      postpartumGuide.nextVisit.checks.forEach((check, i) => {
+        tasks.push({ id: `pnc_${postpartumGuide.nextVisit.visit}_${i}`, text: `${check} (PNC Visit ${postpartumGuide.nextVisit.visit}, ${postpartumGuide.nextVisit.window})`, manual: true });
+      });
+    } else if (guide && guide.nextAncVisit) {
       guide.nextAncVisit.checks.forEach((check, i) => {
         tasks.push({ id: `anc_${guide.nextAncVisit.visit}_${i}`, text: `${check} (Visit ${guide.nextAncVisit.visit}, ${guide.nextAncVisit.window})`, manual: true });
       });
@@ -685,11 +717,12 @@
 
     // Td/TT dose 1 is typically due once the second trimester starts; dose
     // 2 a few weeks after that - only nudge once it's actually relevant to
-    // the recorded week, not for someone who hasn't set a week at all.
+    // the recorded week, not for someone who hasn't set a week at all, and
+    // not once someone has already delivered.
     const profileExtra = loadProfileExtra();
-    if (guide && guide.week >= 14 && !(profileExtra && profileExtra.vaccineDose1)) {
+    if (!isPostpartum && guide && guide.week >= 14 && !(profileExtra && profileExtra.vaccineDose1)) {
       tasks.push({ id: "vaccine_dose1_due", text: "Td/TT vaccine dose 1 due", manual: false, done: false });
-    } else if (guide && guide.week >= 18 && profileExtra && profileExtra.vaccineDose1 && !profileExtra.vaccineDose2) {
+    } else if (!isPostpartum && guide && guide.week >= 18 && profileExtra && profileExtra.vaccineDose1 && !profileExtra.vaccineDose2) {
       tasks.push({ id: "vaccine_dose2_due", text: "Td/TT vaccine dose 2 due", manual: false, done: false });
     }
 
@@ -771,8 +804,38 @@
     });
   }
 
+  // Same collapsible-card pattern as renderThisWeekInto, but for the
+  // postpartum guide's shape (recovery/breastfeeding/mental health/danger
+  // signs instead of note/nutrition/ANC checks) - kept separate rather than
+  // forcing one function to branch on two different data shapes.
+  function renderThisWeekPostpartumInto(containerSelector, idPrefix, guide) {
+    const container = $(containerSelector);
+    const sections = [
+      { id: "recovery", label: "Recovery", detail: `<ul>${guide.recovery.map((r) => `<li>${r}</li>`).join("")}</ul>` },
+      { id: "breastfeeding", label: "Breastfeeding", detail: `<ul>${guide.breastfeeding.map((b) => `<li>${b}</li>`).join("")}</ul>` },
+      { id: "mentalHealth", label: "Mental Well-being", detail: `<p>${guide.mentalHealthNote}</p>` },
+      { id: "warning", label: "Warning Signs", detail: `<ul>${guide.dangerSigns.map((d) => `<li>${d}</li>`).join("")}</ul>` },
+    ];
+    container.innerHTML = sections.map((s) => `
+      <button type="button" class="this-week-item" data-target="${idPrefix}-detail-${s.id}"><span>${s.label}</span><span>→</span></button>
+      <div class="this-week-detail" id="${idPrefix}-detail-${s.id}">${s.detail}</div>`).join("");
+    container.querySelectorAll(".this-week-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.getElementById(btn.dataset.target).classList.toggle("open");
+      });
+    });
+  }
+
   function renderThisWeek() {
-    renderThisWeekInto("#home-this-week", "home-week", loadLastGuide());
+    const postpartumGuide = loadPostpartumGuide();
+    const titleEl = $("#home-this-week-title");
+    if (postpartumGuide && postpartumGuide.isWithin6Weeks) {
+      if (titleEl) titleEl.textContent = TRANSLATIONS[currentLang]["postpartum.title"] || "Postpartum Care";
+      renderThisWeekPostpartumInto("#home-this-week", "home-week", postpartumGuide);
+    } else {
+      if (titleEl) titleEl.textContent = TRANSLATIONS[currentLang]["home.thisWeek"] || "This Week";
+      renderThisWeekInto("#home-this-week", "home-week", loadLastGuide());
+    }
   }
 
   function renderHomeAlerts(history) {
@@ -862,10 +925,17 @@
     $("#home-greeting").textContent = TRANSLATIONS[currentLang][greetingKey] + (name ? ", " + name : "") + " 👋";
 
     const lastGuide = loadLastGuide();
+    const postpartumGuide = loadPostpartumGuide();
+    const isPostpartum = !!(postpartumGuide && postpartumGuide.isWithin6Weeks);
     const weekBadge = $("#home-week-badge");
     const trimesterLabel = $("#home-trimester-label");
     const progressTrack = $("#home-progress-track");
-    if (lastGuide) {
+    if (isPostpartum) {
+      weekBadge.textContent = `DAY ${postpartumGuide.daysPostpartum} POSTPARTUM`;
+      trimesterLabel.textContent = "Postpartum Recovery";
+      progressTrack.hidden = false;
+      $("#home-progress-fill").style.width = `${Math.min((postpartumGuide.daysPostpartum / 42) * 100, 100)}%`;
+    } else if (lastGuide) {
       weekBadge.textContent = `${lastGuide.week} WEEKS PREGNANT`;
       trimesterLabel.textContent = ["", "1st", "2nd", "3rd"][lastGuide.trimester] + " Trimester";
       progressTrack.hidden = false;
@@ -906,6 +976,7 @@
       if (btn.dataset.gotoView === "nutrition-view" && !$("#nutrition-form").children.length) renderNutritionForm();
       if (btn.dataset.gotoView === "assess-view") prefillPregnancyWeek();
       if (btn.dataset.gotoView === "profile-view") prefillProfileForm();
+      if (btn.dataset.gotoView === "postpartum-view") renderPostpartumView();
     });
   });
 
@@ -1745,6 +1816,40 @@
   }
 
   // ==================================================================
+  // Postpartum Care - reads the guide saved by the Profile page's
+  // delivery-date field (see savePostpartumGuide/loadPostpartumGuide);
+  // there's no separate form here, only a display of what's already set.
+  // ==================================================================
+
+  function renderPostpartumView() {
+    const guide = loadPostpartumGuide();
+    const noDateEl = $("#postpartum-no-date");
+    const results = $("#postpartum-results");
+    if (!guide) {
+      noDateEl.textContent = currentLang === "hi"
+        ? "पोस्टपार्टम केयर देखने के लिए, अपनी प्रोफ़ाइल में डिलीवरी की तारीख जोड़ें।"
+        : "Add your delivery date in My Profile to see personalized postpartum care here.";
+      results.hidden = true;
+      return;
+    }
+    noDateEl.textContent = "";
+    results.hidden = false;
+    $("#postpartum-days-badge").textContent = `Day ${guide.daysPostpartum}`;
+    $("#postpartum-weeks-label").textContent = `Week ${guide.weeksPostpartum} postpartum`;
+    $("#postpartum-next-visit").textContent = `Next check-up: Visit ${guide.nextVisit.visit} — ${guide.nextVisit.window}`;
+    $("#postpartum-progress-fill").style.width = `${Math.min((guide.daysPostpartum / 42) * 100, 100)}%`;
+    $("#postpartum-recovery").innerHTML = guide.recovery.map((r) => `<li>${r}</li>`).join("");
+    $("#postpartum-breastfeeding").innerHTML = guide.breastfeeding.map((b) => `<li>${b}</li>`).join("");
+    $("#postpartum-mental-health-note").textContent = guide.mentalHealthNote;
+    $("#postpartum-danger-signs").innerHTML = guide.dangerSigns.map((d) => `<li>${d}</li>`).join("");
+    $("#postpartum-pnc-schedule").innerHTML = guide.pncSchedule.map((visit) => `
+      <div class="anc-visit ${visit.visit === guide.nextVisit.visit ? "next" : ""}">
+        <div class="anc-visit-head"><span>Visit ${visit.visit} — ${visit.window}</span>${visit.visit === guide.nextVisit.visit ? "<span>Next up</span>" : ""}</div>
+        <ul>${visit.checks.map((c) => `<li>${c}</li>`).join("")}</ul>
+      </div>`).join("");
+  }
+
+  // ==================================================================
   // My Pregnancy Profile - the ONE place LMP/week, previous-pregnancy,
   // and existing conditions are entered, instead of asking for the week
   // again in the Assessment wizard, Nutrition, and the Guide separately.
@@ -1775,6 +1880,7 @@
   function renderProfileSummary() {
     const guide = loadLastGuide();
     const extra = loadProfileExtra();
+    const postpartumGuide = loadPostpartumGuide();
     const card = $("#profile-summary-card");
     if (!guide) {
       card.hidden = true;
@@ -1786,12 +1892,15 @@
       ${guide.estimatedDueDate ? `<p class="footnote">Estimated due date: ${guide.estimatedDueDate}</p>` : ""}
       <p>${extra && extra.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy"}</p>
       ${extra && extra.conditions ? `<p>Existing conditions: ${extra.conditions}</p>` : ""}
-      <p>Td/TT: ${extra && extra.vaccineDose1 ? "Dose 1 ✓" : "Dose 1 pending"}${extra && extra.vaccineDose2 ? ", Dose 2 ✓" : ", Dose 2 pending"}</p>`;
+      <p>Td/TT: ${extra && extra.vaccineDose1 ? "Dose 1 ✓" : "Dose 1 pending"}${extra && extra.vaccineDose2 ? ", Dose 2 ✓" : ", Dose 2 pending"}</p>
+      ${postpartumGuide ? `<p>Postpartum: Day ${postpartumGuide.daysPostpartum} (delivered ${postpartumGuide.deliveryDate})</p>` : ""}`;
   }
 
   function prefillProfileForm() {
     const guide = loadLastGuide();
     const extra = loadProfileExtra();
+    const postpartumGuide = loadPostpartumGuide();
+    $("#profile-delivery-date").value = postpartumGuide ? postpartumGuide.deliveryDate : "";
     if (guide && guide.lmp) {
       $("#profile-lmp").value = guide.lmp;
       $('input[name="profile-mode"][value="lmp"]').checked = true;
@@ -1834,6 +1943,17 @@
       const vaccineDose1 = $("#profile-vaccine-dose1").checked;
       const vaccineDose2 = $("#profile-vaccine-dose2").checked;
       saveProfileExtra({ previousPregnancy, conditions, vaccineDose1, vaccineDose2 });
+
+      const deliveryDate = $("#profile-delivery-date").value;
+      if (deliveryDate) {
+        const ppRes = await fetch("/postpartum-guide", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryDate }),
+        });
+        const ppPayload = await ppRes.json();
+        if (ppRes.ok) savePostpartumGuide(ppPayload.data);
+      } else {
+        clearPostpartumGuide();
+      }
 
       noteEl.textContent = currentLang === "hi"
         ? `प्रोफ़ाइल सहेजी गई - सप्ताह ${payload.data.week} के लिए व्यक्तिगत बनाई गई।`

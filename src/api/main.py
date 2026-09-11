@@ -16,6 +16,7 @@ Endpoints reflect the layered architecture:
   GET  /psych-assess/items            - the 10 EPDS questions + response options
   POST /psych-assess                  - EPDS scoring alone
   POST /pregnancy-guide               - trimester/week-based ANC schedule and guidance
+  POST /postpartum-guide               - days/weeks-postpartum recovery, breastfeeding, PNC schedule, and danger signs
   GET  /nutrition/items                - the personalized nutrition questionnaire
   POST /nutrition-assess               - food-group frequency -> per-nutrient adequacy + food suggestions
   GET  /nutrition-checks/mine          - a logged-in user's nutrition check history
@@ -35,7 +36,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src import auth, document_extractor
-from src.dynamic_eval import chat_assistant, nutrition_eval, pregnancy_guide, psych_eval, report_analyzer, triage
+from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -110,6 +111,10 @@ class NutritionAssessRequest(BaseModel):
 class PregnancyGuideRequest(BaseModel):
     lmp: Optional[str] = Field(None, description="Last menstrual period date, ISO format e.g. 2026-01-15")
     week: Optional[int] = Field(None, description="Current gestational week, if known directly")
+
+
+class PostpartumGuideRequest(BaseModel):
+    deliveryDate: str = Field(..., description="ISO date the baby was delivered, e.g. 2026-01-15")
 
 
 class RegisterRequest(BaseModel):
@@ -316,6 +321,15 @@ def pregnancy_guide_endpoint(req: PregnancyGuideRequest):
     else:
         raise HTTPException(status_code=400, detail="Provide either 'lmp' (ISO date) or 'week'.")
 
+    return {"success": True, "data": guide}
+
+
+@app.post("/postpartum-guide")
+def postpartum_guide_endpoint(req: PostpartumGuideRequest):
+    try:
+        guide = postpartum_guide.get_postpartum_guide(req.deliveryDate)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="deliveryDate must be an ISO date string, e.g. 2026-01-15") from exc
     return {"success": True, "data": guide}
 
 

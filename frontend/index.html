@@ -75,6 +75,7 @@
         <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy</button>
         <button class="navlink" data-view="nutrition-view" data-i18n="nav.nutrition">Nutrition</button>
         <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Wellness</button>
+        <button class="navlink" data-view="postpartum-view" data-i18n="nav.postpartum">Postpartum</button>
       </span>
       <span class="nav-divider" aria-hidden="true"></span>
       <span class="nav-group">
@@ -152,7 +153,7 @@
     </div>
 
     <div class="card">
-      <h3 data-i18n="home.thisWeek">This Week</h3>
+      <h3 id="home-this-week-title" data-i18n="home.thisWeek">This Week</h3>
       <div class="this-week-list" id="home-this-week"></div>
     </div>
 
@@ -550,6 +551,12 @@
         <label class="check"><input type="checkbox" id="profile-vaccine-dose2" /> <span data-i18n="profile.vaccineDose2">Dose 2 given</span></label>
       </div>
 
+      <div class="field">
+        <label for="profile-delivery-date" data-i18n="profile.deliveryDateLabel">Delivery date (only if you've already delivered)</label>
+        <input type="date" id="profile-delivery-date" />
+        <p class="footnote" data-i18n="profile.deliveryDateNote">Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.</p>
+      </div>
+
       <button type="button" class="submit-btn" id="profile-save-btn" data-i18n="profile.saveBtn">Save My Profile</button>
       <p class="footnote" id="profile-save-note"></p>
     </div>
@@ -634,6 +641,55 @@
       <h3 data-i18n="nutrition.result">Your Nutrient Adequacy</h3>
       <div id="nutrition-insights"></div>
       <div id="nutrition-nutrients" class="nutrient-grid"></div>
+    </div>
+  </section>
+
+  <!-- ========================= POSTPARTUM CARE VIEW ========================= -->
+  <section id="postpartum-view" class="view">
+    <div class="card">
+      <h2 data-i18n="postpartum.title">Postpartum Care</h2>
+      <p class="section-sub" data-i18n="postpartum.sub">Recovery, breastfeeding, and follow-up guidance for the 6 weeks after delivery - set your delivery date in My Pregnancy Profile to personalize this.</p>
+      <div id="postpartum-no-date" class="footnote"></div>
+    </div>
+
+    <div id="postpartum-results" hidden>
+      <div class="card guide-header-card">
+        <div class="guide-header-top">
+          <div class="guide-week-badge" id="postpartum-days-badge">Day 0</div>
+          <div>
+            <div class="guide-trimester" id="postpartum-weeks-label"></div>
+            <div class="guide-due" id="postpartum-next-visit"></div>
+          </div>
+        </div>
+        <div class="progress-track light"><div class="progress-fill" id="postpartum-progress-fill"></div></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="postpartum.recovery">Recovery</h3>
+        <ul class="recs-list" id="postpartum-recovery"></ul>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="postpartum.breastfeeding">Breastfeeding</h3>
+        <ul class="recs-list" id="postpartum-breastfeeding"></ul>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="postpartum.mentalHealth">Mental Well-being</h3>
+        <p id="postpartum-mental-health-note"></p>
+        <button type="button" class="secondary-btn" data-goto-view="psych-view">💜 Take the Mental Health Check</button>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="postpartum.dangerSigns">Warning Signs - Seek Care Now</h3>
+        <ul class="recs-list danger" id="postpartum-danger-signs"></ul>
+        <button type="button" class="secondary-btn" data-goto-view="assess-view">📝 Describe Symptoms in an Assessment</button>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="postpartum.pncSchedule">Postnatal Check-up (PNC) Schedule</h3>
+        <div id="postpartum-pnc-schedule" class="anc-schedule"></div>
+      </div>
     </div>
   </section>
 
