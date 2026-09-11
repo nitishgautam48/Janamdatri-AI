@@ -594,7 +594,7 @@
   function renderResult(data) {
     lastResult = data;
     const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules,
-      recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression } = data;
+      recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression, clinicalExplanation } = data;
 
     const banner = $("#severity-banner");
     banner.className = "severity-banner level-" + severity.level.toLowerCase();
@@ -602,6 +602,23 @@
     $("#severity-level").textContent = severity.level;
     $("#severity-sub").textContent =
       `Maternal Risk Index: ${mri}` + (severity.escalatedBy ? ` · escalated by: ${severity.escalatedBy.replace(/_/g, " ")}` : "");
+
+    if (clinicalExplanation) {
+      const tierPill = $("#action-tier-pill");
+      tierPill.textContent = clinicalExplanation.actionTierLabel;
+      tierPill.className = "action-tier-pill tier-" + clinicalExplanation.actionTier.toLowerCase();
+      $("#action-instruction").textContent = clinicalExplanation.recommendedNextAction;
+      $("#explain-why").innerHTML = clinicalExplanation.whyThisResult.map((w) => `<li>${w}</li>`).join("");
+      const warningGroup = $("#explain-warning-group");
+      if (clinicalExplanation.warningSigns.length) {
+        warningGroup.hidden = false;
+        $("#explain-warning-signs").innerHTML = clinicalExplanation.warningSigns
+          .map((w) => `<span class="tag dynamic-tag">${w.replace(/_/g, " ")}</span>`).join("");
+      } else {
+        warningGroup.hidden = true;
+      }
+      $("#explain-disclaimer").textContent = clinicalExplanation.disclaimer;
+    }
 
     const frac = Math.max(0, Math.min(mri, 100)) / 100;
     const fill = $("#gauge-fill");

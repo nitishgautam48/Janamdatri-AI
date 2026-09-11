@@ -25,6 +25,11 @@ RULES = [
             "Emergency referral - uterotonic administration and IV fluids at nearest facility; "
             "do not wait for bleeding to worsen."
         ),
+        "why": (
+            "Bleeding in pregnancy or after delivery can escalate quickly and cause severe blood "
+            "loss and shock - it is one of the leading causes of maternal death in India, but it is "
+            "very treatable when caught early."
+        ),
     },
     {
         "id": "sepsis_rule",
@@ -34,6 +39,11 @@ RULES = [
         "intervention": (
             "Facility evaluation for infection - antibiotics and monitoring; "
             "do not manage fever/foul discharge at home."
+        ),
+        "why": (
+            "Fever or a foul-smelling discharge in pregnancy or postpartum can be a sign of an "
+            "infection spreading into the bloodstream (sepsis), which can become life-threatening "
+            "within hours without antibiotics."
         ),
     },
     {
@@ -45,6 +55,11 @@ RULES = [
             "Immediate facility visit for fetal heart rate monitoring - "
             "reduced/absent movement needs same-day evaluation."
         ),
+        "why": (
+            "A noticeable drop in the baby's movement can be the earliest sign that the baby isn't "
+            "getting enough oxygen - fetal heart rate monitoring the same day is the only way to "
+            "check this properly."
+        ),
     },
     {
         "id": "obstructed_labor_rule",
@@ -55,6 +70,11 @@ RULES = [
             "Emergency transport to a facility with emergency obstetric care "
             "(possible instrumental delivery/C-section)."
         ),
+        "why": (
+            "Labor that goes on far longer than expected, or where the baby isn't progressing, can "
+            "lead to uterine rupture or fetal distress - this needs a facility with emergency "
+            "obstetric/surgical capability, not more waiting at home."
+        ),
     },
     {
         "id": "hypertensive_symptom_rule",
@@ -64,6 +84,11 @@ RULES = [
         "intervention": (
             "Urgent BP recheck and urine protein test; refer to facility for pre-eclampsia workup. "
             "Emergency transport if convulsions present."
+        ),
+        "why": (
+            "Headache, blurred vision, or facial swelling can be caused by a sudden rise in blood "
+            "pressure (pre-eclampsia) - left unchecked this can lead to seizures (eclampsia), which "
+            "is why a BP and urine-protein check is needed urgently, not at the next routine visit."
         ),
     },
     {
@@ -80,6 +105,11 @@ RULES = [
         "intervention": (
             "Facility evaluation for hemoglobin testing and iron therapy or transfusion; "
             "anemia sharply increases the risk from even modest blood loss at delivery."
+        ),
+        "why": (
+            "Low hemoglobin means your body has less reserve to cope with the normal blood loss of "
+            "delivery - even a routine amount of bleeding can become dangerous for someone who is "
+            "already anemic, which is why it's worth treating even before any bleeding happens."
         ),
     },
 ]
@@ -119,6 +149,7 @@ def apply_rules(text_scores: dict) -> list:
         if activated:
             entry["severity"] = severity
             entry["intervention"] = rule["intervention"]
+            entry["why"] = rule["why"]
         results.append(entry)
 
     return results

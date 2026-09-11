@@ -383,6 +383,23 @@ textarea { width: 100%; resize: vertical; }
 .severity-level { font-size: 24px; font-weight: 800; }
 .severity-sub { color: var(--muted); font-size: 13.5px; }
 
+.action-tier-pill {
+  display: inline-block; margin-top: 8px; padding: 5px 12px;
+  border-radius: 999px; font-size: 12.5px; font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.action-tier-pill.tier-emergency { background: var(--critical); color: white; }
+.action-tier-pill.tier-urgent { background: var(--severe); color: white; }
+.action-tier-pill.tier-routine { background: var(--mild); color: white; }
+
+.explain-card .action-instruction {
+  font-weight: 700; font-size: 14px; margin: 0 0 10px;
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--tint-bg); border-left: 3px solid var(--primary);
+}
+.explain-card .recs-list { margin-bottom: 10px; }
+.explain-card .footnote { margin-top: 8px; }
+
 .results-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

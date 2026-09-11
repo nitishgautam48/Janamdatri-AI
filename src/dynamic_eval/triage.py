@@ -27,6 +27,36 @@ META = {
 }
 TIER_FLOOR = {"Critical": 80, "Severe": 60, "Moderate": 40, "Mild": 20, "Minimal": 0}
 
+# Collapses the 5-level severity scale into the 3 action tiers a patient
+# actually needs to act on - "Moderate" and "Severe" are different
+# underlying scores, but both mean "don't just wait for your next
+# appointment," so both read as "Urgent" here.
+ACTION_TIERS = {
+    "Critical": {
+        "tier": "Emergency", "tierLabel": "🚨 EMERGENCY - immediate medical attention",
+        "instruction": (
+            "Go to the nearest health facility now, or call for emergency transport - "
+            "108 (ambulance) or 102 (pregnancy transport). Do not wait to see if it improves."
+        ),
+    },
+    "Severe": {
+        "tier": "Urgent", "tierLabel": "⚠️ URGENT - contact a healthcare professional promptly",
+        "instruction": "Contact a healthcare professional or go to a facility today - do not wait for your next scheduled ANC visit.",
+    },
+    "Moderate": {
+        "tier": "Urgent", "tierLabel": "⚠️ URGENT - contact a healthcare professional promptly",
+        "instruction": "Contact your ASHA/ANM or healthcare provider soon (within a day or two) so this can be properly checked.",
+    },
+    "Mild": {
+        "tier": "Routine", "tierLabel": "🟢 ROUTINE - continue monitoring",
+        "instruction": "Continue monitoring and mention this at your next scheduled ANC visit.",
+    },
+    "Minimal": {
+        "tier": "Routine", "tierLabel": "🟢 ROUTINE - continue monitoring",
+        "instruction": "Continue routine ANC visits and self-monitoring - no immediate concern was identified.",
+    },
+}
+
 
 def _tier_for_mri(mri: float) -> str:
     if mri > 75:
@@ -73,6 +103,65 @@ def _psych_mri(psych_result: dict) -> float:
     if psych_result["selfHarmFlagged"]:
         return max(90, total_pct)
     return total_pct
+
+
+def _build_explanation(level: str, escalated_by: str, ladder_result: dict, expert_rules: list,
+                        risk_formulation_result: dict, ml_result: dict) -> dict:
+    """Turns the raw signals synthesize() already computed into a plain-language
+    "why did I get this result" block - a patient-facing "High/Medium/Low" label
+    on its own doesn't tell anyone what to actually do about it."""
+    tier_info = ACTION_TIERS[level]
+    why = []
+
+    if escalated_by == "danger_ladder":
+        why.append(f"Danger sign detected: \"{ladder_result['matchedPhrase']}\" - {ladder_result['description']}")
+    elif escalated_by == "self_harm_risk":
+        why.append(
+            "Thoughts of self-harm were flagged on the Mental Health Check - this is always treated "
+            "as a critical safety signal on its own, regardless of the rest of that score."
+        )
+    elif escalated_by == "psychological_screening":
+        why.append(
+            "The Mental Health Check (EPDS) score indicates a symptom burden significant enough to "
+            "need a professional evaluation, separate from any physical findings."
+        )
+    elif escalated_by:
+        rule = next((r for r in expert_rules if r["id"] == escalated_by), None)
+        if rule:
+            why.append(f"{rule['name']}: {rule['why']}")
+
+    if not why:
+        if ml_result:
+            why.append(
+                f"Based on the vitals provided (age, blood pressure, blood sugar, temperature, "
+                f"heart rate), the trained ML model placed this at {ml_result['riskLevel']}."
+            )
+        else:
+            why.append("No danger signs, concerning symptoms, or high-risk vitals were identified from the information provided.")
+
+    warning_signs = []
+    if ladder_result["rung"] > 0:
+        warning_signs.append(ladder_result["matchedPhrase"])
+    for rule in expert_rules:
+        if rule["activated"] and rule["name"] not in warning_signs:
+            warning_signs.append(rule["name"])
+
+    return {
+        "actionTier": tier_info["tier"],
+        "actionTierLabel": tier_info["tierLabel"],
+        "recommendedNextAction": tier_info["instruction"],
+        "whyThisResult": why,
+        "majorRiskFactors": list(risk_formulation_result.get("dynamicRiskFactors", [])) +
+                            list(risk_formulation_result.get("staticRiskFactors", [])),
+        "warningSigns": warning_signs,
+        "protectiveFactors": list(risk_formulation_result.get("protectiveFactors", [])),
+        "disclaimer": (
+            "This is an automated screening/support aid, not a diagnosis. It supports - but never "
+            "replaces - assessment by a qualified healthcare professional. Any Emergency or Urgent "
+            "result, or anything that feels sudden or severe, always means seek care now regardless "
+            "of what this tool says."
+        ),
+    }
 
 
 def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
@@ -144,10 +233,12 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     clinical_impression = human_intelligence.synthesize(
         text_scores, ml_result, text_result, ladder_result, expert_rules, risk_formulation_result, psych_result
     )
+    explanation = _build_explanation(level, escalated_by, ladder_result, expert_rules, risk_formulation_result, ml_result)
 
     return {
         "mri": display_mri,
         "severity": {"level": level, "escalatedBy": escalated_by, **META[level]},
+        "clinicalExplanation": explanation,
         "mlPrediction": ml_result,
         "textAnalysis": text_result,
         "hemoglobinAssessment": hb_result,
