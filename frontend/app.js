@@ -526,21 +526,54 @@
     try { localStorage.setItem(scopedKey(TODAY_CARE_KEY), JSON.stringify(state)); } catch { /* non-fatal */ }
   }
 
-  function renderTodayCare() {
-    const state = loadTodayCareState();
+  // Builds a checklist that actually changes with pregnancy stage and with
+  // the person's own last result, instead of a fixed generic list: each
+  // check due at the upcoming ANC visit becomes its own line item (not one
+  // bundled "ANC follow-up"), a flagged nutrition gap names the specific
+  // nutrients instead of a generic reminder, and an escalated last
+  // assessment or a raised Mental Health Check score adds a targeted
+  // follow-up task that a fixed list could never know to add.
+  function buildTodayCareTasks(history) {
     const guide = loadLastGuide();
-    const nutritionDone = !!loadSavedNutrition();
+    const nutrition = loadSavedNutrition();
+    const latest = history && history[0];
 
     const tasks = [
       { id: "supplement", text: "Take your prescribed iron-folic acid supplement", manual: true },
       { id: "hydration", text: "Stay hydrated through the day", manual: true },
-      { id: "nutrition_check", text: "Complete your nutrition check", manual: false, done: nutritionDone },
     ];
-    if (guide && guide.nextAncVisit) {
-      tasks.push({ id: "anc_followup", text: `ANC follow-up: Visit ${guide.nextAncVisit.visit} (${guide.nextAncVisit.window})`, manual: true });
-    }
-    tasks.push({ id: "warning_signs_review", text: "Review this week's warning signs", manual: true });
 
+    if (nutrition && nutrition.result.gaps.length) {
+      tasks.push({ id: "nutrition_gaps", text: `Address nutrition gaps: ${nutrition.result.gaps.join(", ")}`, manual: true });
+    } else {
+      tasks.push({ id: "nutrition_check", text: "Complete your nutrition check", manual: false, done: !!nutrition });
+    }
+
+    if (guide && guide.nextAncVisit) {
+      guide.nextAncVisit.checks.forEach((check, i) => {
+        tasks.push({ id: `anc_${guide.nextAncVisit.visit}_${i}`, text: `${check} (Visit ${guide.nextAncVisit.visit}, ${guide.nextAncVisit.window})`, manual: true });
+      });
+    }
+
+    if (latest && latest.result && latest.result.severity) {
+      const sev = latest.result.severity;
+      if (sev.level === "Critical" || sev.level === "Severe") {
+        const reason = sev.escalatedBy ? sev.escalatedBy.replace(/_/g, " ") : sev.level.toLowerCase();
+        tasks.push({ id: "followup_escalation", text: `Follow up with your provider on your last result (${reason})`, manual: true });
+      }
+    }
+    const psychResult = latest && latest.result && latest.result.psychologicalEvaluation;
+    if (psychResult && psychResult.classification !== "Low probability") {
+      tasks.push({ id: "followup_mental_health", text: "Follow up on your Mental Health Check result", manual: true });
+    }
+
+    tasks.push({ id: "warning_signs_review", text: "Review this week's warning signs", manual: true });
+    return tasks;
+  }
+
+  function renderTodayCare(history) {
+    const state = loadTodayCareState();
+    const tasks = buildTodayCareTasks(history);
     const container = $("#home-today-care");
     container.innerHTML = tasks.map((t) => {
       const checked = t.manual ? !!state.checked[t.id] : !!t.done;
@@ -557,7 +590,7 @@
         s.checked[id] = !s.checked[id];
         s.date = todayDateStr();
         saveTodayCareState(s);
-        renderTodayCare();
+        renderTodayCare(history);
       });
     });
   }
@@ -654,7 +687,7 @@
 
     renderHealthSnapshot(history);
     renderNutritionMiniBars();
-    renderTodayCare();
+    renderTodayCare(history);
     renderThisWeek();
     renderHomeAlerts(history);
 
