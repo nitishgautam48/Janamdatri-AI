@@ -4,6 +4,7 @@ Janamdatri-AI - Maternal Risk Triage API.
 Endpoints reflect the layered architecture:
   POST /auth/register, /auth/login  - optional accounts (bearer token via x-user-token)
   GET  /auth/me                      - current user profile
+  DELETE /auth/account                - permanently delete the account and all its data
   POST /predict/ml                   - the trained ML classifier alone (vitals -> risk class)
   GET  /model/info                    - model transparency: features, hyperparameters, CV/test metrics
   POST /assess                         - the full hybrid: ML prediction + rule-based dynamic
@@ -163,6 +164,15 @@ def me(x_user_token: Optional[str] = Header(None)):
     if not user:
         raise HTTPException(status_code=401, detail="Not logged in or session expired.")
     return {"success": True, "data": {"user": user}}
+
+
+@app.delete("/auth/account")
+def delete_account(x_user_token: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+    auth.delete_user(user["id"])
+    return {"success": True, "data": {"deleted": True}}
 
 
 # ============================================================

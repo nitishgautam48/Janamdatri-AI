@@ -203,6 +203,21 @@ def save_nutrition_check(user_id: int, result_json: str):
         conn.close()
 
 
+def delete_user(user_id: int):
+    """Deletes the account and every assessment/chat message/nutrition
+    check tied to it. Sessions/assessments/nutrition_checks cascade via
+    their own ON DELETE CASCADE foreign key, but chat_messages.user_id
+    was never declared as one (it's nullable for anonymous-safe schema
+    reasons), so it needs an explicit delete here too."""
+    conn = _connect()
+    try:
+        conn.execute("DELETE FROM chat_messages WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_nutrition_checks_for_user(user_id: int, limit: int = 20) -> list:
     conn = _connect()
     try:

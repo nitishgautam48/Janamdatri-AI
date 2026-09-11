@@ -635,11 +635,64 @@
     </div>
   </section>
 
+  <!-- ========================= PRIVACY & CONSENT CENTRE ========================= -->
+  <section id="privacy-view" class="view">
+    <div class="card">
+      <h2 data-i18n="privacy.title">Privacy &amp; Consent Centre</h2>
+      <p class="section-sub" data-i18n="privacy.intro">What Janamdatri AI collects, why, who can see it, and how to export or delete it.</p>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="privacy.whatTitle">What data is collected</h3>
+      <ul class="recs-list">
+        <li data-i18n="privacy.what1">Assessment inputs you enter: vitals, symptom text, hemoglobin, and history flags</li>
+        <li data-i18n="privacy.what2">Your Mental Health Check (EPDS) responses and score</li>
+        <li data-i18n="privacy.what3">Your Nutrition Analysis questionnaire responses and results</li>
+        <li data-i18n="privacy.what4">Messages you send to the Instant Help chat</li>
+        <li data-i18n="privacy.what5">Text from any report/prescription you upload or paste (only while being analyzed - see below)</li>
+        <li data-i18n="privacy.what6">Your name and email, only if you create an account</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="privacy.whyTitle">Why it's collected</h3>
+      <p data-i18n="privacy.why1">Solely to compute your risk screening, nutrition, and mental-health results, and - if you choose to create an account - to show your own history and trends back to you across visits. Nothing here is used for advertising, and nothing is sold or shared with third parties.</p>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="privacy.whoTitle">Who can access it</h3>
+      <ul class="recs-list">
+        <li data-i18n="privacy.who1">Guest mode: your inputs are sent to our server only to compute a result, then the result is saved ONLY in your own browser (localStorage) - we do not keep guest data in our database at all.</li>
+        <li data-i18n="privacy.who2">A logged-in account: your assessments, chat messages, and nutrition checks ARE stored in our database, tied to your account, so you can see them across visits/devices. Only your own account (via your login session) can retrieve them - there is no admin dashboard or third party that can browse other users' data in this application.</li>
+        <li data-i18n="privacy.who3">A report you upload/paste is analyzed and the result is returned to you - the original file/text is not separately stored server-side beyond what's needed to process that one request.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="privacy.aiTitle">AI use disclosure</h3>
+      <p data-i18n="privacy.ai1">Risk scoring uses a machine-learning classifier trained on the public UCI Maternal Health Risk dataset, combined with rule-based logic (danger-sign phrase matching, expert rules) - all of it runs on this application's own server. No external AI provider or third-party LLM API is called, and none of your data is sent anywhere outside this application to generate a result.</p>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="privacy.controlsTitle">Your controls</h3>
+      <p class="section-sub" data-i18n="privacy.controlsSub">These act on the data for however you're currently using the app (guest or your logged-in account).</p>
+      <div class="privacy-controls-row">
+        <button type="button" class="secondary-btn" id="privacy-export-btn" data-i18n="privacy.exportBtn">⬇ Export My Data (JSON)</button>
+        <button type="button" class="secondary-btn" id="privacy-clear-local-btn" data-i18n="privacy.clearLocalBtn">🗑 Clear My Local Data</button>
+        <button type="button" class="secondary-btn danger" id="privacy-delete-account-btn" hidden data-i18n="privacy.deleteAccountBtn">⚠ Delete My Account &amp; All Data</button>
+      </div>
+      <p class="footnote" id="privacy-controls-note"></p>
+    </div>
+  </section>
+
 </main>
 
-<footer class="app-footer" data-i18n="footer">
-  Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset
-  with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.
+<footer class="app-footer">
+  <p data-i18n="footer">
+    Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset
+    with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.
+  </p>
+  <button type="button" class="link-btn" id="footer-privacy-link" data-i18n="privacy.footerLink">🔒 Privacy & Consent Centre</button>
 </footer>
 
 <!-- ========================= INSTANT HELP CHAT WIDGET ========================= -->

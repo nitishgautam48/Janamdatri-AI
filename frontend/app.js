@@ -106,11 +106,14 @@
   function syncUserArea() {
     const user = getSavedUser();
     const area = $("#user-area");
+    const deleteAccountBtn = $("#privacy-delete-account-btn");
     if (user && getToken()) {
       area.hidden = false;
       $("#user-name-display").textContent = "Hi, " + (user.name || user.email.split("@")[0]);
+      if (deleteAccountBtn) deleteAccountBtn.hidden = false;
     } else {
       area.hidden = true;
+      if (deleteAccountBtn) deleteAccountBtn.hidden = true;
     }
   }
 
@@ -275,6 +278,28 @@
       "help.women": "Women's Helpline", "help.child": "Child Helpline",
       "help.mental": "Mental Health Helpline (1800-599-0019)", "help.schemes": "Government Schemes",
       footer: "Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.",
+      "privacy.footerLink": "🔒 Privacy & Consent Centre",
+      "privacy.title": "Privacy & Consent Centre",
+      "privacy.intro": "What Janamdatri AI collects, why, who can see it, and how to export or delete it.",
+      "privacy.whatTitle": "What data is collected",
+      "privacy.what1": "Assessment inputs you enter: vitals, symptom text, hemoglobin, and history flags",
+      "privacy.what2": "Your Mental Health Check (EPDS) responses and score",
+      "privacy.what3": "Your Nutrition Analysis questionnaire responses and results",
+      "privacy.what4": "Messages you send to the Instant Help chat",
+      "privacy.what5": "Text from any report/prescription you upload or paste (only while being analyzed - see below)",
+      "privacy.what6": "Your name and email, only if you create an account",
+      "privacy.whyTitle": "Why it's collected",
+      "privacy.why1": "Solely to compute your risk screening, nutrition, and mental-health results, and - if you choose to create an account - to show your own history and trends back to you across visits. Nothing here is used for advertising, and nothing is sold or shared with third parties.",
+      "privacy.whoTitle": "Who can access it",
+      "privacy.who1": "Guest mode: your inputs are sent to our server only to compute a result, then the result is saved ONLY in your own browser (localStorage) - we do not keep guest data in our database at all.",
+      "privacy.who2": "A logged-in account: your assessments, chat messages, and nutrition checks ARE stored in our database, tied to your account, so you can see them across visits/devices. Only your own account (via your login session) can retrieve them - there is no admin dashboard or third party that can browse other users' data in this application.",
+      "privacy.who3": "A report you upload/paste is analyzed and the result is returned to you - the original file/text is not separately stored server-side beyond what's needed to process that one request.",
+      "privacy.aiTitle": "AI use disclosure",
+      "privacy.ai1": "Risk scoring uses a machine-learning classifier trained on the public UCI Maternal Health Risk dataset, combined with rule-based logic (danger-sign phrase matching, expert rules) - all of it runs on this application's own server. No external AI provider or third-party LLM API is called, and none of your data is sent anywhere outside this application to generate a result.",
+      "privacy.controlsTitle": "Your controls",
+      "privacy.controlsSub": "These act on the data for however you're currently using the app (guest or your logged-in account).",
+      "privacy.exportBtn": "⬇ Export My Data (JSON)", "privacy.clearLocalBtn": "🗑 Clear My Local Data",
+      "privacy.deleteAccountBtn": "⚠ Delete My Account & All Data",
     },
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
@@ -353,6 +378,28 @@
       "help.women": "महिला हेल्पलाइन", "help.child": "चाइल्ड हेल्पलाइन",
       "help.mental": "मानसिक स्वास्थ्य हेल्पलाइन (1800-599-0019)", "help.schemes": "सरकारी योजनाएं",
       footer: "यूसीआई मातृ स्वास्थ्य जोखिम डेटासेट पर प्रशिक्षित एआई मॉडल और शारीरिक व मानसिक (EPDS) जोखिम को कवर करने वाली नियम-आधारित प्रणाली का संयोजन। यह निदान नहीं है।",
+      "privacy.footerLink": "🔒 प्राइवेसी और सहमति केंद्र",
+      "privacy.title": "प्राइवेसी और सहमति केंद्र",
+      "privacy.intro": "Janamdatri AI क्या एकत्र करता है, क्यों, कौन देख सकता है, और इसे कैसे एक्सपोर्ट या डिलीट करें।",
+      "privacy.whatTitle": "कौन सा डेटा एकत्र किया जाता है",
+      "privacy.what1": "आपके द्वारा दर्ज मूल्यांकन इनपुट: वाइटल्स, लक्षण टेक्स्ट, हीमोग्लोबिन, और इतिहास फ्लैग",
+      "privacy.what2": "आपकी मानसिक स्वास्थ्य जांच (EPDS) प्रतिक्रियाएं और स्कोर",
+      "privacy.what3": "आपके पोषण विश्लेषण प्रश्नावली की प्रतिक्रियाएं और परिणाम",
+      "privacy.what4": "आपके द्वारा तुरंत सहायता चैट में भेजे गए संदेश",
+      "privacy.what5": "आपके द्वारा अपलोड/पेस्ट की गई रिपोर्ट/प्रिस्क्रिप्शन का टेक्स्ट (केवल विश्लेषण के दौरान - नीचे देखें)",
+      "privacy.what6": "आपका नाम और ईमेल, केवल यदि आप खाता बनाती हैं",
+      "privacy.whyTitle": "यह क्यों एकत्र किया जाता है",
+      "privacy.why1": "केवल आपके जोखिम मूल्यांकन, पोषण, और मानसिक स्वास्थ्य परिणामों की गणना के लिए, और यदि आप खाता बनाती हैं, तो आपका अपना इतिहास और रुझान आपको वापस दिखाने के लिए। इसका उपयोग विज्ञापन के लिए नहीं किया जाता, और कुछ भी किसी तीसरे पक्ष को नहीं बेचा या साझा किया जाता।",
+      "privacy.whoTitle": "इसे कौन देख सकता है",
+      "privacy.who1": "गेस्ट मोड: आपका इनपुट केवल परिणाम की गणना के लिए हमारे सर्वर पर भेजा जाता है, फिर परिणाम केवल आपके अपने ब्राउज़र (localStorage) में सहेजा जाता है - हम गेस्ट डेटा को अपने डेटाबेस में बिल्कुल नहीं रखते।",
+      "privacy.who2": "लॉग-इन खाता: आपके मूल्यांकन, चैट संदेश, और पोषण जांच हमारे डेटाबेस में आपके खाते से जुड़े रहते हैं, ताकि आप उन्हें विभिन्न विज़िट/डिवाइस में देख सकें। केवल आपका अपना खाता (आपके लॉगिन सेशन के माध्यम से) उन्हें प्राप्त कर सकता है - इस एप्लिकेशन में कोई एडमिन डैशबोर्ड या तीसरा पक्ष नहीं है जो अन्य उपयोगकर्ताओं का डेटा देख सके।",
+      "privacy.who3": "आपके द्वारा अपलोड/पेस्ट की गई रिपोर्ट का विश्लेषण किया जाता है और परिणाम आपको वापस दिया जाता है - मूल फ़ाइल/टेक्स्ट को उस एक रिक्वेस्ट को प्रोसेस करने के अलावा सर्वर पर अलग से संग्रहीत नहीं किया जाता।",
+      "privacy.aiTitle": "एआई उपयोग प्रकटीकरण",
+      "privacy.ai1": "जोखिम स्कोरिंग सार्वजनिक UCI मातृ स्वास्थ्य जोखिम डेटासेट पर प्रशिक्षित एक मशीन-लर्निंग मॉडल का उपयोग करती है, नियम-आधारित लॉजिक (खतरे के संकेत वाक्यांश मिलान, विशेषज्ञ नियम) के साथ मिलाकर - यह सब इस एप्लिकेशन के अपने सर्वर पर चलता है। कोई बाहरी एआई प्रदाता या तीसरे पक्ष का LLM API कॉल नहीं किया जाता, और परिणाम बनाने के लिए आपका कोई भी डेटा इस एप्लिकेशन के बाहर कहीं नहीं भेजा जाता।",
+      "privacy.controlsTitle": "आपके नियंत्रण",
+      "privacy.controlsSub": "ये आपके वर्तमान उपयोग (गेस्ट या आपका लॉग-इन खाता) के डेटा पर कार्य करते हैं।",
+      "privacy.exportBtn": "⬇ मेरा डेटा एक्सपोर्ट करें (JSON)", "privacy.clearLocalBtn": "🗑 मेरा लोकल डेटा साफ़ करें",
+      "privacy.deleteAccountBtn": "⚠ मेरा खाता और सभी डेटा हटाएं",
     },
   };
 
@@ -1897,4 +1944,93 @@
     $("#report-preview").textContent = data.extractedTextPreview || "";
     $("#report-results").scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // ==================================================================
+  // Privacy & Consent Centre
+  // ==================================================================
+
+  const SCOPED_STORAGE_KEYS = [
+    { key: HISTORY_KEY, label: "assessmentHistory" },
+    { key: EPDS_KEY, label: "mentalHealthCheck" },
+    { key: GUIDE_KEY, label: "pregnancyGuide" },
+    { key: NUTRITION_KEY, label: "nutritionCheck" },
+    { key: REPORT_VITALS_LOG_KEY, label: "reportVitalsLog" },
+    { key: TODAY_CARE_KEY, label: "todayCareChecklist" },
+    { key: CHAT_HISTORY_KEY, label: "chatHistory" },
+  ];
+
+  function collectLocalExportData() {
+    const data = {};
+    SCOPED_STORAGE_KEYS.forEach(({ key, label }) => {
+      try {
+        const raw = localStorage.getItem(scopedKey(key));
+        if (raw) data[label] = JSON.parse(raw);
+      } catch { /* skip this key */ }
+    });
+    return data;
+  }
+
+  function clearScopedLocalData() {
+    SCOPED_STORAGE_KEYS.forEach(({ key }) => {
+      try { localStorage.removeItem(scopedKey(key)); } catch { /* non-fatal */ }
+    });
+  }
+
+  $("#footer-privacy-link").addEventListener("click", () => showView("privacy-view"));
+
+  $("#privacy-export-btn").addEventListener("click", async () => {
+    const noteEl = $("#privacy-controls-note");
+    noteEl.textContent = "Preparing your export…";
+    const exportPayload = { exportedAt: new Date().toISOString(), local: collectLocalExportData() };
+
+    if (getToken()) {
+      try {
+        const [assessRes, nutritionRes] = await Promise.all([
+          fetch("/assessments/mine", { headers: authHeaders() }),
+          fetch("/nutrition-checks/mine", { headers: authHeaders() }),
+        ]);
+        if (assessRes.ok) exportPayload.serverAssessments = (await assessRes.json()).data.assessments;
+        if (nutritionRes.ok) exportPayload.serverNutritionChecks = (await nutritionRes.json()).data.checks;
+      } catch { /* export whatever we have locally even if the server calls fail */ }
+    }
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `janamdatri-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    noteEl.textContent = "Export downloaded.";
+  });
+
+  $("#privacy-clear-local-btn").addEventListener("click", () => {
+    const msg = currentLang === "hi"
+      ? "यह इस डिवाइस पर आपका मूल्यांकन इतिहास, पोषण जांच, चैट, और चेकलिस्ट डेटा मिटा देगा। जारी रखें?"
+      : "This will erase your local assessment history, nutrition checks, chat, and checklist data on this device (your account itself, if you have one, is not deleted). Continue?";
+    if (!window.confirm(msg)) return;
+    clearScopedLocalData();
+    resetPerUserUIState();
+    $("#privacy-controls-note").textContent = "Local data cleared on this device.";
+  });
+
+  $("#privacy-delete-account-btn").addEventListener("click", async () => {
+    const msg = "This will PERMANENTLY delete your account and everything tied to it on our server - assessments, chat messages, nutrition checks. This cannot be undone. Continue?";
+    if (!window.confirm(msg)) return;
+    const noteEl = $("#privacy-controls-note");
+    try {
+      const res = await fetch("/auth/account", { method: "DELETE", headers: authHeaders() });
+      if (!res.ok) throw new Error("Could not delete your account. Please try again.");
+      clearScopedLocalData();
+      clearSession();
+      syncUserArea();
+      resetPerUserUIState();
+      noteEl.textContent = "";
+      showWelcomeOverlay(true);
+    } catch (err) {
+      noteEl.textContent = err.message;
+    }
+  });
 })();
