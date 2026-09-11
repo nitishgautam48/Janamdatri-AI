@@ -1,0 +1,90 @@
+// Minimal, extensible EN/HI dictionary - ported incrementally from the
+// vanilla-JS app's TRANSLATIONS object as each screen is rebuilt. Only
+// keys actually used by a built screen live here; add more as later
+// phases port more views.
+export const LANG_KEY = "janamdatri_lang";
+
+export const translations = {
+  en: {
+    tagline: "Maternal Risk Triage",
+    "nav.home": "Home",
+    "nav.assess": "Assessment",
+    "nav.guide": "Pregnancy",
+    "nav.nutrition": "Nutrition",
+    "nav.psych": "Mental Wellness",
+    "nav.postpartum": "Postpartum",
+    "nav.history": "History",
+    "nav.reports": "Reports",
+    "nav.profile": "Profile",
+    "nav.help": "Helplines",
+    "nav.privacy": "Privacy",
+
+    "welcome.title": "Janamdatri AI",
+    "welcome.tagline": "Maternal Risk Triage — screening, guidance, and instant help, built for India.",
+    "welcome.login": "Log In",
+    "welcome.signup": "Sign Up",
+    "welcome.guest": "Continue as Guest",
+    "welcome.guestNote": "An account saves your assessment history and chat across visits. Guest mode keeps everything only on this device.",
+    "welcome.providerLink": "I'm a healthcare provider with a patient's share code →",
+
+    "home.greetingMorning": "Good morning",
+    "home.greetingAfternoon": "Good afternoon",
+    "home.greetingEvening": "Good evening",
+    "home.weekNotSet": "Set your pregnancy week",
+    "home.noData": "No data yet",
+    "home.todaysCare": "Today's Care",
+    "home.thisWeek": "This Week",
+    "home.urgentAlerts": "Urgent Alerts",
+    "home.tipOfDay": "Tip of the Day",
+    "home.noAlerts": "No current emergency signs",
+    "home.viewWarningSigns": "View Warning Signs →",
+
+    "chat.title": "Instant Help",
+    "chat.placeholder": "Ask a question or describe symptoms",
+    "chat.emergencyDisclaimer": "This is an automated helper, not a substitute for emergency care.",
+
+    "common.call108": "Call 108",
+    "common.logout": "Log out",
+  },
+  hi: {
+    tagline: "मातृ स्वास्थ्य जोखिम मूल्यांकन",
+    "nav.home": "होम",
+    "nav.assess": "मूल्यांकन",
+    "nav.guide": "गर्भावस्था",
+    "nav.nutrition": "पोषण",
+    "nav.psych": "मानसिक स्वास्थ्य",
+    "nav.postpartum": "प्रसवोत्तर",
+    "nav.history": "इतिहास",
+    "nav.reports": "रिपोर्ट्स",
+    "nav.profile": "प्रोफ़ाइल",
+    "nav.help": "हेल्पलाइन",
+    "nav.privacy": "प्राइवेसी",
+
+    "welcome.title": "Janamdatri AI",
+    "welcome.tagline": "मातृ स्वास्थ्य जोखिम मूल्यांकन — भारत के लिए बनी स्क्रीनिंग, मार्गदर्शन और तुरंत सहायता।",
+    "welcome.login": "लॉग इन",
+    "welcome.signup": "साइन अप",
+    "welcome.guest": "गेस्ट के रूप में जारी रखें",
+    "welcome.guestNote": "खाता आपके मूल्यांकन इतिहास और चैट को विज़िट के बीच सहेजता है। गेस्ट मोड में सब कुछ केवल इस डिवाइस पर रहता है।",
+    "welcome.providerLink": "मैं एक स्वास्थ्य कार्यकर्ता हूं और मेरे पास मरीज़ का शेयर कोड है →",
+
+    "home.greetingMorning": "सुप्रभात",
+    "home.greetingAfternoon": "नमस्कार",
+    "home.greetingEvening": "शुभ संध्या",
+    "home.weekNotSet": "अपना गर्भावस्था सप्ताह सेट करें",
+    "home.noData": "अभी कोई डेटा नहीं",
+    "home.todaysCare": "आज की देखभाल",
+    "home.thisWeek": "इस सप्ताह",
+    "home.urgentAlerts": "तत्काल चेतावनी",
+    "home.tipOfDay": "आज की सलाह",
+    "home.noAlerts": "कोई आपातकालीन संकेत नहीं",
+    "home.viewWarningSigns": "चेतावनी संकेत देखें →",
+
+    "chat.title": "तुरंत सहायता",
+    "chat.placeholder": "सवाल पूछें या लक्षण बताएं",
+    "chat.emergencyDisclaimer": "यह एक स्वचालित सहायक है, आपातकालीन देखभाल का विकल्प नहीं।",
+
+    "common.call108": "108 पर कॉल करें",
+    "common.logout": "लॉग आउट",
+  },
+};

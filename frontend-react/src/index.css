@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Vaadhan-inspired shell (near-black, generous whitespace, bold tight
+   headlines, small-caps eyebrow labels) adapted for a maternal-health
+   context: the neutral black/white is kept, but the single accent is
+   this app's existing warm rose brand color instead of Vaadhan's plain
+   white-on-black, and the clinical severity colors (critical/warning/
+   good) are preserved since risk triage depends on them being legible. */
+@theme {
+  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --color-bg: #0a0910;
+  --color-bg-soft: #100e17;
+  --color-surface: #15131d;
+  --color-surface-hover: #1c1926;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+
+  --color-ink: #f3eee8;
+  --color-muted: #9a92a3;
+  --color-faint: #625d6b;
+
+  --color-primary: #ef6f93;
+  --color-primary-dark: #c94a72;
+  --color-primary-soft: rgba(239, 111, 147, 0.14);
+
+  --color-critical: #ff5c5c;
+  --color-critical-soft: rgba(255, 92, 92, 0.14);
+  --color-warning: #f5b942;
+  --color-warning-soft: rgba(245, 185, 66, 0.14);
+  --color-good: #4ade80;
+  --color-good-soft: rgba(74, 222, 128, 0.14);
+
+  --color-paper: #f7f1ea;
+  --color-paper-ink: #171317;
+
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Vaadhan's faint dot/grid backdrop, reused wherever a section wants that
+   "chamber desk" texture instead of a flat fill. */
+.bg-grid {
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(239, 111, 147, 0.16) 0%, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: auto, 34px 34px, 34px 34px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* Custom scrollbar so the dark theme doesn't get a jarring light-chrome
+   scrollbar on the chat panel / long lists. */
+* {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
