@@ -126,7 +126,9 @@ html, body {
 .brand-text strong { font-size: 17px; }
 .brand-text span { font-size: 12px; opacity: 0.85; }
 
-.topnav { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.topnav { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.nav-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav-divider { width: 1.5px; height: 20px; background: rgba(255,255,255,0.3); margin: 0 4px; }
 .navlink {
   background: rgba(255,255,255,0.12);
   border: none;

@@ -69,14 +69,20 @@
       </div>
     </div>
     <nav class="topnav">
-      <button class="navlink active" data-view="home-view" data-i18n="nav.home">Home</button>
-      <button class="navlink" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
-      <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy Guide</button>
-      <button class="navlink" data-view="nutrition-view" data-i18n="nav.nutrition">Nutrition</button>
-      <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Health</button>
-      <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
-      <button class="navlink" data-view="reports-view" data-i18n="nav.reports">My Reports</button>
-      <button class="navlink" data-view="help-view" data-i18n="nav.help">Helplines</button>
+      <span class="nav-group">
+        <button class="navlink active" data-view="home-view" data-i18n="nav.home">Home</button>
+        <button class="navlink" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
+        <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy</button>
+        <button class="navlink" data-view="nutrition-view" data-i18n="nav.nutrition">Nutrition</button>
+        <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Wellness</button>
+      </span>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <span class="nav-group">
+        <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
+        <button class="navlink" data-view="reports-view" data-i18n="nav.reports">Reports</button>
+        <button class="navlink" data-view="profile-view" data-i18n="nav.profile">Profile</button>
+        <button class="navlink" data-view="help-view" data-i18n="nav.help">Helplines</button>
+      </span>
     </nav>
     <button class="lang-toggle" id="lang-toggle" type="button">हिंदी</button>
     <div class="user-area" id="user-area" hidden>
@@ -177,6 +183,10 @@
         <button type="button" class="action-card" data-goto-view="help-view">
           <span class="action-icon">📞</span>
           <span data-i18n="home.actionHelp">Helplines</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="profile-view">
+          <span class="action-icon">👤</span>
+          <span data-i18n="home.actionProfile">My Pregnancy Profile</span>
         </button>
       </div>
     </div>
@@ -444,6 +454,50 @@
       </div>
 
     </section>
+  </section>
+
+  <!-- ========================= MY PREGNANCY PROFILE VIEW ========================= -->
+  <section id="profile-view" class="view">
+    <div class="card">
+      <h2 data-i18n="profile.title">My Pregnancy Profile</h2>
+      <p class="section-sub" data-i18n="profile.sub">Enter this once - it personalizes your Home dashboard, Assessment, Nutrition targets, ANC checklist, and Pregnancy Guide, so you don't have to re-enter your week everywhere.</p>
+
+      <div class="guide-input-row">
+        <label class="radio"><input type="radio" name="profile-mode" value="lmp" checked /> <span data-i18n="guide.byLmp">By last menstrual period (LMP)</span></label>
+        <label class="radio"><input type="radio" name="profile-mode" value="week" /> <span data-i18n="guide.byWeek">By current week</span></label>
+      </div>
+      <div class="guide-input-fields">
+        <div class="field" id="profile-lmp-field">
+          <label for="profile-lmp" data-i18n="guide.lmpLabel">Last menstrual period date</label>
+          <input type="date" id="profile-lmp" />
+        </div>
+        <div class="field" id="profile-week-field" hidden>
+          <label for="profile-week" data-i18n="guide.weekLabel">Current gestational week</label>
+          <input type="number" id="profile-week" min="0" max="42" value="20" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label data-i18n="profile.previousLabel">Is this a previous pregnancy?</label>
+        <div class="guide-input-row">
+          <label class="radio"><input type="radio" name="profile-previous" value="yes" /> <span data-i18n="profile.previousYes">Yes</span></label>
+          <label class="radio"><input type="radio" name="profile-previous" value="no" checked /> <span data-i18n="profile.previousNo">No / first pregnancy</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="profile-conditions" data-i18n="profile.conditionsLabel">Existing medical conditions (optional)</label>
+        <textarea id="profile-conditions" rows="2" data-i18n-placeholder="profile.conditionsPlaceholder" placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none"></textarea>
+      </div>
+
+      <button type="button" class="submit-btn" id="profile-save-btn" data-i18n="profile.saveBtn">Save My Profile</button>
+      <p class="footnote" id="profile-save-note"></p>
+    </div>
+
+    <div class="card" id="profile-summary-card" hidden>
+      <h3 data-i18n="profile.summaryTitle">Current Profile</h3>
+      <div id="profile-summary-content"></div>
+    </div>
   </section>
 
   <!-- ========================= PREGNANCY GUIDE VIEW ========================= -->

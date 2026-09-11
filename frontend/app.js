@@ -203,8 +203,14 @@
   const TRANSLATIONS = {
     en: {
       tagline: "Maternal Risk Triage",
-      "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.nutrition": "Nutrition",
-      "nav.psych": "Mental Health", "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
+      "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy", "nav.nutrition": "Nutrition",
+      "nav.psych": "Mental Wellness", "nav.history": "History", "nav.reports": "Reports", "nav.profile": "Profile", "nav.help": "Helplines",
+      "profile.title": "My Pregnancy Profile",
+      "profile.sub": "Enter this once - it personalizes your Home dashboard, Assessment, Nutrition targets, ANC checklist, and Pregnancy Guide, so you don't have to re-enter your week everywhere.",
+      "profile.previousLabel": "Is this a previous pregnancy?", "profile.previousYes": "Yes", "profile.previousNo": "No / first pregnancy",
+      "profile.conditionsLabel": "Existing medical conditions (optional)",
+      "profile.conditionsPlaceholder": "e.g. thyroid, diabetes, hypertension - leave blank if none",
+      "profile.saveBtn": "Save My Profile", "profile.summaryTitle": "Current Profile",
       "home.weekNotSet": "Set your pregnancy week",
       "home.snapshotTitle": "Health Snapshot", "home.nutritionTitle": "Nutrition", "home.viewNutrition": "View Nutrition Analysis →",
       "home.todaysCare": "Today's Care", "home.thisWeek": "This Week", "home.urgentAlerts": "Urgent Alerts",
@@ -212,7 +218,7 @@
       "home.actionAssess": "Run Assessment", "home.actionGuide": "Pregnancy Guide",
       "home.actionNutrition": "Nutrition Analysis",
       "home.actionPsych": "Mental Health Check", "home.actionReports": "My Reports",
-      "home.actionChat": "Instant Help Chat", "home.actionHelp": "Helplines",
+      "home.actionChat": "Instant Help Chat", "home.actionHelp": "Helplines", "home.actionProfile": "My Pregnancy Profile",
       "home.tipLabel": "Tip of the day",
       "nutrition.title": "Nutrition Analysis",
       "nutrition.sub": "Tell me how often you eat these food groups, and I'll check your intake against pregnancy nutrient needs (iron, protein, folate, calcium, B12, vitamin D, iodine) and suggest specific, affordable Indian foods to close any gaps. Not a lab test - a starting point for the conversation with your ANC provider or a nutritionist.",
@@ -303,8 +309,14 @@
     },
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
-      "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.nutrition": "पोषण",
-      "nav.psych": "मानसिक स्वास्थ्य", "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
+      "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था", "nav.nutrition": "पोषण",
+      "nav.psych": "मानसिक स्वास्थ्य", "nav.history": "इतिहास", "nav.reports": "रिपोर्ट", "nav.profile": "प्रोफ़ाइल", "nav.help": "हेल्पलाइन",
+      "profile.title": "मेरी गर्भावस्था प्रोफ़ाइल",
+      "profile.sub": "इसे एक बार दर्ज करें - यह आपके होम डैशबोर्ड, मूल्यांकन, पोषण लक्ष्यों, एएनसी चेकलिस्ट, और गर्भावस्था गाइड को व्यक्तिगत बनाता है, ताकि आपको हर जगह अपना सप्ताह फिर से दर्ज न करना पड़े।",
+      "profile.previousLabel": "क्या यह पिछली गर्भावस्था है?", "profile.previousYes": "हां", "profile.previousNo": "नहीं / पहली गर्भावस्था",
+      "profile.conditionsLabel": "मौजूदा चिकित्सा स्थितियां (वैकल्पिक)",
+      "profile.conditionsPlaceholder": "उदा. थायरॉइड, मधुमेह, उच्च रक्तचाप - यदि कोई नहीं है तो खाली छोड़ें",
+      "profile.saveBtn": "मेरी प्रोफ़ाइल सहेजें", "profile.summaryTitle": "वर्तमान प्रोफ़ाइल",
       "home.weekNotSet": "अपना गर्भावस्था सप्ताह सेट करें",
       "home.snapshotTitle": "स्वास्थ्य स्नैपशॉट", "home.nutritionTitle": "पोषण", "home.viewNutrition": "पोषण विश्लेषण देखें →",
       "home.todaysCare": "आज की देखभाल", "home.thisWeek": "इस सप्ताह", "home.urgentAlerts": "आपातकालीन चेतावनी",
@@ -312,7 +324,7 @@
       "home.actionAssess": "मूल्यांकन करें", "home.actionGuide": "गर्भावस्था गाइड",
       "home.actionNutrition": "पोषण विश्लेषण",
       "home.actionPsych": "मानसिक स्वास्थ्य जांच", "home.actionReports": "मेरी रिपोर्ट",
-      "home.actionChat": "तुरंत सहायता चैट", "home.actionHelp": "हेल्पलाइन",
+      "home.actionChat": "तुरंत सहायता चैट", "home.actionHelp": "हेल्पलाइन", "home.actionProfile": "मेरी गर्भावस्था प्रोफ़ाइल",
       "home.tipLabel": "आज की सलाह",
       "nutrition.title": "पोषण विश्लेषण",
       "nutrition.sub": "बताएं कि आप ये खाद्य समूह कितनी बार खाती हैं, और मैं गर्भावस्था के पोषक तत्वों (आयरन, प्रोटीन, फोलेट, कैल्शियम, B12, विटामिन D, आयोडीन) से आपके सेवन की तुलना करूंगी और कमी को पूरा करने के लिए किफायती भारतीय भोजन सुझाऊंगी। यह लैब टेस्ट नहीं है - अपने ANC प्रदाता या न्यूट्रिशनिस्ट से बातचीत शुरू करने का एक तरीका है।",
@@ -446,6 +458,7 @@
     if (btn.dataset.view === "history-view") renderHistory();
     if (btn.dataset.view === "home-view") renderHome();
     if (btn.dataset.view === "assess-view") prefillPregnancyWeek();
+    if (btn.dataset.view === "profile-view") prefillProfileForm();
   }));
 
   // ==================================================================
@@ -823,6 +836,7 @@
       if (btn.dataset.gotoView === "psych-view" && !$("#epds-form").children.length) renderEpdsForm();
       if (btn.dataset.gotoView === "nutrition-view" && !$("#nutrition-form").children.length) renderNutritionForm();
       if (btn.dataset.gotoView === "assess-view") prefillPregnancyWeek();
+      if (btn.dataset.gotoView === "profile-view") prefillProfileForm();
     });
   });
 
@@ -1444,6 +1458,102 @@
     $("#guide-schemes").innerHTML = Object.entries(guide.schemes).map(([name, desc]) => `
       <div class="scheme-tile"><strong>${name}</strong><span>${desc}</span></div>`).join("");
   }
+
+  // ==================================================================
+  // My Pregnancy Profile - the ONE place LMP/week, previous-pregnancy,
+  // and existing conditions are entered, instead of asking for the week
+  // again in the Assessment wizard, Nutrition, and the Guide separately.
+  // The week/trimester/EDD piece reuses the exact same /pregnancy-guide
+  // call and saveLastGuide() every other module already reads from -
+  // this page is a friendlier front door onto that same data, not a
+  // second source of truth.
+  // ==================================================================
+
+  const PREGNANCY_PROFILE_EXTRA_KEY = "janamdatri_pregnancy_profile_extra";
+
+  function saveProfileExtra(extra) {
+    try { localStorage.setItem(scopedKey(PREGNANCY_PROFILE_EXTRA_KEY), JSON.stringify({ ...extra, updatedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
+  }
+
+  function loadProfileExtra() {
+    try { return JSON.parse(localStorage.getItem(scopedKey(PREGNANCY_PROFILE_EXTRA_KEY))); } catch { return null; }
+  }
+
+  $$('input[name="profile-mode"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      const mode = $('input[name="profile-mode"]:checked').value;
+      $("#profile-lmp-field").hidden = mode !== "lmp";
+      $("#profile-week-field").hidden = mode !== "week";
+    });
+  });
+
+  function renderProfileSummary() {
+    const guide = loadLastGuide();
+    const extra = loadProfileExtra();
+    const card = $("#profile-summary-card");
+    if (!guide) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    $("#profile-summary-content").innerHTML = `
+      <div class="epds-total-display"><span class="big">${guide.week}</span><span>weeks · Trimester ${guide.trimester}</span></div>
+      ${guide.estimatedDueDate ? `<p class="footnote">Estimated due date: ${guide.estimatedDueDate}</p>` : ""}
+      <p>${extra && extra.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy"}</p>
+      ${extra && extra.conditions ? `<p>Existing conditions: ${extra.conditions}</p>` : ""}`;
+  }
+
+  function prefillProfileForm() {
+    const guide = loadLastGuide();
+    const extra = loadProfileExtra();
+    if (guide && guide.lmp) {
+      $("#profile-lmp").value = guide.lmp;
+      $('input[name="profile-mode"][value="lmp"]').checked = true;
+      $("#profile-lmp-field").hidden = false;
+      $("#profile-week-field").hidden = true;
+    } else if (guide) {
+      $("#profile-week").value = guide.week;
+      $('input[name="profile-mode"][value="week"]').checked = true;
+      $("#profile-lmp-field").hidden = true;
+      $("#profile-week-field").hidden = false;
+    }
+    if (extra) {
+      if (extra.previousPregnancy === "yes") $('input[name="profile-previous"][value="yes"]').checked = true;
+      $("#profile-conditions").value = extra.conditions || "";
+    }
+    renderProfileSummary();
+  }
+
+  $("#profile-save-btn").addEventListener("click", async () => {
+    const noteEl = $("#profile-save-note");
+    const mode = $('input[name="profile-mode"]:checked').value;
+    const body = mode === "lmp" ? { lmp: $("#profile-lmp").value } : { week: Number($("#profile-week").value) };
+    if (mode === "lmp" && !body.lmp) {
+      noteEl.textContent = currentLang === "hi" ? "कृपया अपनी अंतिम मासिक धर्म तिथि दर्ज करें।" : "Please enter your last menstrual period date.";
+      return;
+    }
+
+    try {
+      const res = await fetch("/pregnancy-guide", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail);
+      saveLastGuide(payload.data);
+
+      const previousPregnancy = $('input[name="profile-previous"]:checked').value;
+      const conditions = $("#profile-conditions").value.trim();
+      saveProfileExtra({ previousPregnancy, conditions });
+
+      noteEl.textContent = currentLang === "hi"
+        ? `प्रोफ़ाइल सहेजी गई - सप्ताह ${payload.data.week} के लिए व्यक्तिगत बनाई गई।`
+        : `Profile saved - your Home dashboard, Assessment, and Nutrition are now personalized to week ${payload.data.week}.`;
+      renderProfileSummary();
+      renderHome();
+    } catch (err) {
+      noteEl.textContent = err.message || "Could not save your profile.";
+    }
+  });
 
   // ==================================================================
   // Nutrition Analysis
