@@ -15,7 +15,8 @@ Any Critical/Severe result always means "seek facility care now",
 regardless of how confident the underlying score is.
 """
 
-from . import danger_ladder, expert_system, hemoglobin_rules, human_intelligence, psych_eval, risk_formulation, text_analyzer
+from . import (danger_ladder, expert_system, hemoglobin_rules, human_intelligence, pregnancy_guide,
+               psych_eval, risk_formulation, text_analyzer)
 
 LEVEL_ORDER = ["Minimal", "Mild", "Moderate", "Severe", "Critical"]
 META = {
@@ -125,6 +126,12 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
             "The Mental Health Check (EPDS) score indicates a symptom burden significant enough to "
             "need a professional evaluation, separate from any physical findings."
         )
+    elif escalated_by == "preterm_labor_risk":
+        why.append(
+            "Labor signs reported before 37 weeks can mean preterm labor - a facility may be able to "
+            "slow or safely manage an early delivery, but only if reached in time, so this needs "
+            "immediate evaluation rather than waiting to see if it settles."
+        )
     elif escalated_by:
         rule = next((r for r in expert_rules if r["id"] == escalated_by), None)
         if rule:
@@ -145,6 +152,8 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
     for rule in expert_rules:
         if rule["activated"] and rule["name"] not in warning_signs:
             warning_signs.append(rule["name"])
+    if escalated_by == "preterm_labor_risk":
+        warning_signs.append("Preterm labor signs (before 37 weeks)")
 
     return {
         "actionTier": tier_info["tier"],
@@ -165,7 +174,7 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
 
 
 def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
-                hemoglobin: float = None, epds_responses: list = None) -> dict:
+                hemoglobin: float = None, epds_responses: list = None, pregnancy_week: int = None) -> dict:
     history = history or {}
 
     text_result = text_analyzer.analyze(text) if text else None
@@ -213,6 +222,21 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         escalated_by = worst_rule["id"]
         escalation_mri = round(worst_rule["maxScore"] * 100)
 
+    # Gestational age changes what a symptom means - labor signs that are
+    # completely normal at term are a preterm-labor EMERGENCY before 37
+    # weeks (a facility may still be able to slow or safely manage an early
+    # delivery, but only if reached in time), which the ML model and the
+    # rule-based checks above have no way to know without the week.
+    preterm_labor_alert = False
+    if pregnancy_week is not None and pregnancy_week < 37 and text_scores.get("obstructed_labor", 0.0) > 0.4:
+        preterm_labor_alert = True
+        obstructed_score = text_scores["obstructed_labor"]
+        preterm_level = "Critical" if obstructed_score >= 0.65 else "Severe"
+        if LEVEL_ORDER.index(preterm_level) > LEVEL_ORDER.index(level):
+            level = preterm_level
+            escalated_by = "preterm_labor_risk"
+            escalation_mri = round(obstructed_score * 100)
+
     # Psychological screening escalates the SAME overall severity scale -
     # a self-harm-flagged EPDS result is exactly as urgent as a physical
     # danger sign, and must never be hidden behind a good physical result.
@@ -235,10 +259,16 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     )
     explanation = _build_explanation(level, escalated_by, ladder_result, expert_rules, risk_formulation_result, ml_result)
 
+    gestational_context = None
+    if pregnancy_week is not None:
+        gestational_context = pregnancy_guide.get_guide(pregnancy_week)
+        gestational_context["pretermLaborAlert"] = preterm_labor_alert
+
     return {
         "mri": display_mri,
         "severity": {"level": level, "escalatedBy": escalated_by, **META[level]},
         "clinicalExplanation": explanation,
+        "gestationalContext": gestational_context,
         "mlPrediction": ml_result,
         "textAnalysis": text_result,
         "hemoglobinAssessment": hb_result,

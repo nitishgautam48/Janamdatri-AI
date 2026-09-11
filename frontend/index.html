@@ -228,6 +228,17 @@
           <input type="number" step="0.1" id="v-hb" min="2" max="18" placeholder="e.g. 10.5" />
         </div>
       </div>
+
+      <div class="form-section">
+        <div class="section-head">
+          <h2><span data-i18n="section.gestation">1c · Pregnancy Stage</span> <span class="badge-soft">optional</span></h2>
+        </div>
+        <p class="section-sub" data-i18n="gestation.sub">If you know your current week, this lets the assessment factor in trimester-specific risks (like preterm labor) and show week-appropriate warning signs.</p>
+        <div class="field" style="max-width:220px">
+          <label for="v-week" data-i18n="field.week">Current gestational week</label>
+          <input type="number" id="v-week" min="0" max="42" placeholder="e.g. 24" />
+        </div>
+      </div>
       <div class="wizard-nav"><span></span><button type="button" class="wizard-next-btn" data-goto="2" data-i18n="wizard.nextSymptoms">Next: Symptoms →</button></div>
       </div>
 
@@ -323,6 +334,11 @@
           <div class="tags" id="explain-warning-signs"></div>
         </div>
         <p class="footnote" id="explain-disclaimer"></p>
+      </div>
+
+      <div class="card" id="gestation-card" hidden>
+        <h3>🗓️ Pregnancy Stage Context</h3>
+        <div id="gestation-content"></div>
       </div>
 
       <div class="results-grid">

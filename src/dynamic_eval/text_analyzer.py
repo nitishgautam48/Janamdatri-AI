@@ -78,6 +78,7 @@ CATEGORIES = {
     },
     "obstructed_labor": {
         "moderate": ["labor pains for a long time", "contractions for hours", "long labor",
+                     "contractions", "having contractions", "labor pain",
                      "बहुत देर से प्रसव पीड़ा"],
         "severe": ["labor for more than a day", "stuck baby", "baby not coming out",
                    "severe abdominal pain during labor", "no progress in labor", "exhausted from labor",

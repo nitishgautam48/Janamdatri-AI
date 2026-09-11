@@ -77,6 +77,10 @@ class AssessRequest(BaseModel):
     epdsResponses: Optional[List[int]] = Field(
         default=None, description="10 EPDS responses (0-3 each) for perinatal mental health screening"
     )
+    pregnancyWeek: Optional[int] = Field(
+        default=None,
+        description="Current gestational week, if known - lets the assessment adjust for trimester (e.g. preterm labor before 37 weeks)",
+    )
 
 
 class PsychAssessRequest(BaseModel):
@@ -203,6 +207,7 @@ def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
             history=req.history or {},
             hemoglobin=req.hemoglobin,
             epds_responses=req.epdsResponses,
+            pregnancy_week=req.pregnancyWeek,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

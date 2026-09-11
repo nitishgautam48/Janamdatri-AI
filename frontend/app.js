@@ -83,7 +83,16 @@
     syncEpdsIncludeVisibility();
     pendingClarificationContext = null;
     unresolvedChatRounds = 0;
+    $("#v-week").value = "";
+    prefillPregnancyWeek();
     renderHome();
+  }
+
+  function prefillPregnancyWeek() {
+    const guide = loadLastGuide();
+    if (guide && guide.week != null && !$("#v-week").value) {
+      $("#v-week").value = guide.week;
+    }
   }
 
   function syncUserArea() {
@@ -202,6 +211,9 @@
       "section.anemia": "1b · Anemia Check",
       "anemia.sub": "If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.",
       "field.hb": "Hemoglobin (g/dL)",
+      "section.gestation": "1c · Pregnancy Stage",
+      "gestation.sub": "If you know your current week, this lets the assessment factor in trimester-specific risks (like preterm labor) and show week-appropriate warning signs.",
+      "field.week": "Current gestational week",
       "section.symptoms": "2 · Symptoms",
       "symptoms.sub": "Tap any that apply — they'll be added to the description below, or type your own.",
       "symptoms.placeholder": "Describe how you're feeling in your own words…",
@@ -270,6 +282,9 @@
       "section.anemia": "1b · एनीमिया जांच",
       "anemia.sub": "यदि आपके पास हाल की हीमोग्लोबिन (Hb) रिपोर्ट है, तो भारत-विशिष्ट एनीमिया ग्रेडिंग के लिए यहां दर्ज करें।",
       "field.hb": "हीमोग्लोबिन (g/dL)",
+      "section.gestation": "1c · गर्भावस्था चरण",
+      "gestation.sub": "यदि आप अपना वर्तमान सप्ताह जानती हैं, तो मूल्यांकन ट्राइमेस्टर-विशिष्ट जोखिम (जैसे समय-पूर्व प्रसव) को ध्यान में रख सकता है और सप्ताह-उचित चेतावनी संकेत दिखा सकता है।",
+      "field.week": "वर्तमान गर्भावधि सप्ताह",
       "section.symptoms": "2 · लक्षण",
       "symptoms.sub": "जो लागू हो उसे टैप करें — यह नीचे विवरण में जुड़ जाएगा, या अपने शब्दों में लिखें।",
       "symptoms.placeholder": "आप कैसा महसूस कर रही हैं, अपने शब्दों में बताएं…",
@@ -361,6 +376,7 @@
     showView(btn.dataset.view);
     if (btn.dataset.view === "history-view") renderHistory();
     if (btn.dataset.view === "home-view") renderHome();
+    if (btn.dataset.view === "assess-view") prefillPregnancyWeek();
   }));
 
   // ==================================================================
@@ -431,6 +447,7 @@
       showView(btn.dataset.gotoView);
       if (btn.dataset.gotoView === "history-view") renderHistory();
       if (btn.dataset.gotoView === "psych-view" && !$("#epds-form").children.length) renderEpdsForm();
+      if (btn.dataset.gotoView === "assess-view") prefillPregnancyWeek();
     });
   });
 
@@ -534,6 +551,8 @@
     const history = collectHistoryFlags();
     const hbVal = $("#v-hb").value;
     const hemoglobin = hbVal ? Number(hbVal) : null;
+    const weekVal = $("#v-week").value;
+    const pregnancyWeek = weekVal ? Number(weekVal) : null;
 
     const savedEpds = loadSavedEpds();
     const includeEpds = savedEpds && $("#include-epds").checked;
@@ -552,7 +571,7 @@
       const res = await fetch("/assess", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ text: text || null, vitals, history, hemoglobin, epdsResponses }),
+        body: JSON.stringify({ text: text || null, vitals, history, hemoglobin, epdsResponses, pregnancyWeek }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.detail || "Assessment failed.");
@@ -594,7 +613,8 @@
   function renderResult(data) {
     lastResult = data;
     const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules,
-      recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression, clinicalExplanation } = data;
+      recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression,
+      clinicalExplanation, gestationalContext } = data;
 
     const banner = $("#severity-banner");
     banner.className = "severity-banner level-" + severity.level.toLowerCase();
@@ -618,6 +638,21 @@
         warningGroup.hidden = true;
       }
       $("#explain-disclaimer").textContent = clinicalExplanation.disclaimer;
+    }
+
+    const gestationCard = $("#gestation-card");
+    if (gestationalContext) {
+      gestationCard.hidden = false;
+      const g = gestationalContext;
+      $("#gestation-content").innerHTML = `
+        <div class="epds-total-display"><span class="big">${g.week}</span><span>weeks · Trimester ${g.trimester}</span></div>
+        ${g.pretermLaborAlert ? `<div class="self-harm-alert">⚠️ Labor signs were reported before 37 weeks - this needs immediate facility evaluation, not waiting to see if it settles.</div>` : ""}
+        <p>${g.note}</p>
+        <p><strong>Watch for at this stage:</strong></p>
+        <ul class="recs-list danger">${g.dangerSigns.map((d) => `<li>${d}</li>`).join("")}</ul>
+        <p class="footnote">Next ANC visit: Visit ${g.nextAncVisit.visit} (${g.nextAncVisit.window})</p>`;
+    } else {
+      gestationCard.hidden = true;
     }
 
     const frac = Math.max(0, Math.min(mri, 100)) / 100;
@@ -951,6 +986,7 @@
   }
 
   syncEpdsIncludeVisibility();
+  prefillPregnancyWeek();
 
   // ==================================================================
   // Helplines page - government schemes reference
@@ -1014,6 +1050,7 @@
       rows.push(["Vitals", "Not included"]);
     }
     if ($("#v-hb").value) rows.push(["Hemoglobin", `${$("#v-hb").value} g/dL`]);
+    if ($("#v-week").value) rows.push(["Pregnancy week", `Week ${$("#v-week").value}`]);
     rows.push(["Symptoms", symptomText.value.trim() || "None described"]);
     const flags = Object.keys(collectHistoryFlags());
     rows.push(["History factors", flags.length ? flags.map((f) => f.replace(/_/g, " ")).join(", ") : "None selected"]);
