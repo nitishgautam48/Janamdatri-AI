@@ -250,8 +250,7 @@
       "guide.sub": "Week-by-week pregnancy check-up (ANC) schedule, nutrition tips, and danger signs — aligned with India's RCH programme.",
       "guide.byLmp": "By last menstrual period (LMP)", "guide.byWeek": "By current week",
       "guide.lmpLabel": "Last menstrual period date", "guide.weekLabel": "Current gestational week",
-      "guide.getGuide": "Get My Guide", "guide.nutrition": "Nutrition Tips",
-      "guide.dangerSigns": "Watch For (Danger Signs)", "guide.ancSchedule": "Pregnancy Check-up Schedule (ANC)",
+      "guide.getGuide": "Get My Guide", "guide.ancSchedule": "Pregnancy Check-up Schedule (ANC)",
       "guide.schemes": "Government Schemes",
       "psych.title": "Mental Health Check",
       "psych.sub": "The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've felt over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a diagnosis.",
@@ -326,8 +325,7 @@
       "guide.sub": "साप्ताहिक गर्भावस्था जांच (एएनसी) कार्यक्रम, पोषण सुझाव, और खतरे के संकेत — भारत के RCH कार्यक्रम के अनुसार।",
       "guide.byLmp": "अंतिम मासिक धर्म तिथि (LMP) से", "guide.byWeek": "वर्तमान सप्ताह से",
       "guide.lmpLabel": "अंतिम मासिक धर्म तिथि", "guide.weekLabel": "वर्तमान गर्भावधि सप्ताह",
-      "guide.getGuide": "मेरी गाइड प्राप्त करें", "guide.nutrition": "पोषण सुझाव",
-      "guide.dangerSigns": "ध्यान दें (खतरे के संकेत)", "guide.ancSchedule": "गर्भावस्था जांच कार्यक्रम (एएनसी)",
+      "guide.getGuide": "मेरी गाइड प्राप्त करें", "guide.ancSchedule": "गर्भावस्था जांच कार्यक्रम (एएनसी)",
       "guide.schemes": "सरकारी योजनाएं",
       "psych.title": "मानसिक स्वास्थ्य जांच",
       "psych.sub": "एडिनबर्ग प्रसवोत्तर अवसाद स्केल (EPDS) — पिछले 7 दिनों में आप कैसा महसूस कर रही हैं, इसके लिए एक मान्य 10-प्रश्न जांच उपकरण। यह एक जांच सहायता है, निदान नहीं।",
@@ -564,11 +562,14 @@
     });
   }
 
-  function renderThisWeek() {
-    const guide = loadLastGuide();
-    const container = $("#home-this-week");
+  // Shared by the Home dashboard's compact "This Week" card and the
+  // Pregnancy Guide's fuller timeline view - same real trimester content
+  // (pregnancy_guide.py), just rendered into different containers with
+  // distinct element ids (idPrefix) so both can exist in the DOM at once.
+  function renderThisWeekInto(containerSelector, idPrefix, guide) {
+    const container = $(containerSelector);
     if (!guide) {
-      container.innerHTML = `<p class="footnote">Set your pregnancy week in the Pregnancy Guide tab to see week-specific guidance here.</p>`;
+      container.innerHTML = `<p class="footnote">Set your pregnancy week to see week-specific guidance here.</p>`;
       return;
     }
     const sections = [
@@ -578,13 +579,17 @@
       { id: "warning", label: "Warning Signs", detail: `<ul>${guide.dangerSigns.map((d) => `<li>${d}</li>`).join("")}</ul>` },
     ];
     container.innerHTML = sections.map((s) => `
-      <button type="button" class="this-week-item" data-week-section="${s.id}"><span>${s.label}</span><span>→</span></button>
-      <div class="this-week-detail" id="this-week-detail-${s.id}">${s.detail}</div>`).join("");
+      <button type="button" class="this-week-item" data-target="${idPrefix}-detail-${s.id}"><span>${s.label}</span><span>→</span></button>
+      <div class="this-week-detail" id="${idPrefix}-detail-${s.id}">${s.detail}</div>`).join("");
     container.querySelectorAll(".this-week-item").forEach((btn) => {
       btn.addEventListener("click", () => {
-        $("#this-week-detail-" + btn.dataset.weekSection).classList.toggle("open");
+        document.getElementById(btn.dataset.target).classList.toggle("open");
       });
     });
+  }
+
+  function renderThisWeek() {
+    renderThisWeekInto("#home-this-week", "home-week", loadLastGuide());
   }
 
   function renderHomeAlerts(history) {
@@ -1238,9 +1243,9 @@
     $("#guide-due").textContent = guide.estimatedDueDate
       ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go`
       : `${guide.weeksUntilDue} weeks to go`;
+    $("#guide-progress-fill").style.width = `${Math.min((guide.week / 40) * 100, 100)}%`;
 
-    $("#guide-nutrition").innerHTML = guide.nutrition.map((n) => `<li>${n}</li>`).join("");
-    $("#guide-danger").innerHTML = guide.dangerSigns.map((d) => `<li>${d}</li>`).join("");
+    renderThisWeekInto("#guide-this-week", "guide-week", guide);
 
     $("#guide-anc-schedule").innerHTML = guide.ancSchedule.map((visit) => `
       <div class="anc-visit ${visit.visit === guide.nextAncVisit.visit ? "next" : ""}">

@@ -615,9 +615,9 @@ textarea { width: 100%; resize: vertical; }
 .guide-input-fields .submit-btn { width: auto; margin-top: 0; padding: 12px 24px; white-space: nowrap; }
 
 .guide-header-card {
-  display: flex; align-items: center; gap: 18px;
   background: linear-gradient(135deg, var(--tint-bg-strong), var(--tint-bg));
 }
+.guide-header-top { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
 .guide-week-badge {
   font-size: 22px; font-weight: 800; color: var(--primary-dark);
   background: white; border-radius: var(--radius-md);
@@ -625,6 +625,9 @@ textarea { width: 100%; resize: vertical; }
 }
 .guide-trimester { font-size: 17px; font-weight: 700; }
 .guide-due { color: var(--muted); font-size: 13px; }
+
+.progress-track.light { background: rgba(122, 37, 68, 0.14); margin-top: 0; }
+.progress-track.light .progress-fill { background: var(--primary); }
 
 .recs-list.danger li { border-left-color: var(--critical); background: #fdeceb; }
 
