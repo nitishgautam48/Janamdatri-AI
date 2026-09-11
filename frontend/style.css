@@ -682,6 +682,10 @@ textarea { width: 100%; resize: vertical; }
   background: #fdeceb; border: 2px solid var(--critical); color: #7a0000;
   padding: 14px 16px; border-radius: var(--radius-md); font-weight: 600; margin-top: 10px;
 }
+.epds-supportive-note {
+  background: var(--tint-bg); border-left: 3px solid var(--accent);
+  padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13.5px; margin: 10px 0;
+}
 
 /* ---------------- Nutrition Analysis ---------------- */
 

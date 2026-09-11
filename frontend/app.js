@@ -576,6 +576,18 @@
       tasks.push({ id: "followup_mental_health", text: "Follow up on your Mental Health Check result", manual: true });
     }
 
+    // A real follow-up loop, not a one-time score: this resolves itself
+    // the moment the person actually retakes the check (which resets
+    // savedAt), rather than needing to be manually dismissed.
+    const savedEpds = loadSavedEpds();
+    if (epdsFollowUpDue(savedEpds)) {
+      tasks.push({
+        id: "epds_followup_due",
+        text: `Time for a Mental Health Check follow-up (last check: ${savedEpds.result.classification}, ${epdsDaysSince(savedEpds)} days ago)`,
+        manual: false, done: false,
+      });
+    }
+
     tasks.push({ id: "warning_signs_review", text: "Review this week's warning signs", manual: true });
     return tasks;
   }
@@ -1058,7 +1070,8 @@
       $("#psych-content").innerHTML = `
         <div class="epds-total-display"><span class="big">${p.total}</span><span>/ ${p.maxScore}</span></div>
         <p><strong>${p.classification}</strong></p>
-        ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019</a></div>` : ""}`;
+        ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019</a></div>` : ""}
+        ${!p.selfHarmFlagged && EPDS_SUPPORTIVE_INFO[p.classification] ? `<p class="epds-supportive-note">💛 ${EPDS_SUPPORTIVE_INFO[p.classification]}</p>` : ""}`;
     } else {
       psychCard.hidden = true;
     }
@@ -1569,12 +1582,40 @@
     }
   });
 
+  // EPDS as a one-time score tells someone a number and stops there. This
+  // adds the two things a real screening loop needs: a plain-language
+  // supportive note tailored to the result (not just the clinical
+  // classification), and a genuine follow-up - re-checking after 2 weeks
+  // resolves itself the moment they actually retake the check, since that
+  // resets the "time since last check" the reminder is based on.
+  const EPDS_SUPPORTIVE_INFO = {
+    "Low probability": "Your responses don't suggest significant depression or anxiety symptoms right now. Mood can shift during pregnancy and after birth, so it's worth checking in again in a couple of weeks, especially if anything changes.",
+    "Possible depression": "Your responses suggest some symptoms worth paying attention to. This is common during and after pregnancy, and it doesn't mean anything is wrong with you as a mother. Consider mentioning how you've been feeling at your next ANC visit.",
+    "Probable depression": "Your responses suggest a symptom pattern consistent with depression. This is common, treatable, and not a personal failing - please talk to your ANC provider or a counselor soon rather than waiting to see if it passes.",
+    "High symptom burden": "Your responses suggest a significant symptom burden right now. Please talk to your ANC provider or a counselor soon - support that actually helps is available, and reaching out is the fastest way to feel better.",
+  };
+  const EPDS_FOLLOWUP_DAYS = 14;
+
+  function epdsDaysSince(savedEpds) {
+    if (!savedEpds) return null;
+    return Math.floor((Date.now() - new Date(savedEpds.savedAt).getTime()) / 86400000);
+  }
+
+  function epdsFollowUpDue(savedEpds) {
+    if (!savedEpds || savedEpds.result.classification === "Low probability") return false;
+    const days = epdsDaysSince(savedEpds);
+    return days != null && days >= EPDS_FOLLOWUP_DAYS;
+  }
+
   function renderEpdsResult(result) {
     $("#epds-result-card").hidden = false;
+    const supportiveNote = EPDS_SUPPORTIVE_INFO[result.classification];
     $("#epds-result-content").innerHTML = `
       <div class="epds-total-display"><span class="big">${result.total}</span><span>/ ${result.maxScore}</span></div>
       <p><strong>${result.classification}</strong></p>
       ${result.selfHarmFlagged ? `<div class="self-harm-alert">🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019 (toll-free, 24x7)</a></div>` : ""}
+      ${supportiveNote ? `<p class="epds-supportive-note">💛 ${supportiveNote}</p>` : ""}
+      ${!result.selfHarmFlagged && result.classification !== "Low probability" ? `<p class="footnote">We'll suggest a follow-up check in about 2 weeks - feelings during pregnancy can change, and it helps to keep checking in.</p>` : ""}
       <p class="footnote">${result.methodology}</p>`;
     $("#epds-result-card").scrollIntoView({ behavior: "smooth", block: "center" });
   }
