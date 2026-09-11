@@ -8,7 +8,10 @@ import NutritionPage from "./pages/NutritionPage";
 import MentalWellnessPage from "./pages/MentalWellnessPage";
 import PostpartumPage from "./pages/PostpartumPage";
 import HistoryPage from "./pages/HistoryPage";
-import ComingSoon from "./pages/ComingSoon";
+import ReportsPage from "./pages/ReportsPage";
+import HelplinesPage from "./pages/HelplinesPage";
+import ProfilePage from "./pages/ProfilePage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 export default function App() {
   return (
@@ -22,10 +25,10 @@ export default function App() {
         <Route path="/mental-wellness" element={<MentalWellnessPage />} />
         <Route path="/postpartum" element={<PostpartumPage />} />
         <Route path="/history" element={<HistoryPage />} />
-        <Route path="/reports" element={<ComingSoon title="Reports" />} />
-        <Route path="/profile" element={<ComingSoon title="My Profile" />} />
-        <Route path="/help" element={<ComingSoon title="Helplines" />} />
-        <Route path="/privacy" element={<ComingSoon title="Privacy & Consent Centre" />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/help" element={<HelplinesPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Route>
     </Routes>
   );

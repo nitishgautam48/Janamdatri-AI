@@ -41,4 +41,11 @@ export const api = {
   chat: (body) => request("/chat", { method: "POST", body }),
 
   helplines: () => request("/helplines"),
+
+  async analyzeDocument(formData) {
+    const res = await fetch("/documents/analyze", { method: "POST", body: formData });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.detail || "Could not analyze this report.");
+    return payload.data;
+  },
 };

@@ -113,6 +113,37 @@ export function loadSavedEpds() {
   return scopedGet(KEYS.EPDS);
 }
 
+export function addReportVitalsToHealthRecord(vitals) {
+  const log = scopedGet(KEYS.REPORT_VITALS_LOG) || [];
+  log.push({ timestamp: new Date().toISOString(), source: "report", ...vitals });
+  scopedSet(KEYS.REPORT_VITALS_LOG, log.slice(-50));
+}
+
+// Every piece of per-identity data this app keeps client-side, for the
+// Privacy Centre's export/clear controls.
+const EXPORTABLE_KEYS = [
+  { key: "HISTORY", label: "assessmentHistory" },
+  { key: "EPDS", label: "mentalHealthCheck" },
+  { key: "GUIDE", label: "pregnancyGuide" },
+  { key: "NUTRITION", label: "nutritionCheck" },
+  { key: "REPORT_VITALS_LOG", label: "reportVitalsLog" },
+  { key: "TODAY_CARE", label: "todayCareChecklist" },
+  { key: "CHAT_HISTORY", label: "chatHistory" },
+];
+
+export function collectLocalExportData() {
+  const data = {};
+  EXPORTABLE_KEYS.forEach(({ key, label }) => {
+    const value = scopedGet(KEYS[key]);
+    if (value != null) data[label] = value;
+  });
+  return data;
+}
+
+export function clearScopedLocalData() {
+  EXPORTABLE_KEYS.forEach(({ key }) => scopedRemove(KEYS[key]));
+}
+
 export const KEYS = {
   HISTORY: "janamdatri_history",
   GUIDE: "janamdatri_last_guide",

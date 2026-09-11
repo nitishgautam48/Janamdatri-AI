@@ -18,6 +18,7 @@ const SECONDARY_LINKS = [
   { to: "/reports", label: "nav.reports" },
   { to: "/profile", label: "nav.profile" },
   { to: "/help", label: "nav.help" },
+  { to: "/privacy", label: "nav.privacy" },
 ];
 
 function NavItem({ to, label }) {
