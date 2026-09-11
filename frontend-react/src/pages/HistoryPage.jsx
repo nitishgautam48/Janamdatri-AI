@@ -32,29 +32,47 @@ function TrendTile({ label, values, color, unit }) {
   );
 }
 
+// Each note is tagged Improving/Needs Attention/(Stable when there are no
+// notes at all) - the same underlying thresholds as before, just given an
+// explicit category so "What Changed" reads as a triage summary rather
+// than a list of plain sentences.
 function buildTrendSummary(series, chronological) {
   const notes = [];
   const hbFl = firstLastValid(series.hb);
   if (hbFl && Math.abs(hbFl.last - hbFl.first) >= 0.3) {
-    notes.push(
-      hbFl.last > hbFl.first
+    const improving = hbFl.last > hbFl.first;
+    notes.push({
+      tone: improving ? "good" : "warning",
+      label: improving ? "Improving" : "Needs Attention",
+      text: improving
         ? `Your hemoglobin has improved across your recent checks (${hbFl.first} → ${hbFl.last} g/dL).`
-        : `Your hemoglobin has been declining across your recent checks (${hbFl.first} → ${hbFl.last} g/dL) - worth mentioning at your next visit.`
-    );
+        : `Your hemoglobin has been declining across your recent checks (${hbFl.first} → ${hbFl.last} g/dL) - worth mentioning at your next visit.`,
+    });
   }
   const sbpFl = firstLastValid(series.sbp);
   if (sbpFl && Math.abs(sbpFl.last - sbpFl.first) >= 5) {
-    notes.push(
-      sbpFl.last > sbpFl.first
+    const worsening = sbpFl.last > sbpFl.first;
+    notes.push({
+      tone: worsening ? "warning" : "good",
+      label: worsening ? "Needs Attention" : "Improving",
+      text: worsening
         ? `Your blood pressure has been trending up (${sbpFl.first} → ${sbpFl.last} mmHg systolic) - worth watching closely.`
-        : `Your blood pressure has improved (${sbpFl.first} → ${sbpFl.last} mmHg systolic).`
-    );
+        : `Your blood pressure has improved (${sbpFl.first} → ${sbpFl.last} mmHg systolic).`,
+    });
   }
   const weightFl = firstLastValid(series.weight);
   if (weightFl && weightFl.last < weightFl.first) {
-    notes.push(`Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.`);
+    notes.push({
+      tone: "warning",
+      label: "Needs Attention",
+      text: `Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.`,
+    });
   } else if (weightFl && weightFl.last - weightFl.first >= 2) {
-    notes.push(`Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.`);
+    notes.push({
+      tone: "warning",
+      label: "Needs Attention",
+      text: `Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.`,
+    });
   }
   if (chronological.length >= 2) {
     const prev = chronological[chronological.length - 2];
@@ -63,7 +81,11 @@ function buildTrendSummary(series, chronological) {
       const increased = LEVEL_ORDER.indexOf(latest.severityLevel) > LEVEL_ORDER.indexOf(prev.severityLevel);
       const escalatedBy = latest.result?.severity?.escalatedBy;
       const reason = escalatedBy ? ` because of ${escalatedBy.replace(/_/g, " ")}` : "";
-      notes.push(`Your risk level ${increased ? "increased" : "decreased"} from ${prev.severityLevel} to ${latest.severityLevel}${reason}.`);
+      notes.push({
+        tone: increased ? "critical" : "good",
+        label: increased ? "Needs Attention" : "Improving",
+        text: `Your risk level ${increased ? "increased" : "decreased"} from ${prev.severityLevel} to ${latest.severityLevel}${reason}.`,
+      });
     }
   }
   return notes;
@@ -128,12 +150,23 @@ function HealthTrends({ history }) {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {visibleTiles.map((t) => <TrendTile key={t.label} {...t} />)}
       </div>
-      <div className="mt-3 space-y-1.5">
-        {summaryNotes.length ? (
-          summaryNotes.map((n, i) => <p key={i} className="text-sm text-ink">📈 {n}</p>)
-        ) : (
-          <p className="text-sm text-muted">No major changes detected across your recent assessments.</p>
-        )}
+      <div className="mt-4">
+        <p className="eyebrow mb-2">What Changed</p>
+        <div className="space-y-2">
+          {summaryNotes.length ? (
+            summaryNotes.map((n, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <Pill tone={n.tone} className="mt-0.5 shrink-0 !px-2 !py-0.5 text-[10px]">{n.label}</Pill>
+                <p className="text-sm text-ink">{n.text}</p>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <Pill tone="good" className="!px-2 !py-0.5 text-[10px]">Stable</Pill>
+              <p className="text-sm text-muted">No major changes detected across your recent assessments.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

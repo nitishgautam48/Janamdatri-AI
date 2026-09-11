@@ -6,10 +6,20 @@ import { KEYS, lastKnownHemoglobin, scopedGet, scopedSet } from "../lib/storage"
 
 const STATUS_TONE = { Adequate: "good", Borderline: "warning", Low: "critical" };
 
+// A simple average of the per-nutrient percentages already shown below -
+// not a new medical claim, just one number to anchor the page on. Computed
+// client-side so a result saved before this field existed still gets one.
+function withNutritionScore(data) {
+  if (!data || data.nutritionScore != null) return data;
+  const percents = Object.values(data.nutrients || {}).map((n) => n.percent);
+  const nutritionScore = percents.length ? Math.round(percents.reduce((a, b) => a + b, 0) / percents.length) : 0;
+  return { ...data, nutritionScore };
+}
+
 export default function NutritionPage() {
   const [items, setItems] = useState(null);
   const [responses, setResponses] = useState({});
-  const [result, setResult] = useState(() => scopedGet(KEYS.NUTRITION)?.result || null);
+  const [result, setResult] = useState(() => withNutritionScore(scopedGet(KEYS.NUTRITION)?.result || null));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -29,11 +39,11 @@ export default function NutritionPage() {
     const guide = scopedGet(KEYS.GUIDE);
     setBusy(true);
     try {
-      const data = await api.nutritionAssess({
+      const data = withNutritionScore(await api.nutritionAssess({
         responses,
         hemoglobin: lastKnownHemoglobin(),
         pregnancyWeek: guide ? guide.week : null,
-      });
+      }));
       setResult(data);
       scopedSet(KEYS.NUTRITION, { result: data, savedAt: new Date().toISOString() });
     } catch (err) {
@@ -84,6 +94,26 @@ export default function NutritionPage() {
           {busy ? "…" : "Analyze My Diet"}
         </Button>
       </Card>
+
+      {result && (
+        <Card className={result.nutritionScore >= 70 ? "border-good/30" : result.nutritionScore >= 40 ? "border-warning/30 bg-warning-soft" : "border-critical/30 bg-critical-soft"}>
+          <p className="eyebrow mb-2">Nutrition Score</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-ink">{result.nutritionScore}</span>
+            <span className="text-sm text-muted">/ 100</span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-hover">
+            <div
+              className={`h-full rounded-full ${result.nutritionScore >= 70 ? "bg-good" : result.nutritionScore >= 40 ? "bg-warning" : "bg-critical"}`}
+              style={{ width: `${result.nutritionScore}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-faint">
+            An overall read across the nutrients below - a starting point for the conversation with your ANC provider,
+            not a lab result.
+          </p>
+        </Card>
+      )}
 
       {result && (
         <Card>

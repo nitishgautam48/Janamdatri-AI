@@ -15,11 +15,7 @@ export function buildTodayCareTasks(history) {
     { id: "hydration", text: "Stay hydrated through the day", manual: true },
   ];
 
-  const gaps = nutrition?.result?.nutrients
-    ? Object.entries(nutrition.result.nutrients)
-        .filter(([, v]) => v.status !== "Adequate")
-        .map(([name]) => name)
-    : [];
+  const gaps = nutrition?.result?.gaps || [];
   if (gaps.length) {
     tasks.push({ id: "nutrition_gaps", text: `Possible nutrition gaps to discuss with your provider: ${gaps.join(", ")}`, manual: true });
   } else {
