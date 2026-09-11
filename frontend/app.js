@@ -134,7 +134,7 @@
     en: {
       tagline: "Maternal Risk Triage",
       "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.psych": "Mental Health",
-      "nav.history": "History", "nav.help": "Helplines",
+      "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
       emergencyBtn: "🚨 Call 108",
       disclaimer: "⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.",
       "section.vitals": "1 · Vitals", includeVitals: "Include vitals",
@@ -178,6 +178,12 @@
       "psych.score": "Score My Mood", "psych.result": "Your Result",
       "history.title": "Assessment History", clear: "Clear",
       "history.stored": "Stored only in this browser (not sent anywhere).",
+      "reports.title": "My Reports",
+      "reports.sub": "Upload a prescription or lab report (PDF/TXT), or paste its text, and get a clear medication schedule (what to take, when) and a summary of any values worth discussing with your provider.",
+      "reports.uploadLabel": "Upload file (.pdf or .txt)", "reports.pasteLabel": "Paste the report's text",
+      "reports.pastePlaceholder": "e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
+      "reports.analyze": "Analyze Report", "reports.summary": "Summary", "reports.schedule": "Medication Schedule",
+      "reports.findings": "Key Findings", "reports.preview": "Extracted Text (preview)",
       "help.title": "Helplines", "help.ambulance": "Emergency Ambulance",
       "help.transport": "Pregnancy Emergency Transport", "help.national": "National Health Helpline",
       "help.women": "Women's Helpline", "help.child": "Child Helpline",
@@ -187,7 +193,7 @@
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
       "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.psych": "मानसिक स्वास्थ्य",
-      "nav.history": "इतिहास", "nav.help": "हेल्पलाइन",
+      "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
       emergencyBtn: "🚨 108 पर कॉल करें",
       disclaimer: "⚠️ यह केवल एक जांच सहायता है — निदान नहीं। <strong>गंभीर</strong> या <strong>अति गंभीर</strong> परिणाम का मतलब है तुरंत अस्पताल जाएं।",
       "section.vitals": "1 · महत्वपूर्ण संकेत", includeVitals: "Vitals शामिल करें",
@@ -231,6 +237,12 @@
       "psych.score": "मेरा मूड स्कोर करें", "psych.result": "आपका परिणाम",
       "history.title": "मूल्यांकन इतिहास", clear: "साफ़ करें",
       "history.stored": "केवल इस ब्राउज़र में संग्रहीत (कहीं भेजा नहीं जाता)।",
+      "reports.title": "मेरी रिपोर्ट",
+      "reports.sub": "प्रिस्क्रिप्शन या लैब रिपोर्ट (PDF/TXT) अपलोड करें, या उसका टेक्स्ट पेस्ट करें, और दवा का शेड्यूल (क्या लेना है, कब लेना है) पाएं।",
+      "reports.uploadLabel": "फ़ाइल अपलोड करें (.pdf या .txt)", "reports.pasteLabel": "रिपोर्ट का टेक्स्ट पेस्ट करें",
+      "reports.pastePlaceholder": "उदा. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
+      "reports.analyze": "रिपोर्ट का विश्लेषण करें", "reports.summary": "सारांश", "reports.schedule": "दवा शेड्यूल",
+      "reports.findings": "मुख्य निष्कर्ष", "reports.preview": "निकाला गया टेक्स्ट (पूर्वावलोकन)",
       "help.title": "हेल्पलाइन", "help.ambulance": "आपातकालीन एम्बुलेंस",
       "help.transport": "गर्भावस्था आपातकालीन परिवहन", "help.national": "राष्ट्रीय स्वास्थ्य हेल्पलाइन",
       "help.women": "महिला हेल्पलाइन", "help.child": "चाइल्ड हेल्पलाइन",
@@ -344,6 +356,7 @@
 
   function collectVitals() {
     if (!vitalsEnable.checked) return null;
+    if ($$("#vitals-grid input").some((inp) => inp.value.trim() === "")) return null;
     return {
       Age: Number($("#v-age").value),
       SystolicBP: Number($("#v-sbp").value),
@@ -362,6 +375,14 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorMsg.hidden = true;
+
+    const vitalsErr = vitalsValidationError();
+    if (vitalsErr) {
+      errorMsg.textContent = vitalsErr;
+      errorMsg.hidden = false;
+      goToWizardStep(1);
+      return;
+    }
 
     const text = symptomText.value.trim();
     const vitals = collectVitals();
@@ -796,8 +817,30 @@
     $("#assess-form").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function vitalsValidationError() {
+    if (!vitalsEnable.checked) return null;
+    const incomplete = $$("#vitals-grid input").some((inp) => inp.value.trim() === "");
+    if (incomplete) {
+      return currentLang === "hi"
+        ? "कृपया सभी Vitals भरें, या ऊपर 'Vitals शामिल करें' को अनचेक करें।"
+        : "Please fill in all vitals fields, or uncheck 'Include vitals' above.";
+    }
+    return null;
+  }
+
   $$(".wizard-next-btn, .wizard-back-btn").forEach((btn) => {
-    btn.addEventListener("click", () => goToWizardStep(Number(btn.dataset.goto)));
+    btn.addEventListener("click", () => {
+      if (btn.classList.contains("wizard-next-btn") && btn.closest(".wizard-step").dataset.step === "1") {
+        const err = vitalsValidationError();
+        if (err) {
+          errorMsg.textContent = err;
+          errorMsg.hidden = false;
+          return;
+        }
+      }
+      errorMsg.hidden = true;
+      goToWizardStep(Number(btn.dataset.goto));
+    });
   });
 
   function renderReviewSummary() {
@@ -899,4 +942,75 @@
       appendChatMessage("bot", "Sorry, I couldn't reach the help service. Please check your connection or call 108 if this is urgent.");
     }
   });
+
+  // ==================================================================
+  // My Reports - document/prescription analysis
+  // ==================================================================
+
+  const TIME_ORDER = ["Morning", "Afternoon", "Evening", "Night", "As needed"];
+
+  $("#report-analyze-btn").addEventListener("click", async () => {
+    const fileInput = $("#report-file");
+    const pastedText = $("#report-text").value.trim();
+    const errorEl = $("#report-error");
+    const btn = $("#report-analyze-btn");
+    errorEl.hidden = true;
+
+    const file = fileInput.files[0];
+    if (!file && !pastedText) {
+      errorEl.textContent = "Upload a file or paste the report's text first.";
+      errorEl.hidden = false;
+      return;
+    }
+
+    const formData = new FormData();
+    if (file) formData.append("file", file);
+    if (pastedText) formData.append("text", pastedText);
+
+    btn.disabled = true;
+    btn.querySelector(".spinner").hidden = false;
+    try {
+      const res = await fetch("/documents/analyze", { method: "POST", body: formData });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Could not analyze this report.");
+      renderReportResult(payload.data);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.querySelector(".spinner").hidden = true;
+    }
+  });
+
+  function renderReportResult(data) {
+    $("#report-results").hidden = false;
+    $("#report-summary-text").textContent = data.summary;
+
+    const scheduleEl = $("#report-schedule");
+    const times = Object.keys(data.scheduleByTime || {});
+    if (times.length === 0) {
+      scheduleEl.innerHTML = `<p class="schedule-empty">No medication schedule could be determined from this report.</p>`;
+    } else {
+      scheduleEl.innerHTML = TIME_ORDER.filter((t) => data.scheduleByTime[t]).map((time) => `
+        <div class="schedule-tile">
+          <h4>${time}</h4>
+          <ul>${data.scheduleByTime[time].map((m) => `<li>${m}</li>`).join("")}</ul>
+        </div>`).join("");
+    }
+
+    const findingsEl = $("#report-findings");
+    if (!data.findings || data.findings.length === 0) {
+      findingsEl.innerHTML = `<p class="schedule-empty">No lab values were recognized in this report.</p>`;
+    } else {
+      findingsEl.innerHTML = data.findings.map((f) => `
+        <div class="rule-card">
+          <div class="rule-card-head"><strong>${f.label}: ${f.value}</strong>${f.flag ? '<span class="sev-pill Moderate">Review</span>' : ""}</div>
+          ${f.flag ? `<p>${f.flag}</p>` : ""}
+        </div>`).join("");
+    }
+
+    $("#report-preview").textContent = data.extractedTextPreview || "";
+    $("#report-results").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 })();

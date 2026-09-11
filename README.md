@@ -120,6 +120,8 @@ GET  /psych-assess/items             the 10 EPDS questions + response options
 POST /psych-assess                    EPDS scoring alone: { responses: [0-3 x10] }
 POST /pregnancy-guide                 { lmp? (ISO date), week? } -> trimester guide
 POST /chat                            { message } -> rule-based instant-help assistant
+POST /documents/analyze               upload (.pdf/.txt) or paste report text ->
+                                      medication schedule + flagged findings
 GET  /helplines                       India helplines + government scheme references
 ```
 
@@ -127,7 +129,8 @@ GET  /helplines                       India helplines + government scheme refere
 `epdsResponses`. `history` is an optional structured-flags object matching
 the factor names in `risk_formulation.py` (e.g. `{"prior_csection": true,
 "regular_anc_visits": true}`). Passing `x-user-token` persists the result
-server-side for that account.
+server-side for that account. `POST /documents/analyze` takes multipart
+form data with either a `file` field or a `text` field (or both).
 
 ## Frontend — `frontend/`
 
@@ -138,16 +141,21 @@ FastAPI:
   visit — never re-shown to a returning guest or logged-in user
 - A **4-step assessment wizard** (Vitals → Symptoms → History → Review)
   with a progress bar and a review summary before submission, instead of
-  one long scrolling form
+  one long scrolling form — vitals fields start empty with example
+  placeholders, never pre-filled with values that could be submitted
+  unnoticed
 - A **results view**: risk gauge (animated count-up), ML probability
   bars, danger-sign ladder, risk-factor tags, anemia/EPDS cards, and a
   **Clinical Impression** card (cross-signal patterns + corroboration
   confidence from `human_intelligence.py`)
-- A **Pregnancy Guide** tab, a **Mental Health Check (EPDS)** tab, an
-  assessment **History** tab (server-backed when logged in, localStorage
-  otherwise), and a **Helplines** page
+- A **Pregnancy Guide** tab, a **Mental Health Check (EPDS)** tab, a
+  **My Reports** tab (upload or paste a prescription/lab report for a
+  medication schedule + flagged findings), an assessment **History** tab
+  (server-backed when logged in, localStorage otherwise), and a
+  **Helplines** page
 - A floating **Instant Help chat** widget on every page, with real-time
-  emergency detection
+  emergency detection and a graceful clarifying-question fallback for
+  vague symptom language ("I'm in pain") instead of a dead-end response
 - A full **English/Hindi** language toggle, bilingual symptom chips, and
   a text-to-speech **Read Aloud** button for low-literacy accessibility
 

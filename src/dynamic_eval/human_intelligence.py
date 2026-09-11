@@ -48,7 +48,48 @@ PATTERNS = [
         "note": ("Hypertensive symptoms alongside bleeding can indicate placental abruption - "
                  "a combination that is more urgent than either finding alone suggests."),
     },
+    {
+        "id": "compounded_malnutrition_anemia",
+        "requires": {"malnutrition": 0.5, "anemia": 0.4},
+        "note": ("Poor nutrition alongside anemia compounds risk to both mother and baby - "
+                 "this needs dietary support and iron therapy together, not either alone."),
+    },
+    {
+        "id": "infection_with_fetal_distress",
+        "requires": {"infection": 0.5, "fetal_distress": 0.4},
+        "note": ("Signs of infection alongside reduced fetal movement can indicate the infection is "
+                 "affecting the baby (e.g. chorioamnionitis) - this needs urgent facility evaluation."),
+    },
+    {
+        "id": "obstructed_labor_with_hemorrhage",
+        "requires": {"obstructed_labor": 0.5, "hemorrhage": 0.4},
+        "note": ("Obstructed labor alongside bleeding raises concern for uterine rupture - "
+                 "a surgical emergency, not something to keep waiting out at home."),
+    },
 ]
+
+
+def _detect_psych_physical_pattern(scores: dict, psych_result: dict) -> dict:
+    """Perinatal mental health symptoms and physical danger signs compound
+    each other (a frightening physical symptom worsens anxiety/depression,
+    and depression can delay someone from seeking care for a physical
+    danger sign) - this can't be expressed by the score-only PATTERNS list
+    above since it needs the EPDS result as a second input, not a score
+    dict entry."""
+    if not psych_result:
+        return None
+    psych_significant = psych_result["selfHarmFlagged"] or psych_result["total"] >= 10
+    physical_significant = any(v >= 0.5 for k, v in scores.items() if k != "malnutrition") or \
+        scores.get("malnutrition", 0) >= 0.5
+    if psych_significant and physical_significant:
+        return {
+            "id": "compounded_psychological_physical",
+            "note": ("A significant physical finding alongside a raised mental-health screening score "
+                     "means both need addressing together - untreated anxiety/depression can delay "
+                     "seeking care for the physical symptom, and a frightening physical symptom can "
+                     "worsen mental health."),
+        }
+    return None
 
 
 def _detect_patterns(scores: dict) -> list:
@@ -95,6 +136,9 @@ def synthesize(scores: dict, ml_result: dict = None, text_result: dict = None, l
                expert_rules: list = None, risk_formulation_result: dict = None, psych_result: dict = None) -> dict:
     expert_rules = expert_rules or []
     patterns = _detect_patterns(scores)
+    psych_pattern = _detect_psych_physical_pattern(scores, psych_result)
+    if psych_pattern:
+        patterns.append(psych_pattern)
     confidence = _assess_confidence(ml_result, text_result, ladder_result, expert_rules,
                                      risk_formulation_result, psych_result)
 

@@ -16,6 +16,8 @@ Endpoints reflect the layered architecture:
   POST /psych-assess                  - EPDS scoring alone
   POST /pregnancy-guide               - trimester/week-based ANC schedule and guidance
   POST /chat                           - rule-based instant-help assistant
+  POST /documents/analyze              - upload/paste a prescription or lab report ->
+                                         medication schedule + flagged findings
   GET  /helplines                      - India helplines and scheme references
 """
 
@@ -23,13 +25,13 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import auth
-from src.dynamic_eval import chat_assistant, pregnancy_guide, psych_eval, triage
+from src import auth, document_extractor
+from src.dynamic_eval import chat_assistant, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -277,6 +279,45 @@ def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
             print(f"Could not persist chat message: {exc}")
 
     return {"success": True, "data": result}
+
+
+# ============================================================
+#  DOCUMENT ANALYSIS (prescriptions / lab reports)
+# ============================================================
+
+MAX_DOCUMENT_TEXT_LENGTH = 50_000
+
+
+@app.post("/documents/analyze")
+async def analyze_document(file: UploadFile = File(None), text: str = Form(None)):
+    if not file and not text:
+        raise HTTPException(status_code=400, detail="Upload a file or paste the report's text.")
+
+    if file:
+        content = await file.read()
+        try:
+            extracted_text = document_extractor.extract_text(file.filename, content)
+        except document_extractor.ExtractionError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        source_name = file.filename
+    else:
+        extracted_text = text
+        source_name = "pasted text"
+
+    if not extracted_text or not extracted_text.strip():
+        raise HTTPException(status_code=400, detail="No text found to analyze.")
+
+    extracted_text = extracted_text[:MAX_DOCUMENT_TEXT_LENGTH]
+    result = report_analyzer.analyze(extracted_text)
+
+    return {
+        "success": True,
+        "data": {
+            **result,
+            "sourceName": source_name,
+            "extractedTextPreview": extracted_text[:2000],
+        },
+    }
 
 
 @app.get("/helplines")

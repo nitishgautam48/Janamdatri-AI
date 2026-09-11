@@ -73,6 +73,7 @@
       <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy Guide</button>
       <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Health</button>
       <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
+      <button class="navlink" data-view="reports-view" data-i18n="nav.reports">My Reports</button>
       <button class="navlink" data-view="help-view" data-i18n="nav.help">Helplines</button>
     </nav>
     <button class="lang-toggle" id="lang-toggle" type="button">हिंदी</button>
@@ -105,6 +106,8 @@
         <div class="wizard-step-dot" data-step-dot="4"><span>4</span><label data-i18n="wizard.review">Review</label></div>
       </div>
 
+      <p class="error-msg" id="form-error" hidden></p>
+
       <div class="wizard-step" data-step="1">
       <div class="form-section">
         <div class="section-head">
@@ -117,27 +120,27 @@
         <div class="vitals-grid" id="vitals-grid">
           <div class="field">
             <label for="v-age" data-i18n="field.age">Age (years)</label>
-            <input type="number" id="v-age" min="12" max="60" value="28" />
+            <input type="number" id="v-age" min="12" max="60" placeholder="e.g. 28" />
           </div>
           <div class="field">
             <label for="v-sbp"><span data-i18n="field.sbp">Systolic BP</span> <span class="hint">normal &lt;120</span></label>
-            <input type="number" id="v-sbp" min="60" max="220" value="120" />
+            <input type="number" id="v-sbp" min="60" max="220" placeholder="e.g. 118" />
           </div>
           <div class="field">
             <label for="v-dbp"><span data-i18n="field.dbp">Diastolic BP</span> <span class="hint">normal &lt;80</span></label>
-            <input type="number" id="v-dbp" min="40" max="160" value="80" />
+            <input type="number" id="v-dbp" min="40" max="160" placeholder="e.g. 76" />
           </div>
           <div class="field">
             <label for="v-bs"><span data-i18n="field.bs">Blood Sugar (mmol/L)</span> <span class="hint">normal ~6-7</span></label>
-            <input type="number" step="0.1" id="v-bs" min="2" max="25" value="7" />
+            <input type="number" step="0.1" id="v-bs" min="2" max="25" placeholder="e.g. 6.5" />
           </div>
           <div class="field">
             <label for="v-temp"><span data-i18n="field.temp">Body Temp (°F)</span> <span class="hint">normal ~98</span></label>
-            <input type="number" step="0.1" id="v-temp" min="90" max="110" value="98" />
+            <input type="number" step="0.1" id="v-temp" min="90" max="110" placeholder="e.g. 98.2" />
           </div>
           <div class="field">
             <label for="v-hr" data-i18n="field.hr">Heart Rate (bpm)</label>
-            <input type="number" id="v-hr" min="40" max="180" value="76" />
+            <input type="number" id="v-hr" min="40" max="180" placeholder="e.g. 78" />
           </div>
         </div>
       </div>
@@ -224,7 +227,6 @@
         <span class="btn-label" data-i18n="runAssessment">Run Assessment</span>
         <span class="spinner" hidden></span>
       </button>
-      <p class="error-msg" id="form-error" hidden></p>
       </div>
     </form>
 
@@ -398,6 +400,55 @@
       </div>
       <p class="section-sub" data-i18n="history.stored">Stored only in this browser (not sent anywhere).</p>
       <div id="history-list" class="history-list"></div>
+    </div>
+  </section>
+
+  <!-- ========================= MY REPORTS VIEW ========================= -->
+  <section id="reports-view" class="view">
+    <div class="card">
+      <h2 data-i18n="reports.title">My Reports</h2>
+      <p class="section-sub" data-i18n="reports.sub">
+        Upload a prescription or lab report (PDF/TXT), or paste its text, and get a clear medication
+        schedule (what to take, when) and a summary of any values worth discussing with your provider.
+      </p>
+
+      <div class="field">
+        <label for="report-file" data-i18n="reports.uploadLabel">Upload file (.pdf or .txt)</label>
+        <input type="file" id="report-file" accept=".pdf,.txt" />
+      </div>
+      <div class="welcome-divider"><span>or</span></div>
+      <div class="field">
+        <label for="report-text" data-i18n="reports.pasteLabel">Paste the report's text</label>
+        <textarea id="report-text" rows="6" data-i18n-placeholder="reports.pastePlaceholder" placeholder="e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…"></textarea>
+      </div>
+
+      <button type="button" class="submit-btn" id="report-analyze-btn">
+        <span class="btn-label" data-i18n="reports.analyze">Analyze Report</span>
+        <span class="spinner" hidden></span>
+      </button>
+      <p class="error-msg" id="report-error" hidden></p>
+    </div>
+
+    <div id="report-results" hidden>
+      <div class="card">
+        <h3 data-i18n="reports.summary">Summary</h3>
+        <p id="report-summary-text"></p>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="reports.schedule">Medication Schedule</h3>
+        <div id="report-schedule" class="schedule-grid"></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="reports.findings">Key Findings</h3>
+        <div id="report-findings" class="rules-list"></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="reports.preview">Extracted Text (preview)</h3>
+        <pre id="report-preview" class="report-preview"></pre>
+      </div>
     </div>
   </section>
 

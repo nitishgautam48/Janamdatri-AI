@@ -507,6 +507,23 @@ textarea { width: 100%; resize: vertical; }
   padding: 14px 16px; border-radius: var(--radius-md); font-weight: 600; margin-top: 10px;
 }
 
+/* ---------------- My Reports ---------------- */
+
+.schedule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.schedule-tile {
+  background: #f8f6ff; border: 1.5px solid var(--border); border-radius: var(--radius-md);
+  padding: 14px;
+}
+.schedule-tile h4 { margin: 0 0 8px; font-size: 13px; color: var(--primary-dark); }
+.schedule-tile ul { margin: 0; padding-left: 18px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; }
+.schedule-empty { color: var(--muted); font-size: 13px; }
+
+.report-preview {
+  white-space: pre-wrap; word-break: break-word; font-family: inherit;
+  background: #f8f6ff; border-radius: var(--radius-sm); padding: 12px; font-size: 12px;
+  max-height: 200px; overflow-y: auto; color: var(--muted); margin: 0;
+}
+
 /* ---------------- Instant Help Chat widget ---------------- */
 
 .chat-fab {

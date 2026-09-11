@@ -92,19 +92,34 @@ A rule-based system covering everything the ML model structurally cannot see:
 - **`human_intelligence.py`** — cross-signal clinical reasoning. Two things
   a per-category rule structurally cannot express: (1) CROSS-CATEGORY
   PATTERNS - some combinations are more dangerous together than either
-  finding alone (hypertensive symptoms + fetal distress resembles severe
+  finding alone: hypertensive symptoms + fetal distress resembles severe
   pre-eclampsia with fetal compromise; hemorrhage + anemia raises
   hemorrhagic-shock risk; infection + obstructed labor raises concern for
-  intrapartum sepsis); (2) MULTI-SOURCE CONFIDENCE - how many independent
-  signals (ML model, symptom text, danger ladder, an activated expert rule,
-  an elevated risk-history multiplier, psychological screening) corroborate
-  a result, surfaced as a confidence label rather than presenting every
-  finding with the same implied certainty.
+  intrapartum sepsis; hypertensive symptoms + hemorrhage can indicate
+  placental abruption; malnutrition + anemia compounds nutritional risk;
+  infection + fetal distress can indicate the infection is affecting the
+  baby; obstructed labor + hemorrhage raises concern for uterine rupture;
+  and a raised EPDS score alongside any significant physical finding gets
+  its own pattern, since untreated depression/anxiety can delay someone
+  from seeking care for a physical symptom and a frightening physical
+  symptom can worsen mental health in turn. (2) MULTI-SOURCE CONFIDENCE -
+  how many independent signals (ML model, symptom text, danger ladder, an
+  activated expert rule, an elevated risk-history multiplier, psychological
+  screening) corroborate a result, surfaced as a confidence label rather
+  than presenting every finding with the same implied certainty.
 - **`chat_assistant.py`** — the Instant Help chat's rule-based intent
-  matcher. Deliberately reuses `danger_ladder`/`text_analyzer` rather than
-  its own separate keyword list: a symptom typed into chat gets exactly the
-  same emergency detection as one entered in the assessment form, and
-  safety-checking always runs before FAQ matching.
+  matcher (11 FAQ intents: ANC schedule, nutrition, anemia, mental health,
+  helplines, labor signs, fetal movement, vaccination, delivery location,
+  greetings, thanks). Deliberately reuses `danger_ladder`/`text_analyzer`
+  rather than its own separate keyword list: a symptom typed into chat
+  gets exactly the same emergency detection as one entered in the
+  assessment form, and safety-checking always runs before FAQ matching.
+  Vague distress language that doesn't match a specific category ("I'm in
+  pain", "I don't feel well") gets a clarifying follow-up question - the
+  same thing a triage nurse would ask - instead of a dead-end "I didn't
+  understand," which is what "training" a rule-based bot further actually
+  means: widening phrase coverage and improving the fallback, not
+  pretending it's a language model.
 - **`triage.py`** — the synthesis point. Combines the ML-derived Maternal
   Risk Index with the risk-formulation multiplier, then escalates via
   worst-signal-wins across the danger ladder, the expert rules, and the
@@ -112,6 +127,33 @@ A rule-based system covering everything the ML model structurally cannot see:
   rule, or an EPDS self-harm flag can each independently push the overall
   result to Critical — none of them can be hidden behind a good score from
   the other layers.
+
+## Report analysis (`src/document_extractor.py`, `src/dynamic_eval/report_analyzer.py`)
+
+Upload (.pdf/.txt) or paste a prescription/lab report's text and get: a
+medication schedule grouped by time of day, and any recognized lab values
+with abnormal ones flagged (hemoglobin via the same India anemia grading
+used elsewhere, blood pressure against the pregnancy hypertension
+threshold, blood sugar/TSH/urine protein reported for the person to
+review with their provider).
+
+Medication extraction works by first SPLITTING the text into segments
+(newline/comma/semicolon/sentence boundaries, careful not to split
+decimal doses like "8.5") and only then searching each segment
+independently for a known drug name, a dose (`\d+(mg|mcg|iu|g)`), and a
+frequency - including common Indian prescription shorthand like "1-0-1"
+(morning-afternoon-night) and OD/BD/TDS/QID/HS/SOS. Segmenting first,
+rather than taking a fixed-length text window after each drug match, is
+what keeps one drug's dosing notation from leaking into a neighboring
+drug's reading on comma-separated or run-on single-line prescriptions -
+a real bug caught by testing against exactly that input shape.
+
+Scanned/photographed reports (an image, or a PDF that's just a scanned
+image with no text layer) have no extractable text without OCR, which
+needs a system-level engine this deployment doesn't install. Rather than
+silently returning nothing, extraction fails with a clear message telling
+the person to paste the text by hand instead - honest about the
+limitation rather than pretending to support image uploads.
 
 ## Accounts (`src/auth.py`)
 
@@ -168,3 +210,9 @@ has no idea whether a request came from a logged-in account or a guest.
   verification, password reset, or rate limiting on login attempts. Fine
   for a demo; a real deployment handling real health data needs all three,
   plus encryption at rest for the SQLite database.
+- Report analysis is pattern-matching against a curated drug-name list and
+  common Indian prescription shorthand, not medical interpretation. A drug
+  not in `DRUG_KEYWORDS`, or dosing notation it doesn't recognize, won't
+  be extracted - always follow the actual prescription over this tool's
+  reading of it. Scanned/photographed reports aren't supported (no OCR) -
+  paste the text directly instead.
