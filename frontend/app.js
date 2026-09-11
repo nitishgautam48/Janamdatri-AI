@@ -5,6 +5,7 @@
   const GUIDE_KEY = "janamdatri_last_guide";
   const NUTRITION_KEY = "janamdatri_last_nutrition";
   const REPORT_VITALS_LOG_KEY = "janamdatri_report_vitals_log";
+  const EMERGENCY_BANNER_DISMISSED_KEY = "janamdatri_emergency_banner_dismissed_for";
   const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
 
@@ -92,6 +93,7 @@
     $("#v-week").value = "";
     prefillPregnancyWeek();
     renderHome();
+    checkGlobalEmergencyBanner();
   }
 
   function prefillPregnancyWeek() {
@@ -658,6 +660,59 @@
     });
   }
 
+  // A danger sign shouldn't only be visible on the Home tab - this banner
+  // is sticky under the top bar on EVERY view for as long as the most
+  // recent result is unresolved (Critical/Severe, or a self-harm flag).
+  // Dismissing hides it for THIS specific result (tracked by its
+  // timestamp); a session-only choice, not a persistent one, so a fresh
+  // page load still shows it if nothing has actually changed.
+  async function checkGlobalEmergencyBanner() {
+    const banner = $("#global-emergency-banner");
+    const serverHistory = await loadServerHistory();
+    const history = serverHistory !== null ? serverHistory : loadHistory();
+    const latest = history[0];
+    const isDanger = latest && (latest.severityLevel === "Critical" || latest.severityLevel === "Severe");
+    const assessSelfHarm = !!(latest && latest.result && latest.result.psychologicalEvaluation && latest.result.psychologicalEvaluation.selfHarmFlagged);
+
+    // The standalone Mental Health Check (psych-view) never creates an
+    // assessment-history entry, so a self-harm flag from THAT flow has to
+    // be checked separately - otherwise a real safety signal from the
+    // most common entry point to EPDS would never trigger this banner.
+    const savedEpds = loadSavedEpds();
+    const standaloneSelfHarm = !!(savedEpds && savedEpds.result && savedEpds.result.selfHarmFlagged);
+    const selfHarm = assessSelfHarm || standaloneSelfHarm;
+
+    if (!isDanger && !selfHarm) {
+      banner.hidden = true;
+      return;
+    }
+
+    const dismissKey = `${latest ? latest.timestamp : ""}|${savedEpds ? savedEpds.savedAt : ""}`;
+    let dismissedFor = null;
+    try { dismissedFor = sessionStorage.getItem(scopedKey(EMERGENCY_BANNER_DISMISSED_KEY)); } catch { /* non-fatal */ }
+    if (dismissedFor === dismissKey) {
+      banner.hidden = true;
+      return;
+    }
+
+    banner.hidden = false;
+    banner.dataset.dismissKey = dismissKey;
+    $("#global-emergency-text").textContent = selfHarm
+      ? "🚨 A Mental Health Check flagged thoughts of self-harm - please reach out to someone you trust or KIRAN (1800-599-0019) now."
+      : `🚨 Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.`;
+  }
+
+  $("#global-emergency-dismiss").addEventListener("click", () => {
+    const banner = $("#global-emergency-banner");
+    try { sessionStorage.setItem(scopedKey(EMERGENCY_BANNER_DISMISSED_KEY), banner.dataset.dismissKey || ""); } catch { /* non-fatal */ }
+    banner.hidden = true;
+  });
+
+  $("#global-emergency-view-btn").addEventListener("click", () => {
+    showView("history-view");
+    renderHistory();
+  });
+
   async function renderHome() {
     const user = getSavedUser();
     const hour = new Date().getHours();
@@ -715,6 +770,7 @@
   $("#home-chat-action").addEventListener("click", () => chatFab.click());
 
   renderHome();
+  checkGlobalEmergencyBanner();
 
   // ==================================================================
   // Vitals enable toggle
@@ -838,6 +894,7 @@
       if (!res.ok) throw new Error(payload.detail || "Assessment failed.");
       renderResult(payload.data);
       saveToHistory(payload.data);
+      checkGlobalEmergencyBanner();
       $("#results").hidden = false;
       $("#results").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
@@ -1506,6 +1563,7 @@
       renderEpdsResult(payload.data);
       saveEpds(responses, payload.data);
       syncEpdsIncludeVisibility();
+      checkGlobalEmergencyBanner();
     } catch (err) {
       alert(err.message || "Could not score EPDS.");
     }

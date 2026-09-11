@@ -92,6 +92,24 @@ html, body {
   box-shadow: 0 2px 12px rgba(95, 63, 160, 0.25);
 }
 
+.global-emergency-banner {
+  position: sticky; top: 0; z-index: 49;
+  background: var(--critical); color: white;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  padding: 10px 20px; font-weight: 700; font-size: 13.5px;
+  animation: critical-pulse 2s infinite;
+}
+.global-emergency-banner[hidden] { display: none; }
+.global-emergency-actions { display: flex; align-items: center; gap: 8px; }
+.global-emergency-actions .cta-btn { padding: 6px 12px; font-size: 12.5px; }
+.global-emergency-actions .cta-emergency { background: white; color: var(--critical); }
+.global-emergency-actions .cta-secondary { background: rgba(255,255,255,0.2); color: white; border-color: white; }
+.global-emergency-dismiss {
+  background: none; border: none; color: white; font-size: 16px; cursor: pointer;
+  padding: 4px 6px; opacity: 0.85;
+}
+.global-emergency-dismiss:hover { opacity: 1; }
+
 .topbar-inner {
   max-width: 1100px;
   margin: 0 auto;
