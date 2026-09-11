@@ -80,10 +80,11 @@ CATEGORIES = {
     },
     "fetal_distress": {
         "moderate": ["baby is moving less", "less movement than usual", "fewer kicks today",
-                     "not moving much",
+                     "not moving much", "not kicking much", "baby not kicking", "kicking less",
+                     "reduced kicks",
                      "बच्चे की हलचल कम हो गई"],
         "severe": ["baby stopped moving", "no movement since yesterday", "cant feel the baby move",
-                   "no kicks at all", "baby not moving at all",
+                   "no kicks at all", "baby not moving at all", "stopped kicking", "not kicking at all",
                    "बच्चा हिलना बंद हो गया", "बच्चे की हलचल महसूस नहीं हो रही"],
     },
     "obstructed_labor": {

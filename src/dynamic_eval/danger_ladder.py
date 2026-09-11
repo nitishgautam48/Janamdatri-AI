@@ -55,6 +55,7 @@ PHRASES_BY_RUNG = {
     4: ["severe headache", "cant see properly", "severe abdominal pain", "heavy bleeding",
         "bleeding heavily", "soaked through a pad", "soaking a pad every hour",
         "baby stopped moving", "no movement since yesterday", "cant feel the baby move",
+        "stopped kicking", "not kicking at all",
         "fast breathing", "difficulty breathing", "trouble breathing", "having trouble breathing",
         "not able to breathe", "not able to breath", "unable to breathe", "unable to breath",
         "cant breathe", "cannot breathe", "breathless", "gasping for air", "gasping",

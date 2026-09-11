@@ -44,10 +44,46 @@ FAQ_INTENTS = [
         "id": "nutrition",
         "phrases": ["what should i eat", "what to eat", "diet", "nutrition", "food during pregnancy",
                     "iron tablets", "folic acid", "eating habits", "hungry all the time", "vomiting",
-                    "morning sickness", "nausea", "पोषण", "खाना"],
+                    "morning sickness", "nausea", "nauseous", "पोषण", "खाना"],
         "reply": ("Take your iron-folic acid (IFA) tablets as prescribed, eat iron-rich foods (leafy "
                   "greens, jaggery, lentils), and add calcium from the second trimester. Small, frequent "
                   "meals help with nausea. See the Pregnancy Guide tab for trimester-specific tips."),
+    },
+    {
+        "id": "food_safety",
+        "phrases": ["eat papaya", "raw papaya", "eat pineapple", "safe to eat", "foods to avoid",
+                    "what not to eat", "street food", "raw food", "undercooked", "raw fish", "sushi"],
+        "reply": ("Ripe papaya and pineapple in normal amounts are fine - the traditional caution is "
+                  "specifically about large amounts of RAW/unripe papaya. Avoid unpasteurized dairy, "
+                  "undercooked meat/eggs/fish, and raw seafood (listeria/toxoplasmosis risk); limit "
+                  "caffeine, and avoid alcohol completely. When in doubt about a specific food, ask your "
+                  "ANC provider rather than relying on general advice."),
+    },
+    {
+        "id": "hydration",
+        "phrases": ["how much water", "hydration", "drink water", "dehydration", "dehydrated"],
+        "reply": ("Aim for about 2.5-3 litres of water a day, more in hot weather or if you're vomiting - "
+                  "dark urine, dizziness, or a dry mouth are signs you need more. Severe vomiting that "
+                  "stops you from keeping fluids down needs same-day medical attention, not just more water."),
+    },
+    {
+        "id": "missed_period",
+        "phrases": ["missed my period", "missed period", "late period", "think im pregnant",
+                    "might be pregnant"],
+        "reply": ("A missed period is one of the earliest pregnancy signs - a home urine pregnancy test "
+                  "(after your period is a few days late) or a visit to your ASHA/ANM or a clinic can "
+                  "confirm it. If it's positive, register for ANC care as early as possible - the first "
+                  "trimester matters for screening and starting supplements."),
+    },
+    {
+        "id": "medication_safety",
+        "phrases": ["take paracetamol", "is paracetamol safe", "safe medicine", "which medicines are safe",
+                    "can i take medicine", "otc medicine", "pain medicine", "ibuprofen", "safe painkiller"],
+        "reply": ("Paracetamol (acetaminophen) at the recommended dose is generally considered safe in "
+                  "pregnancy, but ibuprofen, aspirin, and most other painkillers are NOT recommended, "
+                  "especially later in pregnancy. Always check with your ANC provider or pharmacist before "
+                  "taking ANY medicine, including ones that seem harmless - this includes herbal/ayurvedic "
+                  "remedies too."),
     },
     {
         "id": "anemia",
@@ -58,8 +94,9 @@ FAQ_INTENTS = [
     },
     {
         "id": "mental_health",
-        "phrases": ["feeling sad", "depressed", "anxious", "cant sleep", "mood", "stress", "im scared",
-                    "i am scared", "worried", "overwhelmed", "crying a lot", "उदास"],
+        "phrases": ["feeling sad", "feel sad", "very sad", "so sad", "depressed", "anxious", "cant sleep",
+                    "mood", "stress", "im scared", "i am scared", "worried", "overwhelmed", "crying a lot",
+                    "not supportive", "no support", "no one to talk to", "alone in this", "उदास"],
         "reply": ("Feeling low, anxious, or overwhelmed during or after pregnancy is common and treatable - "
                   "it's not a personal failing. Try the Mental Health Check (EPDS) tab, or talk to your ANC "
                   "provider. If you ever have thoughts of harming yourself, call KIRAN: 1800-599-0019 (24x7)."),
@@ -73,8 +110,8 @@ FAQ_INTENTS = [
     },
     {
         "id": "labor_signs",
-        "phrases": ["am i in labor", "labour signs", "labor signs", "contractions", "how do i know labor",
-                    "water broke", "waters broke", "when will i deliver"],
+        "phrases": ["in labor", "in labour", "labour signs", "labor signs", "contractions",
+                    "how do i know labor", "water broke", "waters broke", "when will i deliver"],
         "reply": ("Signs labor may be starting: regular, increasingly strong contractions; your water "
                   "breaking; lower back pain with tightening. If contractions are regular and less than "
                   "5-10 minutes apart, or your water breaks, head to your planned facility now - don't wait "
@@ -82,7 +119,9 @@ FAQ_INTENTS = [
     },
     {
         "id": "fetal_movement",
-        "phrases": ["baby movement", "kick count", "how many kicks", "baby kicking", "fetal movement"],
+        "phrases": ["baby movement", "kick count", "how many kicks", "baby kicking", "fetal movement",
+                    "feel the baby move", "when will i feel movement", "when should i feel movement",
+                    "baby move"],
         "reply": ("From about the second trimester, you should feel regular movement every day. A noticeable "
                   "drop in movement, or none at all in a few hours where the baby is usually active, is a "
                   "reason to go get checked the same day - don't wait until the next scheduled visit."),
@@ -97,7 +136,8 @@ FAQ_INTENTS = [
     {
         "id": "delivery_place",
         "phrases": ["where should i deliver", "hospital delivery", "home birth", "which hospital",
-                    "institutional delivery"],
+                    "institutional delivery", "cost of delivery", "how much does delivery cost",
+                    "is c section safe", "is cesarean safe", "c-section safe", "c section safe"],
         "reply": ("An institutional delivery (hospital or PHC/FRU with skilled staff and emergency care "
                   "available) is safer than a home birth, especially if any risk factors are present. "
                   "JSY provides cash assistance for institutional delivery - ask your ASHA worker."),
@@ -105,7 +145,8 @@ FAQ_INTENTS = [
     {
         "id": "blood_pressure",
         "phrases": ["blood pressure", "bp check", "whats normal bp", "what is normal bp", "is my bp high",
-                    "bp reading", "hypertension", "high bp"],
+                    "bp reading", "hypertension", "high bp", "what is preeclampsia", "what is pre-eclampsia",
+                    "what is eclampsia"],
         "reply": ("Normal BP in pregnancy is under 140/90 - readings at or above that (especially with "
                   "headache, blurred vision, or swelling) can mean pre-eclampsia and need same-day checking. "
                   "Get it checked at every ANC visit, and enter a reading in the Assessment tab if you have one."),
@@ -264,15 +305,21 @@ CATEGORY_FALLBACK_NOTES = {
 
 
 def _match_faq(normalized_text: str):
+    # Word-boundary matching, not a bare substring check - "hi" as a plain
+    # `in` check matches inside "th-IS", "wh-ICH", "th-INK"... a short
+    # greeting/FAQ phrase is exactly the kind of string that collides with
+    # ordinary words, and it was silently hijacking unrelated messages
+    # ("I missed my period THIS month" -> "greeting", "I THINK I am in
+    # labor" -> "greeting") into the wrong intent.
     for intent in FAQ_INTENTS:
-        if any(phrase in normalized_text for phrase in intent["phrases"]):
+        if any(contains_phrase(normalized_text, phrase) for phrase in intent["phrases"]):
             return intent
     return None
 
 
 def _match_topic(normalized_text: str):
     for topic in VAGUE_TOPICS:
-        if any(kw in normalized_text for kw in topic["keywords"]):
+        if any(contains_phrase(normalized_text, kw) for kw in topic["keywords"]):
             return topic
     return None
 
