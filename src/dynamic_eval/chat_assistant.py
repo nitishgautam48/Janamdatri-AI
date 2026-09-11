@@ -291,6 +291,56 @@ CRISIS_REPLY = (
     "to go through this alone."
 )
 
+# Asked ALONGSIDE the "go now" directive, never instead of it - the
+# directive always comes first and doesn't wait on an answer. This is
+# what a health worker triaging a call actually does: give the urgent
+# instruction immediately, then keep asking questions while the person
+# is on the way, because the answers change what the FACILITY needs to
+# be ready for (and, since this is carried as context into the next
+# turn - see danger_sign_followup in the intent set below - a reply that
+# adds real detail, like "and I can't breathe", gets re-analyzed and can
+# surface an even more specific finding next turn).
+# Keyed by keyword found IN the matched danger-ladder phrase, checked in
+# order, first match wins.
+_DANGER_FOLLOWUP_BY_KEYWORD = [
+    (["chest pain", "chest tightness", "pain in my chest", "tightness in my chest",
+      "breath", "breathless", "gasping", "सीने में दर्द", "छाती में दर्द", "सांस"],
+     "While you're on your way - did this start suddenly, and is it with any breathlessness, dizziness, "
+     "or swelling/pain in one leg? Tell the facility this as soon as you arrive."),
+    (["bleeding", "soaked", "pad", "रक्तस्राव"],
+     "While you're on your way - roughly how much bleeding (soaking through in under an hour is heavy), "
+     "and are there clots or do you feel dizzy/faint? Tell the facility this as soon as you arrive."),
+    (["headache", "see properly", "सिरदर्द"],
+     "While you're on your way - do you also have blurred vision, swelling in your face/hands, or has "
+     "your BP been high in this pregnancy? Tell the facility this as soon as you arrive."),
+    (["baby", "movement", "कदम", "हिलना"],
+     "While you're on your way - when did you last feel the baby move, and do you have any bleeding or "
+     "pain along with it? Tell the facility this as soon as you arrive."),
+    (["abdominal pain", "पेट दर्द"],
+     "While you're on your way - is the pain constant or coming and going, and is there any bleeding or "
+     "fever with it? Tell the facility this as soon as you arrive."),
+    (["discharge", "weak to get out of bed", "स्राव"],
+     "While you're on your way - do you also have a fever, and how long has this been going on? Tell "
+     "the facility this as soon as you arrive."),
+]
+
+# Rung 5 (convulsions, unconsciousness, a stuck baby, labor over a day) is
+# genuinely no time for questions, and the person typing may not even be
+# the patient - act now, ask nothing.
+_NO_FOLLOWUP_RUNG = 5
+
+
+def _danger_sign_followup(matched_phrase: str, rung: int) -> str:
+    if rung >= _NO_FOLLOWUP_RUNG:
+        return None
+    for keywords, question in _DANGER_FOLLOWUP_BY_KEYWORD:
+        if any(kw in matched_phrase for kw in keywords):
+            return question
+    return (
+        "While you're on your way - how long has this been going on, and is there any bleeding, fever, "
+        "or reduced baby movement with it? Tell the facility this as soon as you arrive."
+    )
+
 # A friendly label for each text_analyzer.py category, and a fallback note
 # for the one category (malnutrition) with no matching expert_system.py
 # rule to borrow "why" text from.
@@ -398,15 +448,23 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     high_category_score = max(text_scores.values()) if text_scores else 0.0
 
     if ladder_result["rung"] >= 4 or high_category_score >= 0.85:
+        matched_phrase = ladder_result["matchedPhrase"] or "this symptom"
+        base_reply = (
+            f"⚠️ What you're describing ({matched_phrase}) sounds like it could be a danger sign. "
+            "Please go to the nearest health facility now, or call for emergency transport: 108 "
+            "(ambulance) or 102 (pregnancy transport). Don't wait to see if it gets better."
+        )
+        followup = _danger_sign_followup(matched_phrase, ladder_result["rung"])
         return {
-            "reply": (
-                f"⚠️ What you're describing ({ladder_result['matchedPhrase'] or 'this symptom'}) "
-                "sounds like it could be a danger sign. Please go to the nearest health facility now, "
-                "or call for emergency transport: 108 (ambulance) or 102 (pregnancy transport). "
-                "Don't wait to see if it gets better."
-            ),
+            "reply": f"{base_reply} {followup}" if followup else base_reply,
             "isEmergency": True,
             "dangerLadder": ladder_result,
+            # Carried back as contextMessage on the next turn (see the
+            # frontend's UNRESOLVED_CHAT_INTENTS/UNRESOLVED_INTENTS) only
+            # when there IS a follow-up question actually asking for more -
+            # rung 5 (seizure, unconscious, stuck baby...) asks nothing, so
+            # there's nothing for a reply to attach context to.
+            "intent": "danger_sign_followup" if followup else "danger_sign",
         }
 
     intent = _match_faq(normalized)

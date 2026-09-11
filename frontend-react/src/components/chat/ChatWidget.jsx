@@ -9,7 +9,7 @@ import { KEYS, scopedGet, scopedSet } from "../../lib/storage";
 // widget's UNRESOLVED_CHAT_INTENTS so the follow-up-context behavior is
 // identical, just re-hosted in a corner panel instead of a full-viewport
 // one (see the comment below on why that's the actual bug fix).
-const UNRESOLVED_INTENTS = new Set(["clarify_symptom", "fallback"]);
+const UNRESOLVED_INTENTS = new Set(["clarify_symptom", "fallback", "danger_sign_followup"]);
 
 const GREETING = { sender: "bot", text: "Hi! Ask me about ANC visits, nutrition, anemia, mental health, or describe a symptom and I'll check for danger signs." };
 

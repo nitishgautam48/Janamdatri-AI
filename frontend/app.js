@@ -18,7 +18,7 @@
   // the Assessment tab" nudge) - see the chat form submit handler below.
   let pendingClarificationContext = null;
   let unresolvedChatRounds = 0;
-  const UNRESOLVED_CHAT_INTENTS = new Set(["clarify_symptom", "fallback"]);
+  const UNRESOLVED_CHAT_INTENTS = new Set(["clarify_symptom", "fallback", "danger_sign_followup"]);
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
