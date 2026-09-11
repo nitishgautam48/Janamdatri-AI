@@ -92,6 +92,15 @@ export function appendHistoryEntry(result) {
   scopedSet(KEYS.HISTORY, history.slice(0, MAX_HISTORY));
 }
 
+export function lastKnownHemoglobin() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  for (const entry of history) {
+    const hb = entry.result && entry.result.hemoglobinAssessment;
+    if (hb) return hb.hemoglobin;
+  }
+  return null;
+}
+
 export function lastKnownWeight() {
   const history = scopedGet(KEYS.HISTORY) || [];
   for (const entry of history) {
@@ -113,4 +122,5 @@ export const KEYS = {
   TODAY_CARE: "janamdatri_today_care",
   PROFILE_EXTRA: "janamdatri_pregnancy_profile_extra",
   CHAT_HISTORY: "janamdatri_chat",
+  REPORT_VITALS_LOG: "janamdatri_report_vitals_log",
 };

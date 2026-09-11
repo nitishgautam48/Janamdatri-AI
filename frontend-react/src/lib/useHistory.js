@@ -19,6 +19,7 @@ export function useHistory() {
   const { isAuthed, identityKey } = useAuth();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +40,7 @@ export function useHistory() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthed, identityKey]);
+  }, [isAuthed, identityKey, refetchKey]);
 
-  return { history, loading };
+  return { history, loading, refetch: () => setRefetchKey((k) => k + 1) };
 }
