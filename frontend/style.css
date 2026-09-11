@@ -737,6 +737,16 @@ textarea { width: 100%; resize: vertical; }
   display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;
 }
 .epds-total-display .big { font-size: 32px; font-weight: 800; color: var(--primary-dark); }
+
+.share-code-display {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--tint-bg-strong); border: 1.5px dashed var(--primary);
+  border-radius: var(--radius-md); padding: 14px; margin-bottom: 10px;
+}
+.share-code-display[hidden] { display: none; }
+.share-code-value {
+  font-size: 26px; font-weight: 800; letter-spacing: 4px; color: var(--primary-dark); font-family: monospace;
+}
 .self-harm-alert {
   background: #fdeceb; border: 2px solid var(--critical); color: #7a0000;
   padding: 14px 16px; border-radius: var(--radius-md); font-weight: 600; margin-top: 10px;

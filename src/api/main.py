@@ -5,6 +5,8 @@ Endpoints reflect the layered architecture:
   POST /auth/register, /auth/login  - optional accounts (bearer token via x-user-token)
   GET  /auth/me                      - current user profile
   DELETE /auth/account                - permanently delete the account and all its data
+  POST/GET/DELETE /auth/share-code    - generate/read/revoke a provider share code (one active at a time)
+  GET  /provider/patient-summary       - public, code-only read-only summary for whoever holds a valid share code
   POST /predict/ml                   - the trained ML classifier alone (vitals -> risk class)
   GET  /model/info                    - model transparency: features, hyperparameters, CV/test metrics
   POST /assess                         - the full hybrid: ML prediction + rule-based dynamic
@@ -188,6 +190,82 @@ def delete_account(x_user_token: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Not logged in or session expired.")
     auth.delete_user(user["id"])
     return {"success": True, "data": {"deleted": True}}
+
+
+# ============================================================
+#  PROVIDER SHARE CODE - lets a logged-in user hand a short code to a
+#  health worker/doctor for read-only access to their latest summary,
+#  with no separate provider login. Only one code is ever active per
+#  user, so generating a new one immediately revokes the old one.
+# ============================================================
+
+@app.post("/auth/share-code")
+def create_share_code(x_user_token: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+    code = auth.generate_share_code(user["id"])
+    return {"success": True, "data": {"code": code}}
+
+
+@app.get("/auth/share-code")
+def read_share_code(x_user_token: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+    code = auth.get_active_share_code(user["id"])
+    return {"success": True, "data": {"code": code}}
+
+
+@app.delete("/auth/share-code")
+def delete_share_code(x_user_token: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+    auth.revoke_share_code(user["id"])
+    return {"success": True, "data": {"revoked": True}}
+
+
+@app.get("/provider/patient-summary")
+def provider_patient_summary(code: str):
+    """Public (no login) by design - the share code itself is the sole
+    credential, exactly as the patient handing over a card would work.
+    Read-only: this endpoint has no counterpart that writes anything, and
+    it only ever returns the ONE patient the code belongs to - there is no
+    way to list or browse any other patient from here."""
+    user = auth.get_user_by_share_code(code)
+    if not user:
+        raise HTTPException(status_code=404, detail="Invalid or revoked share code.")
+
+    latest_assessment = None
+    assessments = auth.get_assessments_for_user(user["id"], limit=1)
+    if assessments:
+        row = assessments[0]
+        result = json.loads(row["result_json"])
+        latest_assessment = {
+            "createdAt": row["created_at"],
+            "severityLevel": row["severity_level"],
+            "mri": row["mri"],
+            "vitalsInput": result.get("vitalsInput"),
+            "hemoglobinAssessment": result.get("hemoglobinAssessment"),
+            "explanation": result.get("clinicalExplanation"),
+        }
+
+    latest_nutrition = None
+    nutrition_checks = auth.get_nutrition_checks_for_user(user["id"], limit=1)
+    if nutrition_checks:
+        row = nutrition_checks[0]
+        result = json.loads(row["result_json"])
+        latest_nutrition = {"createdAt": row["created_at"], "gaps": result.get("gaps", [])}
+
+    return {
+        "success": True,
+        "data": {
+            "patientName": user.get("name") or user["email"].split("@")[0],
+            "latestAssessment": latest_assessment,
+            "latestNutrition": latest_nutrition,
+        },
+    }
 
 
 # ============================================================

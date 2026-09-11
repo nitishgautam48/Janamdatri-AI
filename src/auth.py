@@ -65,6 +65,12 @@ def init_db():
             created_at REAL NOT NULL,
             result_json TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS share_codes (
+            code TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at REAL NOT NULL,
+            revoked INTEGER NOT NULL DEFAULT 0
+        );
     """)
     conn.commit()
     conn.close()
@@ -227,5 +233,70 @@ def get_nutrition_checks_for_user(user_id: int, limit: int = 20) -> list:
             (user_id, limit),
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# Excludes visually-ambiguous characters (0/O, 1/I/L) since this code is
+# meant to be read off one screen and typed into another by hand.
+_SHARE_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def _generate_code() -> str:
+    return "".join(secrets.choice(_SHARE_CODE_ALPHABET) for _ in range(8))
+
+
+def generate_share_code(user_id: int) -> str:
+    """Creates a fresh share code for the user, revoking any code they
+    already had - only one code is ever active per user at a time, so
+    "generate" and "regenerate" are the same operation, and a provider
+    holding an old code loses access the moment a new one is made."""
+    conn = _connect()
+    try:
+        conn.execute("UPDATE share_codes SET revoked = 1 WHERE user_id = ? AND revoked = 0", (user_id,))
+        code = _generate_code()
+        conn.execute(
+            "INSERT INTO share_codes (code, user_id, created_at, revoked) VALUES (?, ?, ?, 0)",
+            (code, user_id, time.time()),
+        )
+        conn.commit()
+        return code
+    finally:
+        conn.close()
+
+
+def get_active_share_code(user_id: int) -> str:
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT code FROM share_codes WHERE user_id = ? AND revoked = 0 ORDER BY created_at DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        return row["code"] if row else None
+    finally:
+        conn.close()
+
+
+def revoke_share_code(user_id: int):
+    conn = _connect()
+    try:
+        conn.execute("UPDATE share_codes SET revoked = 1 WHERE user_id = ? AND revoked = 0", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_user_by_share_code(code: str) -> dict:
+    if not code:
+        return None
+    conn = _connect()
+    try:
+        row = conn.execute(
+            """SELECT users.id, users.email, users.name
+               FROM share_codes JOIN users ON share_codes.user_id = users.id
+               WHERE share_codes.code = ? AND share_codes.revoked = 0""",
+            (code.strip().upper(),),
+        ).fetchone()
+        return dict(row) if row else None
     finally:
         conn.close()

@@ -190,6 +190,13 @@
     showWelcomeOverlay(false);
   });
 
+  // A provider never logs in or picks Guest - the share code itself is
+  // their only credential, so this link bypasses the account gate entirely.
+  $("#provider-access-link").addEventListener("click", () => {
+    showWelcomeOverlay(false);
+    showView("provider-view");
+  });
+
   $("#logout-btn").addEventListener("click", () => {
     clearSession();
     syncUserArea();
@@ -321,6 +328,17 @@
       "privacy.controlsSub": "These act on the data for however you're currently using the app (guest or your logged-in account).",
       "privacy.exportBtn": "⬇ Export My Data (JSON)", "privacy.clearLocalBtn": "🗑 Clear My Local Data",
       "privacy.deleteAccountBtn": "⚠ Delete My Account & All Data",
+      "privacy.shareCodeTitle": "Share With a Doctor/Health Worker",
+      "privacy.shareCodeSub": "Generate a one-time code that lets a provider view a read-only summary of your latest result - your risk level, vitals, hemoglobin, nutrition gaps, and warning signs. They cannot see any other patient, cannot edit anything, and lose access the moment you revoke or regenerate the code.",
+      "privacy.shareCodeGuestNote": "Sign up or log in to generate a provider share code - guest data lives only on this device, so there's nothing on our server for a provider's code to point to.",
+      "privacy.shareCodeNone": "No active share code.",
+      "privacy.shareCodeGenerateBtn": "🔑 Generate Share Code", "privacy.shareCodeRevokeBtn": "✕ Revoke Access",
+      "provider.title": "Provider Access",
+      "provider.sub": "Enter the code your patient shared with you to view their latest result. No login needed - the code itself is the access credential.",
+      "provider.codeLabel": "Share code", "provider.lookupBtn": "View Patient Summary",
+      "provider.readOnlyNote": "Read-only summary. No edit access, and no other patients are reachable from this code.",
+      "provider.latestAssessment": "Latest Assessment", "provider.latestNutrition": "Latest Nutrition Check",
+      "provider.noData": "This patient has no assessment or nutrition data yet.",
     },
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
@@ -441,6 +459,17 @@
       "privacy.controlsSub": "ये आपके वर्तमान उपयोग (गेस्ट या आपका लॉग-इन खाता) के डेटा पर कार्य करते हैं।",
       "privacy.exportBtn": "⬇ मेरा डेटा एक्सपोर्ट करें (JSON)", "privacy.clearLocalBtn": "🗑 मेरा लोकल डेटा साफ़ करें",
       "privacy.deleteAccountBtn": "⚠ मेरा खाता और सभी डेटा हटाएं",
+      "privacy.shareCodeTitle": "डॉक्टर/स्वास्थ्य कार्यकर्ता के साथ साझा करें",
+      "privacy.shareCodeSub": "एक कोड बनाएं जिससे कोई प्रदाता आपके नवीनतम परिणाम का केवल-पढ़ने योग्य सारांश देख सके - आपका जोखिम स्तर, वाइटल्स, हीमोग्लोबिन, पोषण की कमी, और चेतावनी संकेत। वे किसी अन्य मरीज़ को नहीं देख सकते, कुछ भी संपादित नहीं कर सकते, और जैसे ही आप कोड रद्द या पुनः बनाती हैं, उनकी पहुंच खत्म हो जाती है।",
+      "privacy.shareCodeGuestNote": "प्रदाता शेयर कोड बनाने के लिए साइन अप या लॉग इन करें - गेस्ट डेटा केवल इस डिवाइस पर रहता है, इसलिए हमारे सर्वर पर प्रदाता के कोड के लिए कुछ भी नहीं है।",
+      "privacy.shareCodeNone": "कोई सक्रिय शेयर कोड नहीं।",
+      "privacy.shareCodeGenerateBtn": "🔑 शेयर कोड बनाएं", "privacy.shareCodeRevokeBtn": "✕ एक्सेस रद्द करें",
+      "provider.title": "प्रदाता एक्सेस",
+      "provider.sub": "अपने मरीज़ द्वारा साझा किया गया कोड दर्ज करें ताकि उनका नवीनतम परिणाम देखा जा सके। लॉगिन की आवश्यकता नहीं - कोड ही एक्सेस क्रेडेंशियल है।",
+      "provider.codeLabel": "शेयर कोड", "provider.lookupBtn": "मरीज़ का सारांश देखें",
+      "provider.readOnlyNote": "केवल-पढ़ने योग्य सारांश। कोई संपादन एक्सेस नहीं, और इस कोड से कोई अन्य मरीज़ पहुंच योग्य नहीं है।",
+      "provider.latestAssessment": "नवीनतम मूल्यांकन", "provider.latestNutrition": "नवीनतम पोषण जांच",
+      "provider.noData": "इस मरीज़ का अभी तक कोई मूल्यांकन या पोषण डेटा नहीं है।",
     },
   };
 
@@ -2531,7 +2560,10 @@
     });
   }
 
-  $("#footer-privacy-link").addEventListener("click", () => showView("privacy-view"));
+  $("#footer-privacy-link").addEventListener("click", () => {
+    showView("privacy-view");
+    renderShareCodeSection();
+  });
 
   $("#privacy-export-btn").addEventListener("click", async () => {
     const noteEl = $("#privacy-controls-note");
@@ -2588,4 +2620,130 @@
       noteEl.textContent = err.message;
     }
   });
+
+  // ==================================================================
+  // Provider Share Code - a logged-in user generates a short code from
+  // here; a provider enters it in the separate, login-free Provider view
+  // below to see a read-only summary of just this one account. Only one
+  // code is ever active per account (see auth.generate_share_code), so
+  // generating and regenerating are the same button.
+  // ==================================================================
+
+  function updateShareCodeDisplay(code) {
+    const displayEl = $("#share-code-display");
+    const noneEl = $("#share-code-none");
+    const revokeBtn = $("#share-code-revoke-btn");
+    if (code) {
+      $("#share-code-value").textContent = code;
+      displayEl.hidden = false;
+      noneEl.hidden = true;
+      revokeBtn.hidden = false;
+    } else {
+      displayEl.hidden = true;
+      noneEl.hidden = false;
+      revokeBtn.hidden = true;
+    }
+  }
+
+  async function renderShareCodeSection() {
+    const guestNote = $("#share-code-guest-note");
+    const accountArea = $("#share-code-account-area");
+    if (!getToken()) {
+      guestNote.hidden = false;
+      accountArea.hidden = true;
+      return;
+    }
+    guestNote.hidden = true;
+    accountArea.hidden = false;
+    try {
+      const res = await fetch("/auth/share-code", { headers: authHeaders() });
+      const payload = await res.json();
+      if (res.ok) updateShareCodeDisplay(payload.data.code);
+    } catch { /* leave the last-known display state on a transient failure */ }
+  }
+
+  $("#share-code-generate-btn").addEventListener("click", async () => {
+    const noteEl = $("#share-code-note");
+    try {
+      const res = await fetch("/auth/share-code", { method: "POST", headers: authHeaders() });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Could not generate a share code.");
+      updateShareCodeDisplay(payload.data.code);
+      noteEl.textContent = currentLang === "hi"
+        ? "नया कोड बनाया गया - यदि आपके पास पहले से कोई कोड था, तो वह अब काम नहीं करेगा।"
+        : "New code generated - any earlier code you had no longer works.";
+    } catch (err) {
+      noteEl.textContent = err.message;
+    }
+  });
+
+  $("#share-code-revoke-btn").addEventListener("click", async () => {
+    const noteEl = $("#share-code-note");
+    try {
+      const res = await fetch("/auth/share-code", { method: "DELETE", headers: authHeaders() });
+      if (!res.ok) throw new Error("Could not revoke your share code.");
+      updateShareCodeDisplay(null);
+      noteEl.textContent = currentLang === "hi" ? "एक्सेस रद्द कर दिया गया।" : "Access revoked.";
+    } catch (err) {
+      noteEl.textContent = err.message;
+    }
+  });
+
+  // ==================================================================
+  // Provider view - login-free by design (see #provider-access-link
+  // above). The share code the patient hands over is the only credential;
+  // there is no way from here to browse or discover any other patient.
+  // ==================================================================
+
+  $("#provider-lookup-btn").addEventListener("click", async () => {
+    const code = $("#provider-code-input").value.trim();
+    const errorEl = $("#provider-error");
+    errorEl.hidden = true;
+    $("#provider-results").hidden = true;
+    if (!code) return;
+
+    try {
+      const res = await fetch(`/provider/patient-summary?code=${encodeURIComponent(code)}`);
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Could not find that share code.");
+      renderProviderSummary(payload.data);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    }
+  });
+
+  function renderProviderSummary(data) {
+    $("#provider-results").hidden = false;
+    $("#provider-patient-name").textContent = data.patientName;
+
+    const assessCard = $("#provider-assessment-card");
+    if (data.latestAssessment) {
+      assessCard.hidden = false;
+      const a = data.latestAssessment;
+      const exp = a.explanation || {};
+      $("#provider-assessment-content").innerHTML = `
+        <p><strong>Risk level:</strong> ${a.severityLevel} (MRI ${a.mri})</p>
+        <p class="footnote">Recorded: ${new Date(a.createdAt * 1000).toLocaleString()}</p>
+        ${a.vitalsInput ? `<p><strong>Vitals:</strong> BP ${a.vitalsInput.SystolicBP}/${a.vitalsInput.DiastolicBP}, blood sugar ${a.vitalsInput.BS} mmol/L, temp ${a.vitalsInput.BodyTemp}°F, heart rate ${a.vitalsInput.HeartRate} bpm</p>` : ""}
+        ${a.hemoglobinAssessment ? `<p><strong>Hemoglobin:</strong> ${a.hemoglobinAssessment.hemoglobin} g/dL (${a.hemoglobinAssessment.grade})</p>` : ""}
+        ${exp.warningSigns && exp.warningSigns.length ? `<p><strong>Warning signs:</strong></p><ul class="recs-list danger">${exp.warningSigns.map((w) => `<li>${w}</li>`).join("")}</ul>` : ""}
+        ${exp.recommendedNextAction ? `<p><strong>Recommended next action:</strong> ${exp.recommendedNextAction}</p>` : ""}`;
+    } else {
+      assessCard.hidden = true;
+    }
+
+    const nutritionCard = $("#provider-nutrition-card");
+    if (data.latestNutrition) {
+      nutritionCard.hidden = false;
+      const n = data.latestNutrition;
+      $("#provider-nutrition-content").innerHTML = `
+        <p class="footnote">Recorded: ${new Date(n.createdAt * 1000).toLocaleString()}</p>
+        ${n.gaps && n.gaps.length ? `<ul class="recs-list">${n.gaps.map((g) => `<li>${g}</li>`).join("")}</ul>` : "<p>No nutrition gaps flagged.</p>"}`;
+    } else {
+      nutritionCard.hidden = true;
+    }
+
+    $("#provider-no-data").hidden = !!(data.latestAssessment || data.latestNutrition);
+  }
 })();

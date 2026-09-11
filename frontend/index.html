@@ -56,6 +56,7 @@
     <div class="welcome-divider"><span>or</span></div>
     <button type="button" class="secondary-btn" id="guest-btn">Continue as Guest</button>
     <p class="welcome-note">An account saves your assessment history and chat across visits. Guest mode keeps everything only on this device.</p>
+    <button type="button" class="link-btn" id="provider-access-link">👩‍⚕️ I'm a healthcare provider with a patient's share code →</button>
   </div>
 </div>
 
@@ -854,6 +855,58 @@
         <button type="button" class="secondary-btn danger" id="privacy-delete-account-btn" hidden data-i18n="privacy.deleteAccountBtn">⚠ Delete My Account &amp; All Data</button>
       </div>
       <p class="footnote" id="privacy-controls-note"></p>
+    </div>
+
+    <div class="card" id="share-code-card">
+      <h3 data-i18n="privacy.shareCodeTitle">Share With a Doctor/Health Worker</h3>
+      <p class="section-sub" data-i18n="privacy.shareCodeSub">Generate a one-time code that lets a provider view a read-only summary of your latest result - your risk level, vitals, hemoglobin, nutrition gaps, and warning signs. They cannot see any other patient, cannot edit anything, and lose access the moment you revoke or regenerate the code.</p>
+      <div id="share-code-guest-note" class="footnote" hidden data-i18n="privacy.shareCodeGuestNote">Sign up or log in to generate a provider share code - guest data lives only on this device, so there's nothing on our server for a provider's code to point to.</div>
+      <div id="share-code-account-area" hidden>
+        <div id="share-code-display" class="share-code-display" hidden>
+          <span class="share-code-value" id="share-code-value"></span>
+        </div>
+        <div id="share-code-none" class="footnote" data-i18n="privacy.shareCodeNone">No active share code.</div>
+        <div class="privacy-controls-row">
+          <button type="button" class="secondary-btn" id="share-code-generate-btn" data-i18n="privacy.shareCodeGenerateBtn">🔑 Generate Share Code</button>
+          <button type="button" class="secondary-btn danger" id="share-code-revoke-btn" hidden data-i18n="privacy.shareCodeRevokeBtn">✕ Revoke Access</button>
+        </div>
+        <p class="footnote" id="share-code-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= PROVIDER VIEW (public, code-only, no patient login) ========================= -->
+  <section id="provider-view" class="view">
+    <div class="card">
+      <h2 data-i18n="provider.title">Provider Access</h2>
+      <p class="section-sub" data-i18n="provider.sub">Enter the code your patient shared with you to view their latest result. No login needed - the code itself is the access credential.</p>
+      <div class="field">
+        <label for="provider-code-input" data-i18n="provider.codeLabel">Share code</label>
+        <input type="text" id="provider-code-input" maxlength="8" placeholder="e.g. 8UDPF7AG" style="text-transform:uppercase;" />
+      </div>
+      <button type="button" class="submit-btn" id="provider-lookup-btn" data-i18n="provider.lookupBtn">View Patient Summary</button>
+      <p class="footnote" id="provider-error" hidden></p>
+    </div>
+
+    <div id="provider-results" hidden>
+      <div class="card">
+        <h3 id="provider-patient-name"></h3>
+        <p class="footnote" data-i18n="provider.readOnlyNote">Read-only summary. No edit access, and no other patients are reachable from this code.</p>
+      </div>
+
+      <div class="card" id="provider-assessment-card">
+        <h3 data-i18n="provider.latestAssessment">Latest Assessment</h3>
+        <div id="provider-assessment-content"></div>
+      </div>
+
+      <div class="card" id="provider-nutrition-card">
+        <h3 data-i18n="provider.latestNutrition">Latest Nutrition Check</h3>
+        <div id="provider-nutrition-content"></div>
+      </div>
+
+      <div id="provider-no-data" class="card" hidden>
+        <p data-i18n="provider.noData">This patient has no assessment or nutrition data yet.</p>
+      </div>
     </div>
   </section>
 
