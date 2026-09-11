@@ -85,6 +85,14 @@
       </span>
     </nav>
     <button class="lang-toggle" id="lang-toggle" type="button">हिंदी</button>
+    <button class="a11y-toggle-btn" id="a11y-toggle-btn" type="button" title="Display settings" aria-label="Display settings">⚙️</button>
+    <div class="a11y-panel" id="a11y-panel" hidden>
+      <h4 data-i18n="a11y.title">Display Settings</h4>
+      <label class="check"><input type="checkbox" id="a11y-large-text" /> <span data-i18n="a11y.largeText">Larger text</span></label>
+      <label class="check"><input type="checkbox" id="a11y-high-contrast" /> <span data-i18n="a11y.highContrast">High contrast</span></label>
+      <label class="check"><input type="checkbox" id="a11y-large-touch" /> <span data-i18n="a11y.largeTouch">Larger touch targets</span></label>
+      <button type="button" class="link-btn" id="a11y-close-btn" data-i18n="a11y.close">Close</button>
+    </div>
     <div class="user-area" id="user-area" hidden>
       <span class="user-name" id="user-name-display"></span>
       <button class="user-logout-btn" id="logout-btn" type="button" title="Log out">Log out</button>

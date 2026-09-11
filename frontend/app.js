@@ -225,6 +225,8 @@
       "nutrition.analyze": "Analyze My Diet", "nutrition.result": "Your Nutrient Adequacy",
       "home.greetingMorning": "Good morning", "home.greetingAfternoon": "Good afternoon", "home.greetingEvening": "Good evening",
       emergencyBtn: "🚨 Call 108",
+      "a11y.title": "Display Settings", "a11y.largeText": "Larger text",
+      "a11y.highContrast": "High contrast", "a11y.largeTouch": "Larger touch targets", "a11y.close": "Close",
       disclaimer: "⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.",
       "section.vitals": "1 · Vitals", includeVitals: "Include vitals",
       "field.age": "Age (years)", "field.sbp": "Systolic BP", "field.dbp": "Diastolic BP",
@@ -331,6 +333,8 @@
       "nutrition.analyze": "मेरे आहार का विश्लेषण करें", "nutrition.result": "आपकी पोषक तत्व पर्याप्तता",
       "home.greetingMorning": "सुप्रभात", "home.greetingAfternoon": "नमस्ते", "home.greetingEvening": "शुभ संध्या",
       emergencyBtn: "🚨 108 पर कॉल करें",
+      "a11y.title": "डिस्प्ले सेटिंग्स", "a11y.largeText": "बड़ा टेक्स्ट",
+      "a11y.highContrast": "हाई कॉन्ट्रास्ट", "a11y.largeTouch": "बड़े टच टारगेट", "a11y.close": "बंद करें",
       disclaimer: "⚠️ यह केवल एक जांच सहायता है — निदान नहीं। <strong>गंभीर</strong> या <strong>अति गंभीर</strong> परिणाम का मतलब है तुरंत अस्पताल जाएं।",
       "section.vitals": "1 · महत्वपूर्ण संकेत", includeVitals: "Vitals शामिल करें",
       "field.age": "आयु (वर्ष)", "field.sbp": "सिस्टोलिक बीपी", "field.dbp": "डायस्टोलिक बीपी",
@@ -443,6 +447,49 @@
   });
 
   applyTranslations();
+
+  // ==================================================================
+  // Accessibility settings - a device/browser preference, not per-
+  // account data, so this is intentionally the one UI setting stored
+  // UNSCOPED (not run through scopedKey()) - it should stay the same
+  // regardless of which account is logged in on this device.
+  // ==================================================================
+
+  const A11Y_SETTINGS_KEY = "janamdatri_a11y_settings";
+
+  function loadA11ySettings() {
+    try { return JSON.parse(localStorage.getItem(A11Y_SETTINGS_KEY)) || {}; } catch { return {}; }
+  }
+
+  function applyA11ySettings(settings) {
+    document.documentElement.classList.toggle("a11y-large-text", !!settings.largeText);
+    document.documentElement.classList.toggle("a11y-high-contrast", !!settings.highContrast);
+    document.documentElement.classList.toggle("a11y-large-touch", !!settings.largeTouch);
+    $("#a11y-large-text").checked = !!settings.largeText;
+    $("#a11y-high-contrast").checked = !!settings.highContrast;
+    $("#a11y-large-touch").checked = !!settings.largeTouch;
+  }
+
+  function saveA11ySettings(settings) {
+    try { localStorage.setItem(A11Y_SETTINGS_KEY, JSON.stringify(settings)); } catch { /* non-fatal */ }
+  }
+
+  applyA11ySettings(loadA11ySettings());
+
+  $("#a11y-toggle-btn").addEventListener("click", () => {
+    $("#a11y-panel").hidden = !$("#a11y-panel").hidden;
+  });
+  $("#a11y-close-btn").addEventListener("click", () => { $("#a11y-panel").hidden = true; });
+
+  [["a11y-large-text", "largeText"], ["a11y-high-contrast", "highContrast"], ["a11y-large-touch", "largeTouch"]]
+    .forEach(([elId, settingKey]) => {
+      $("#" + elId).addEventListener("change", () => {
+        const settings = loadA11ySettings();
+        settings[settingKey] = $("#" + elId).checked;
+        saveA11ySettings(settings);
+        applyA11ySettings(settings);
+      });
+    });
 
   // ==================================================================
   // Navigation

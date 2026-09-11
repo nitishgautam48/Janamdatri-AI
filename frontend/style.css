@@ -23,6 +23,55 @@
   --minimal: #2f8f5f;
 }
 
+/* ---------------- Accessibility modes ---------------- */
+
+html.a11y-large-text { font-size: 118%; }
+
+html.a11y-high-contrast {
+  --bg: #ffffff;
+  --card-bg: #ffffff;
+  --text: #000000;
+  --muted: #262626;
+  --border: #000000;
+  --primary: #7a0033;
+  --primary-dark: #4d0020;
+  --accent: #7a4a00;
+  --accent-light: #a3630a;
+  --teal: #00473b;
+  --tint-bg: #fdeef2;
+  --tint-bg-strong: #f8d4de;
+  --hint: #4d0020;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --critical: #8a0000;
+  --severe: #8a3d00;
+  --moderate: #5c4400;
+  --mild: #00521f;
+  --minimal: #00521f;
+}
+html.a11y-high-contrast body { background: #ffffff; }
+html.a11y-high-contrast .card { border-width: 2px; }
+
+html.a11y-large-touch .navlink, html.a11y-large-touch .action-card, html.a11y-large-touch .chip,
+html.a11y-large-touch .submit-btn, html.a11y-large-touch .secondary-btn, html.a11y-large-touch .cta-btn,
+html.a11y-large-touch .today-care-item, html.a11y-large-touch .action-tier-pill,
+html.a11y-large-touch input, html.a11y-large-touch select, html.a11y-large-touch textarea {
+  min-height: 46px;
+}
+html.a11y-large-touch .navlink { padding-top: 14px; padding-bottom: 14px; }
+html.a11y-large-touch .field input, html.a11y-large-touch .field textarea { padding: 14px; }
+
+.a11y-toggle-btn {
+  background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: white;
+  border-radius: var(--radius-sm); padding: 6px 10px; font-size: 15px; cursor: pointer;
+}
+.a11y-panel {
+  position: absolute; top: 100%; right: 20px; margin-top: 6px; z-index: 60;
+  background: var(--card-bg); border: 1.5px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow); padding: 16px; width: 240px;
+}
+.a11y-panel h4 { margin: 0 0 10px; font-size: 13.5px; }
+.a11y-panel .check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 10px; cursor: pointer; }
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -118,6 +167,7 @@ html, body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
