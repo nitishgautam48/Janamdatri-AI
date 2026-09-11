@@ -8,13 +8,18 @@ Two endpoints reflect the two-layer architecture:
                         checklist, expert rules) -> final triage decision
 """
 
+from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.dynamic_eval import triage
 from src.ml.predict import get_classifier
+
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 app = FastAPI(
     title="Janamdatri-AI Maternal Risk Triage",
@@ -24,6 +29,13 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 class Vitals(BaseModel):
