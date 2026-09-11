@@ -3,6 +3,7 @@
   const HISTORY_KEY = "janamdatri_history";
   const EPDS_KEY = "janamdatri_last_epds";
   const GUIDE_KEY = "janamdatri_last_guide";
+  const NUTRITION_KEY = "janamdatri_last_nutrition";
   const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
 
@@ -80,6 +81,10 @@
     if (epdsResultCard) epdsResultCard.hidden = true;
     const epdsForm = document.getElementById("epds-form");
     if (epdsForm) epdsForm.querySelectorAll('input[type="radio"]:checked').forEach((el) => { el.checked = false; });
+    const nutritionResultCard = document.getElementById("nutrition-result-card");
+    if (nutritionResultCard) nutritionResultCard.hidden = true;
+    const nutritionForm = document.getElementById("nutrition-form");
+    if (nutritionForm) nutritionForm.querySelectorAll('input[type="radio"]:checked').forEach((el) => { el.checked = false; });
     syncEpdsIncludeVisibility();
     pendingClarificationContext = null;
     unresolvedChatRounds = 0;
@@ -192,15 +197,20 @@
   const TRANSLATIONS = {
     en: {
       tagline: "Maternal Risk Triage",
-      "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.psych": "Mental Health",
-      "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
+      "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.nutrition": "Nutrition",
+      "nav.psych": "Mental Health", "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
       "home.sub": "Screening, guidance, and instant help for a healthier pregnancy — built for India.",
       "home.lastAssessment": "Last Assessment", "home.pregnancyWeek": "Pregnancy Week", "home.mentalHealth": "Mental Health",
       "home.quickActions": "Quick Actions",
       "home.actionAssess": "Run Assessment", "home.actionGuide": "Pregnancy Guide",
+      "home.actionNutrition": "Nutrition Analysis",
       "home.actionPsych": "Mental Health Check", "home.actionReports": "My Reports",
       "home.actionChat": "Instant Help Chat", "home.actionHelp": "Helplines",
+      "home.nutritionStatus": "Nutrition",
       "home.tipLabel": "Tip of the day",
+      "nutrition.title": "Nutrition Analysis",
+      "nutrition.sub": "Tell me how often you eat these food groups, and I'll check your intake against pregnancy nutrient needs (iron, protein, folate, calcium, B12, vitamin D, iodine) and suggest specific, affordable Indian foods to close any gaps. Not a lab test - a starting point for the conversation with your ANC provider or a nutritionist.",
+      "nutrition.analyze": "Analyze My Diet", "nutrition.result": "Your Nutrient Adequacy",
       "home.greetingMorning": "Good morning", "home.greetingAfternoon": "Good afternoon", "home.greetingEvening": "Good evening",
       "home.noneYet": "None yet", "home.notSet": "Not set",
       emergencyBtn: "🚨 Call 108",
@@ -263,15 +273,20 @@
     },
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
-      "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.psych": "मानसिक स्वास्थ्य",
-      "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
+      "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.nutrition": "पोषण",
+      "nav.psych": "मानसिक स्वास्थ्य", "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
       "home.sub": "एक स्वस्थ गर्भावस्था के लिए जांच, मार्गदर्शन और तुरंत सहायता — भारत के लिए बनाया गया।",
       "home.lastAssessment": "अंतिम मूल्यांकन", "home.pregnancyWeek": "गर्भावस्था सप्ताह", "home.mentalHealth": "मानसिक स्वास्थ्य",
       "home.quickActions": "त्वरित कार्य",
       "home.actionAssess": "मूल्यांकन करें", "home.actionGuide": "गर्भावस्था गाइड",
+      "home.actionNutrition": "पोषण विश्लेषण",
       "home.actionPsych": "मानसिक स्वास्थ्य जांच", "home.actionReports": "मेरी रिपोर्ट",
       "home.actionChat": "तुरंत सहायता चैट", "home.actionHelp": "हेल्पलाइन",
+      "home.nutritionStatus": "पोषण",
       "home.tipLabel": "आज की सलाह",
+      "nutrition.title": "पोषण विश्लेषण",
+      "nutrition.sub": "बताएं कि आप ये खाद्य समूह कितनी बार खाती हैं, और मैं गर्भावस्था के पोषक तत्वों (आयरन, प्रोटीन, फोलेट, कैल्शियम, B12, विटामिन D, आयोडीन) से आपके सेवन की तुलना करूंगी और कमी को पूरा करने के लिए किफायती भारतीय भोजन सुझाऊंगी। यह लैब टेस्ट नहीं है - अपने ANC प्रदाता या न्यूट्रिशनिस्ट से बातचीत शुरू करने का एक तरीका है।",
+      "nutrition.analyze": "मेरे आहार का विश्लेषण करें", "nutrition.result": "आपकी पोषक तत्व पर्याप्तता",
       "home.greetingMorning": "सुप्रभात", "home.greetingAfternoon": "नमस्ते", "home.greetingEvening": "शुभ संध्या",
       "home.noneYet": "अभी तक कोई नहीं", "home.notSet": "सेट नहीं है",
       emergencyBtn: "🚨 108 पर कॉल करें",
@@ -438,6 +453,11 @@
     const savedEpds = loadSavedEpds();
     $("#home-stat-epds").textContent = savedEpds ? savedEpds.result.classification : dict["home.noneYet"];
 
+    const savedNutrition = loadSavedNutrition();
+    $("#home-stat-nutrition").textContent = savedNutrition
+      ? (savedNutrition.result.gaps.length ? `${savedNutrition.result.gaps.length} gap(s) found` : "All adequate")
+      : dict["home.noneYet"];
+
     const tips = TIPS[currentLang] || TIPS.en;
     $("#home-tip-text").textContent = tips[dayOfYear() % tips.length];
   }
@@ -447,6 +467,7 @@
       showView(btn.dataset.gotoView);
       if (btn.dataset.gotoView === "history-view") renderHistory();
       if (btn.dataset.gotoView === "psych-view" && !$("#epds-form").children.length) renderEpdsForm();
+      if (btn.dataset.gotoView === "nutrition-view" && !$("#nutrition-form").children.length) renderNutritionForm();
       if (btn.dataset.gotoView === "assess-view") prefillPregnancyWeek();
     });
   });
@@ -904,6 +925,130 @@
 
     $("#guide-schemes").innerHTML = Object.entries(guide.schemes).map(([name, desc]) => `
       <div class="scheme-tile"><strong>${name}</strong><span>${desc}</span></div>`).join("");
+  }
+
+  // ==================================================================
+  // Nutrition Analysis
+  // ==================================================================
+
+  let nutritionItemsCache = null;
+
+  async function loadNutritionItems() {
+    if (nutritionItemsCache) return nutritionItemsCache;
+    const res = await fetch("/nutrition/items");
+    const payload = await res.json();
+    nutritionItemsCache = payload.data;
+    return nutritionItemsCache;
+  }
+
+  async function renderNutritionForm() {
+    const { questions, frequencyOptions } = await loadNutritionItems();
+    const container = $("#nutrition-form");
+    container.innerHTML = questions.map((q, i) => `
+      <div class="epds-question">
+        <div class="epds-question-text">${i + 1}. ${q.text}</div>
+        <div class="epds-options">
+          ${frequencyOptions.map((opt, val) => `
+            <label class="epds-option">
+              <input type="radio" name="nutrition-${q.id}" value="${val}" />
+              <span>${opt}</span>
+            </label>`).join("")}
+        </div>
+      </div>`).join("");
+  }
+
+  $$('.navlink[data-view="nutrition-view"]').forEach((btn) => {
+    btn.addEventListener("click", () => { if (!$("#nutrition-form").children.length) renderNutritionForm(); });
+  });
+
+  // Reads the most recent hemoglobin on record (from assessment history) so
+  // the nutrition check can connect a clinical finding (low Hb) with a
+  // dietary one (low iron intake) automatically, instead of asking the
+  // person to re-enter it - see nutrition_eval.py's connectedInsights.
+  function lastKnownHemoglobin() {
+    const history = loadHistory();
+    for (const entry of history) {
+      const hb = entry.result && entry.result.hemoglobinAssessment;
+      if (hb) return hb.hemoglobin;
+    }
+    return null;
+  }
+
+  $("#nutrition-submit-btn").addEventListener("click", async () => {
+    const errorEl = $("#nutrition-error");
+    const btn = $("#nutrition-submit-btn");
+    errorEl.hidden = true;
+
+    const { questions } = await loadNutritionItems();
+    const responses = {};
+    for (const q of questions) {
+      const checked = document.querySelector(`input[name="nutrition-${q.id}"]:checked`);
+      if (!checked) {
+        errorEl.textContent = currentLang === "hi" ? "कृपया सभी प्रश्नों के उत्तर दें।" : "Please answer all the questions.";
+        errorEl.hidden = false;
+        return;
+      }
+      responses[q.id] = Number(checked.value);
+    }
+
+    const lastGuide = loadLastGuide();
+    const pregnancyWeek = lastGuide ? lastGuide.week : null;
+    const hemoglobin = lastKnownHemoglobin();
+
+    btn.disabled = true;
+    btn.querySelector(".spinner").hidden = false;
+    try {
+      const res = await fetch("/nutrition-assess", {
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ responses, hemoglobin, pregnancyWeek }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Could not analyze diet.");
+      renderNutritionResult(payload.data);
+      saveNutritionResult(payload.data);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.querySelector(".spinner").hidden = true;
+    }
+  });
+
+  const NUTRIENT_STATUS_COLOR = { Adequate: "#2f8f5f", Borderline: "#c98a1a", Low: "#c23b2e" };
+
+  function renderNutritionResult(data) {
+    $("#nutrition-result-card").hidden = false;
+
+    let insightsHtml = "";
+    if (data.priorityNutrients && data.priorityNutrients.length) {
+      insightsHtml += `<p class="footnote">Priority for this trimester: ${data.priorityNutrients.join(", ")}</p>`;
+    }
+    if (data.connectedInsights && data.connectedInsights.length) {
+      insightsHtml += data.connectedInsights
+        .map((i) => `<div class="nutrition-connected-alert">🔗 ${i}</div>`).join("");
+    }
+    $("#nutrition-insights").innerHTML = insightsHtml;
+
+    $("#nutrition-nutrients").innerHTML = Object.entries(data.nutrients).map(([name, v]) => `
+      <div class="nutrient-card">
+        <div class="nutrient-head">
+          <strong>${name}</strong>
+          <span class="sev-pill" style="background:${NUTRIENT_STATUS_COLOR[v.status]}">${v.status}</span>
+        </div>
+        <div class="nutrient-bar-track"><div class="nutrient-bar-fill" style="width:${v.percent}%;background:${NUTRIENT_STATUS_COLOR[v.status]}"></div></div>
+        ${v.status !== "Adequate" ? `<ul class="recs-list">${v.suggestions.slice(0, 4).map((s) => `<li>${s}</li>`).join("")}</ul>` : ""}
+      </div>`).join("");
+
+    $("#nutrition-result-card").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function saveNutritionResult(result) {
+    try { localStorage.setItem(scopedKey(NUTRITION_KEY), JSON.stringify({ result, savedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
+  }
+
+  function loadSavedNutrition() {
+    try { return JSON.parse(localStorage.getItem(scopedKey(NUTRITION_KEY))); } catch { return null; }
   }
 
   // ==================================================================

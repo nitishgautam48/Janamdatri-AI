@@ -15,6 +15,9 @@ Endpoints reflect the layered architecture:
   GET  /psych-assess/items            - the 10 EPDS questions + response options
   POST /psych-assess                  - EPDS scoring alone
   POST /pregnancy-guide               - trimester/week-based ANC schedule and guidance
+  GET  /nutrition/items                - the personalized nutrition questionnaire
+  POST /nutrition-assess               - food-group frequency -> per-nutrient adequacy + food suggestions
+  GET  /nutrition-checks/mine          - a logged-in user's nutrition check history
   POST /chat                           - rule-based instant-help assistant
   POST /documents/analyze              - upload/paste a prescription or lab report ->
                                          medication schedule + flagged findings
@@ -31,7 +34,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src import auth, document_extractor
-from src.dynamic_eval import chat_assistant, pregnancy_guide, psych_eval, report_analyzer, triage
+from src.dynamic_eval import chat_assistant, nutrition_eval, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
@@ -85,6 +88,12 @@ class AssessRequest(BaseModel):
 
 class PsychAssessRequest(BaseModel):
     responses: List[int] = Field(..., min_length=10, max_length=10)
+
+
+class NutritionAssessRequest(BaseModel):
+    responses: dict = Field(..., description="Map of question id -> frequency response (0-3)")
+    hemoglobin: Optional[float] = Field(default=None, description="Recent Hb in g/dL, if known, to connect with dietary iron intake")
+    pregnancyWeek: Optional[int] = Field(default=None, description="Current gestational week, if known, to prioritize by trimester")
 
 
 class PregnancyGuideRequest(BaseModel):
@@ -273,6 +282,48 @@ def pregnancy_guide_endpoint(req: PregnancyGuideRequest):
         raise HTTPException(status_code=400, detail="Provide either 'lmp' (ISO date) or 'week'.")
 
     return {"success": True, "data": guide}
+
+
+# ============================================================
+#  NUTRITION ANALYSIS
+# ============================================================
+
+@app.get("/nutrition/items")
+def nutrition_items():
+    return {
+        "success": True,
+        "data": {"questions": nutrition_eval.QUESTIONS, "frequencyOptions": nutrition_eval.FREQUENCY_OPTIONS},
+    }
+
+
+@app.post("/nutrition-assess")
+def nutrition_assess(req: NutritionAssessRequest, x_user_token: Optional[str] = Header(None)):
+    trimester = pregnancy_guide.trimester_for_week(req.pregnancyWeek) if req.pregnancyWeek is not None else None
+    try:
+        result = nutrition_eval.score(req.responses, hemoglobin=req.hemoglobin, trimester=trimester)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    user = _current_user(x_user_token)
+    if user:
+        try:
+            auth.save_nutrition_check(user["id"], json.dumps(result))
+        except Exception as exc:
+            print(f"Could not persist nutrition check: {exc}")
+
+    return {"success": True, "data": result}
+
+
+@app.get("/nutrition-checks/mine")
+def nutrition_checks_mine(x_user_token: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+
+    rows = auth.get_nutrition_checks_for_user(user["id"])
+    for row in rows:
+        row["result"] = json.loads(row.pop("result_json"))
+    return {"success": True, "data": {"checks": rows}}
 
 
 # ============================================================

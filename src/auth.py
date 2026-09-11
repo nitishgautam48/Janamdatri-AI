@@ -59,6 +59,12 @@ def init_db():
             sender TEXT NOT NULL,
             message TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS nutrition_checks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at REAL NOT NULL,
+            result_json TEXT NOT NULL
+        );
     """)
     conn.commit()
     conn.close()
@@ -181,5 +187,30 @@ def save_chat_message(user_id: int, sender: str, message: str):
             (user_id, time.time(), sender, message),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def save_nutrition_check(user_id: int, result_json: str):
+    conn = _connect()
+    try:
+        conn.execute(
+            "INSERT INTO nutrition_checks (user_id, created_at, result_json) VALUES (?, ?, ?)",
+            (user_id, time.time(), result_json),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_nutrition_checks_for_user(user_id: int, limit: int = 20) -> list:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT id, created_at, result_json FROM nutrition_checks "
+            "WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()

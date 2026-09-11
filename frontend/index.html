@@ -72,6 +72,7 @@
       <button class="navlink active" data-view="home-view" data-i18n="nav.home">Home</button>
       <button class="navlink" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
       <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy Guide</button>
+      <button class="navlink" data-view="nutrition-view" data-i18n="nav.nutrition">Nutrition</button>
       <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Health</button>
       <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
       <button class="navlink" data-view="reports-view" data-i18n="nav.reports">My Reports</button>
@@ -123,6 +124,13 @@
           <div class="stat-value" id="home-stat-epds">—</div>
         </div>
       </div>
+      <div class="stat-card">
+        <span class="stat-icon">🥗</span>
+        <div>
+          <div class="stat-label" data-i18n="home.nutritionStatus">Nutrition</div>
+          <div class="stat-value" id="home-stat-nutrition">—</div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -135,6 +143,10 @@
         <button type="button" class="action-card" data-goto-view="guide-view">
           <span class="action-icon">🤰</span>
           <span data-i18n="home.actionGuide">Pregnancy Guide</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="nutrition-view">
+          <span class="action-icon">🥗</span>
+          <span data-i18n="home.actionNutrition">Nutrition Analysis</span>
         </button>
         <button type="button" class="action-card" data-goto-view="psych-view">
           <span class="action-icon">💜</span>
@@ -471,6 +483,31 @@
         <h3 data-i18n="guide.schemes">Government Schemes</h3>
         <div id="guide-schemes" class="scheme-grid"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ========================= NUTRITION ANALYSIS VIEW ========================= -->
+  <section id="nutrition-view" class="view">
+    <div class="card">
+      <h2 data-i18n="nutrition.title">Nutrition Analysis</h2>
+      <p class="section-sub" data-i18n="nutrition.sub">
+        Tell me how often you eat these food groups, and I'll check your intake against pregnancy
+        nutrient needs (iron, protein, folate, calcium, B12, vitamin D, iodine) and suggest specific,
+        affordable Indian foods to close any gaps. Not a lab test - a starting point for the
+        conversation with your ANC provider or a nutritionist.
+      </p>
+      <div id="nutrition-form"></div>
+      <button class="submit-btn" id="nutrition-submit-btn" type="button">
+        <span class="btn-label" data-i18n="nutrition.analyze">Analyze My Diet</span>
+        <span class="spinner" hidden></span>
+      </button>
+      <p class="error-msg" id="nutrition-error" hidden></p>
+    </div>
+
+    <div class="card" id="nutrition-result-card" hidden>
+      <h3 data-i18n="nutrition.result">Your Nutrient Adequacy</h3>
+      <div id="nutrition-insights"></div>
+      <div id="nutrition-nutrients" class="nutrient-grid"></div>
     </div>
   </section>
 
