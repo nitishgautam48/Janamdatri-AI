@@ -115,8 +115,12 @@ def _extract_medications(text: str) -> list:
     return found
 
 
-def _extract_findings(text: str) -> list:
+def _extract_findings(text: str) -> tuple:
     findings = []
+    # Parsed numeric values alongside the display findings, so the frontend
+    # can offer "add this to my health record" without re-parsing a
+    # formatted display string like "138/88 mmHg" back into numbers itself.
+    extracted_vitals = {}
 
     hb_match = re.search(r"\b(?:hemoglobin|haemoglobin|hb)\b\s*[:\-]?\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
     if hb_match:
@@ -126,6 +130,7 @@ def _extract_findings(text: str) -> list:
             "label": "Hemoglobin", "value": f"{value} g/dL",
             "flag": graded["grade"] if graded["grade"] != "Normal" else None,
         })
+        extracted_vitals["hemoglobin"] = value
 
     bp_match = re.search(r"\b(?:blood pressure|bp)\b\s*[:\-]?\s*(\d{2,3})\s*/\s*(\d{2,3})", text, re.IGNORECASE)
     if bp_match:
@@ -136,10 +141,14 @@ def _extract_findings(text: str) -> list:
         elif sbp >= 140 or dbp >= 90:
             flag = "Above pregnancy hypertension threshold (140/90)"
         findings.append({"label": "Blood Pressure", "value": f"{sbp}/{dbp} mmHg", "flag": flag})
+        extracted_vitals["systolicBP"] = sbp
+        extracted_vitals["diastolicBP"] = dbp
 
     bs_match = re.search(r"\b(?:blood sugar|glucose|fbs|ppbs|rbs)\b\s*[:\-]?\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
     if bs_match:
+        value = float(bs_match.group(1))
         findings.append({"label": "Blood Sugar", "value": bs_match.group(1), "flag": "Review the unit and range with your provider"})
+        extracted_vitals["bloodSugar"] = value
 
     urine_match = re.search(r"\burine\s*(?:protein|albumin)\b\s*[:\-]?\s*(nil|trace|\++|\d+)", text, re.IGNORECASE)
     if urine_match:
@@ -151,12 +160,12 @@ def _extract_findings(text: str) -> list:
     if tsh_match:
         findings.append({"label": "TSH", "value": tsh_match.group(1), "flag": "Review the reference range with your provider"})
 
-    return findings
+    return findings, extracted_vitals
 
 
 def analyze(text: str) -> dict:
     medications = _extract_medications(text)
-    findings = _extract_findings(text)
+    findings, extracted_vitals = _extract_findings(text)
 
     schedule_by_time = {"Morning": [], "Afternoon": [], "Evening": [], "Night": [], "As needed": []}
     for med in medications:
@@ -181,6 +190,7 @@ def analyze(text: str) -> dict:
         "medications": medications,
         "scheduleByTime": {k: v for k, v in schedule_by_time.items() if v},
         "findings": findings,
+        "extractedVitals": extracted_vitals,
         "methodology": (
             "Pattern-matching over the extracted text for known drug names, dosing notation, and lab "
             "value formats - not medical interpretation. Always follow what your prescriber actually "

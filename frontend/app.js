@@ -4,6 +4,7 @@
   const EPDS_KEY = "janamdatri_last_epds";
   const GUIDE_KEY = "janamdatri_last_guide";
   const NUTRITION_KEY = "janamdatri_last_nutrition";
+  const REPORT_VITALS_LOG_KEY = "janamdatri_report_vitals_log";
   const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
 
@@ -264,6 +265,9 @@
       "reports.pastePlaceholder": "e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
       "reports.analyze": "Analyze Report", "reports.summary": "Summary", "reports.schedule": "Medication Schedule",
       "reports.findings": "Key Findings", "reports.preview": "Extracted Text (preview)",
+      "reports.confirmTitle": "Add These Values to My Health Record?",
+      "reports.confirmSub": "These will show up in your Health Trends alongside your assessments. Nothing is added until you confirm.",
+      "reports.confirmBtn": "✓ Add to My Health Record", "reports.confirmSuccess": "Added to your Health Trends.",
       "help.title": "Helplines", "help.ambulance": "Emergency Ambulance",
       "help.transport": "Pregnancy Emergency Transport", "help.national": "National Health Helpline",
       "help.women": "Women's Helpline", "help.child": "Child Helpline",
@@ -339,6 +343,9 @@
       "reports.pastePlaceholder": "उदा. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
       "reports.analyze": "रिपोर्ट का विश्लेषण करें", "reports.summary": "सारांश", "reports.schedule": "दवा शेड्यूल",
       "reports.findings": "मुख्य निष्कर्ष", "reports.preview": "निकाला गया टेक्स्ट (पूर्वावलोकन)",
+      "reports.confirmTitle": "ये मान मेरे स्वास्थ्य रिकॉर्ड में जोड़ें?",
+      "reports.confirmSub": "ये आपके स्वास्थ्य रुझानों में आपके मूल्यांकनों के साथ दिखेंगे। पुष्टि करने तक कुछ भी नहीं जोड़ा जाएगा।",
+      "reports.confirmBtn": "✓ मेरे स्वास्थ्य रिकॉर्ड में जोड़ें", "reports.confirmSuccess": "आपके स्वास्थ्य रुझानों में जोड़ दिया गया।",
       "help.title": "हेल्पलाइन", "help.ambulance": "आपातकालीन एम्बुलेंस",
       "help.transport": "गर्भावस्था आपातकालीन परिवहन", "help.national": "राष्ट्रीय स्वास्थ्य हेल्पलाइन",
       "help.women": "महिला हेल्पलाइन", "help.child": "चाइल्ड हेल्पलाइन",
@@ -1175,19 +1182,50 @@
     return `<div class="trend-summary">${notes.map((n) => `<p>📈 ${n}</p>`).join("")}</div>`;
   }
 
+  function loadReportVitalsLog() {
+    try { return JSON.parse(localStorage.getItem(scopedKey(REPORT_VITALS_LOG_KEY))) || []; } catch { return []; }
+  }
+
+  function addReportVitalsToHealthRecord(vitals) {
+    const log = loadReportVitalsLog();
+    log.push({ timestamp: new Date().toISOString(), source: "report", ...vitals });
+    try { localStorage.setItem(scopedKey(REPORT_VITALS_LOG_KEY), JSON.stringify(log.slice(-50))); } catch { /* non-fatal */ }
+  }
+
   function renderHealthTrends(history) {
     const container = $("#health-trends-content");
-    if (history.length < 2) {
-      container.innerHTML = `<p class="footnote">Not enough data yet - run at least 2 assessments to see trends here.</p>`;
+    const reportLog = loadReportVitalsLog();
+    if (history.length < 2 && reportLog.length < 2) {
+      container.innerHTML = `<p class="footnote">Not enough data yet - run at least 2 assessments (or confirm values from an uploaded report in My Reports) to see trends here.</p>`;
       return;
     }
 
+    // Merge real assessments with confirmed report values into one
+    // chronological point list per metric - a report has no triage result,
+    // so it only ever contributes to the vitals/Hb series, never to the
+    // risk-score trend or the risk-level-change note below.
     const chronological = [...history].reverse();
+    const assessPoints = chronological.map((h) => ({
+      t: new Date(h.timestamp).getTime(),
+      mri: h.mri,
+      sbp: h.result && h.result.vitalsInput ? h.result.vitalsInput.SystolicBP : null,
+      bs: h.result && h.result.vitalsInput ? h.result.vitalsInput.BS : null,
+      hb: h.result && h.result.hemoglobinAssessment ? h.result.hemoglobinAssessment.hemoglobin : null,
+    }));
+    const reportPoints = reportLog.map((r) => ({
+      t: new Date(r.timestamp).getTime(),
+      mri: null,
+      sbp: r.systolicBP != null ? r.systolicBP : null,
+      bs: r.bloodSugar != null ? r.bloodSugar : null,
+      hb: r.hemoglobin != null ? r.hemoglobin : null,
+    }));
+    const merged = [...assessPoints, ...reportPoints].sort((a, b) => a.t - b.t);
+
     const series = {
-      mri: chronological.map((h) => h.mri),
-      sbp: chronological.map((h) => (h.result && h.result.vitalsInput ? h.result.vitalsInput.SystolicBP : null)),
-      bs: chronological.map((h) => (h.result && h.result.vitalsInput ? h.result.vitalsInput.BS : null)),
-      hb: chronological.map((h) => (h.result && h.result.hemoglobinAssessment ? h.result.hemoglobinAssessment.hemoglobin : null)),
+      mri: merged.map((p) => p.mri),
+      sbp: merged.map((p) => p.sbp),
+      bs: merged.map((p) => p.bs),
+      hb: merged.map((p) => p.hb),
     };
 
     const tiles = [
@@ -1733,6 +1771,28 @@
           <div class="rule-card-head"><strong>${f.label}: ${f.value}</strong>${f.flag ? '<span class="sev-pill Moderate">Review</span>' : ""}</div>
           ${f.flag ? `<p>${f.flag}</p>` : ""}
         </div>`).join("");
+    }
+
+    const confirmCard = $("#report-confirm-card");
+    const extractedVitals = data.extractedVitals || {};
+    const confirmLabels = [];
+    if (extractedVitals.hemoglobin != null) confirmLabels.push(`Hemoglobin: ${extractedVitals.hemoglobin} g/dL`);
+    if (extractedVitals.systolicBP != null) confirmLabels.push(`Blood Pressure: ${extractedVitals.systolicBP}/${extractedVitals.diastolicBP} mmHg`);
+    if (extractedVitals.bloodSugar != null) confirmLabels.push(`Blood Sugar: ${extractedVitals.bloodSugar} mmol/L`);
+
+    if (confirmLabels.length) {
+      confirmCard.hidden = false;
+      $("#report-confirm-list").innerHTML = `<ul class="recs-list">${confirmLabels.map((l) => `<li>${l}</li>`).join("")}</ul>`;
+      $("#report-confirm-success").hidden = true;
+      const btn = $("#report-confirm-btn");
+      btn.disabled = false;
+      btn.onclick = () => {
+        addReportVitalsToHealthRecord(extractedVitals);
+        btn.disabled = true;
+        $("#report-confirm-success").hidden = false;
+      };
+    } else {
+      confirmCard.hidden = true;
     }
 
     $("#report-preview").textContent = data.extractedTextPreview || "";
