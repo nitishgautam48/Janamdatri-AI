@@ -1,5 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
-import TopNav from "./TopNav";
+import TopBar from "./TopBar";
+import Sidebar from "./Sidebar";
+import BottomNav from "./BottomNav";
 import ChatWidget from "../chat/ChatWidget";
 import { useAuth } from "../../context/AuthContext";
 import WelcomeGate from "../auth/WelcomeGate";
@@ -16,14 +18,18 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      <TopNav />
+      <TopBar />
       {hasIdentity || isPublicRoute ? (
-        <main className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
-          <Outlet />
-        </main>
+        <div className="mx-auto flex max-w-7xl">
+          {hasIdentity && <Sidebar />}
+          <main className="min-w-0 flex-1 px-4 py-8 pb-24 lg:px-8 lg:pb-8">
+            <Outlet />
+          </main>
+        </div>
       ) : (
         <WelcomeGate />
       )}
+      {hasIdentity && <BottomNav />}
       {hasIdentity && <ChatWidget />}
     </div>
   );

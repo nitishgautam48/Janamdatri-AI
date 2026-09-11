@@ -29,11 +29,11 @@ export default function WelcomeGate() {
   }
 
   return (
-    <div className="bg-grid flex min-h-screen items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md rounded-lg border border-border bg-surface/90 p-8 shadow-2xl shadow-black/40 backdrop-blur">
+    <div className="flex min-h-screen items-center justify-center bg-bg-soft px-4 py-16">
+      <div className="w-full max-w-md rounded-lg border border-border bg-surface p-8 shadow-xl shadow-black/5">
         <div className="mb-8 text-center">
           <div className="mb-3 flex justify-center">
-            <Pill>THE SYSTEM</Pill>
+            <Pill tone="primary">WELCOME</Pill>
           </div>
           <span className="text-4xl">🤰</span>
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-ink">{t("welcome.title")}</h1>

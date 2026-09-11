@@ -8,6 +8,7 @@ export const translations = {
   en: {
     tagline: "Maternal Risk Triage",
     "nav.home": "Home",
+    "nav.health": "Health",
     "nav.assess": "Assessment",
     "nav.guide": "Pregnancy",
     "nav.nutrition": "Nutrition",
@@ -18,6 +19,7 @@ export const translations = {
     "nav.profile": "Profile",
     "nav.help": "Helplines",
     "nav.privacy": "Privacy",
+    "nav.more": "More",
 
     "welcome.title": "Janamdatri AI",
     "welcome.tagline": "Maternal Risk Triage — screening, guidance, and instant help, built for India.",
@@ -49,6 +51,7 @@ export const translations = {
   hi: {
     tagline: "मातृ स्वास्थ्य जोखिम मूल्यांकन",
     "nav.home": "होम",
+    "nav.health": "स्वास्थ्य",
     "nav.assess": "मूल्यांकन",
     "nav.guide": "गर्भावस्था",
     "nav.nutrition": "पोषण",
@@ -59,6 +62,7 @@ export const translations = {
     "nav.profile": "प्रोफ़ाइल",
     "nav.help": "हेल्पलाइन",
     "nav.privacy": "प्राइवेसी",
+    "nav.more": "अधिक",
 
     "welcome.title": "Janamdatri AI",
     "welcome.tagline": "मातृ स्वास्थ्य जोखिम मूल्यांकन — भारत के लिए बनी स्क्रीनिंग, मार्गदर्शन और तुरंत सहायता।",

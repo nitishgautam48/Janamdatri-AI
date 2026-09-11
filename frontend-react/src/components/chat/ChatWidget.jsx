@@ -13,7 +13,7 @@ const UNRESOLVED_INTENTS = new Set(["clarify_symptom", "fallback", "danger_sign_
 
 const GREETING = { sender: "bot", text: "Hi! Ask me about ANC visits, nutrition, anemia, mental health, or describe a symptom and I'll check for danger signs." };
 
-// Anchored bottom-right with a top offset and z-30 (TopNav is z-40), so
+// Anchored bottom-right with a top offset and z-30 (TopBar is z-40), so
 // the header can never end up hidden behind it. The bug in the old
 // vanilla-JS widget was a full-viewport panel starting at top:0 that sat
 // on top of the nav bar; a corner widget (Intercom/Zendesk-style) is
@@ -79,7 +79,7 @@ export default function ChatWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("chat.title")}
-          className="fixed bottom-5 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-paper-ink shadow-lg shadow-black/40 hover:bg-primary-dark"
+          className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-paper-ink shadow-lg shadow-black/40 hover:bg-primary-dark lg:bottom-5"
         >
           💬
         </button>
@@ -88,7 +88,7 @@ export default function ChatWidget() {
       {open && (
         <div
           style={{ top: "calc(var(--app-header-h, 5rem) + 0.75rem)" }}
-          className="fixed bottom-5 right-5 z-30 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl shadow-black/50">
+          className="fixed bottom-24 right-5 z-30 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl shadow-black/50 lg:bottom-5">
           <div className="flex items-center justify-between border-b border-border bg-bg-soft px-4 py-3">
             <span className="text-sm font-semibold text-ink">💬 {t("chat.title")}</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-muted hover:text-ink">

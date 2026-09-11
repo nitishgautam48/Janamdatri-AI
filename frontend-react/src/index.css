@@ -1,46 +1,52 @@
 @import "tailwindcss";
 
-/* Vaadhan-inspired shell (near-black, generous whitespace, bold tight
-   headlines, small-caps eyebrow labels) adapted for a maternal-health
-   context: the neutral black/white is kept, but the single accent is
-   this app's existing warm rose brand color instead of Vaadhan's plain
-   white-on-black, and the clinical severity colors (critical/warning/
-   good) are preserved since risk triage depends on them being legible. */
+/* Command-centre healthcare theme: soft white/off-white background, a
+   calm teal/green primary, and clean rounded cards - deliberately
+   replacing the earlier dark Vaadhan-style shell. Token NAMES are kept
+   the same as before (bg/surface/ink/primary/critical/warning/good/
+   paper-ink...) so every existing component that already references
+   them (Button, Card, Pill, every page) repaints correctly just by
+   changing values here, with no per-component edits needed. */
 @theme {
   --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
 
-  --color-bg: #0a0910;
-  --color-bg-soft: #100e17;
-  --color-surface: #15131d;
-  --color-surface-hover: #1c1926;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-bg: #f6f9f8;
+  --color-bg-soft: #eef4f2;
+  --color-surface: #ffffff;
+  --color-surface-hover: #eef6f4;
+  --color-border: #e3e9e7;
+  --color-border-strong: #cfdad7;
 
-  --color-ink: #f3eee8;
-  --color-muted: #9a92a3;
-  --color-faint: #625d6b;
+  --color-ink: #142420;
+  --color-muted: #5c6b67;
+  --color-faint: #8b9995;
 
-  --color-primary: #ef6f93;
-  --color-primary-dark: #c94a72;
-  --color-primary-soft: rgba(239, 111, 147, 0.14);
+  --color-primary: #0f9488;
+  --color-primary-dark: #0b7a70;
+  --color-primary-soft: rgba(15, 148, 136, 0.1);
 
-  --color-critical: #ff5c5c;
-  --color-critical-soft: rgba(255, 92, 92, 0.14);
-  --color-warning: #f5b942;
-  --color-warning-soft: rgba(245, 185, 66, 0.14);
-  --color-good: #4ade80;
-  --color-good-soft: rgba(74, 222, 128, 0.14);
+  --color-critical: #dc2626;
+  --color-critical-soft: rgba(220, 38, 38, 0.09);
+  --color-warning: #d97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.1);
+  --color-good: #16a34a;
+  --color-good-soft: rgba(22, 163, 74, 0.09);
+  --color-info: #0284c7;
+  --color-info-soft: rgba(2, 132, 199, 0.09);
 
-  --color-paper: #f7f1ea;
-  --color-paper-ink: #171317;
+  /* "On-primary" text/background - white text sits on the teal/green
+     primary buttons and pills; "paper" itself is a light neutral card
+     variant, distinct from the main surface only where that matters. */
+  --color-paper: #fbfdfc;
+  --color-paper-ink: #ffffff;
 
-  --radius-lg: 22px;
-  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-md: 16px;
   --radius-sm: 10px;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -51,16 +57,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Vaadhan's faint dot/grid backdrop, reused wherever a section wants that
-   "chamber desk" texture instead of a flat fill. */
-.bg-grid {
-  background-image:
-    radial-gradient(circle at 15% 0%, rgba(239, 111, 147, 0.16) 0%, transparent 45%),
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: auto, 34px 34px, 34px 34px;
-}
-
 .eyebrow {
   font-size: 11px;
   font-weight: 600;
@@ -69,8 +65,6 @@ body {
   color: var(--color-muted);
 }
 
-/* Custom scrollbar so the dark theme doesn't get a jarring light-chrome
-   scrollbar on the chat panel / long lists. */
 * {
   scrollbar-color: var(--color-border-strong) transparent;
 }
