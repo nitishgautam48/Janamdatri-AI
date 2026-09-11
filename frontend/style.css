@@ -398,6 +398,18 @@ textarea { width: 100%; resize: vertical; }
   padding: 12px 14px; border-radius: var(--radius-md); font-weight: 600; font-size: 13.5px;
 }
 
+.cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border-radius: var(--radius-md); border: none;
+  font-weight: 800; font-size: 13.5px; cursor: pointer; text-decoration: none;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.cta-btn:active { transform: scale(0.97); }
+.cta-emergency { background: var(--critical); color: white; box-shadow: 0 4px 12px rgba(194, 59, 46, 0.3); }
+.cta-urgent { background: var(--severe); color: white; box-shadow: 0 4px 12px rgba(217, 113, 63, 0.3); }
+.cta-secondary { background: var(--tint-bg-strong); color: var(--primary-dark); border: 1.5px solid var(--primary); }
+
 .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .action-card {
   display: flex; flex-direction: column; align-items: center; gap: 8px;

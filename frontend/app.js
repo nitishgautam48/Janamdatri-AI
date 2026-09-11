@@ -232,26 +232,26 @@
       "hist.pph": "Prior postpartum hemorrhage", "hist.stillbirth": "Prior stillbirth/loss",
       "hist.hypertension": "Chronic hypertension", "hist.diabetes": "Pre-existing diabetes",
       "history.current": "Current pregnancy care",
-      "hist.anc": "Regular ANC visits", "hist.ifa": "Taking iron/folic supplements",
+      "hist.anc": "Regular pregnancy check-ups (ANC)", "hist.ifa": "Taking iron/folic supplements",
       "hist.institutional": "Planning institutional delivery", "hist.birthplan": "Has a birth preparedness plan",
-      "hist.family": "Supportive family", "hist.noanc": "No ANC visits so far",
+      "hist.family": "Supportive family", "hist.noanc": "No pregnancy check-ups so far (ANC)",
       includeEpds: "Include my saved Mental Health Check (EPDS) score in this assessment",
       runAssessment: "Run Assessment",
-      riskGauge: "Risk Gauge", mlPrediction: "ML Prediction", dangerLadder: "Danger-Sign Ladder",
+      riskGauge: "Risk Gauge", mlPrediction: "AI Risk Estimate", dangerLadder: "Warning Sign Check",
       riskFactors: "Risk Factors", static: "Static", dynamic: "Dynamic", protective: "Protective",
-      anemiaGrading: "Anemia Grading (India)", psychEval: "Psychological Evaluation (EPDS)",
-      activeRules: "Active Expert Rules", recommendations: "Recommendations",
+      anemiaGrading: "Anemia Grading (India)", psychEval: "Emotional Well-being Screening (EPDS)",
+      activeRules: "Concerns Identified", recommendations: "Recommendations", clinicalImpression: "Health Assessment",
       newAssessment: "New Assessment", readAloud: "Read Aloud", printReport: "Print Report",
       "wizard.vitals": "Vitals", "wizard.symptoms": "Symptoms", "wizard.history": "History", "wizard.review": "Review",
       "wizard.back": "← Back", "wizard.nextSymptoms": "Next: Symptoms →", "wizard.nextHistory": "Next: History →",
       "wizard.nextReview": "Next: Review →", "wizard.reviewHeading": "4 · Review",
       "wizard.reviewSub": "Check what you're about to submit, then run the assessment.",
       "guide.title": "Pregnancy Guide",
-      "guide.sub": "Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.",
+      "guide.sub": "Week-by-week pregnancy check-up (ANC) schedule, nutrition tips, and danger signs — aligned with India's RCH programme.",
       "guide.byLmp": "By last menstrual period (LMP)", "guide.byWeek": "By current week",
       "guide.lmpLabel": "Last menstrual period date", "guide.weekLabel": "Current gestational week",
       "guide.getGuide": "Get My Guide", "guide.nutrition": "Nutrition Tips",
-      "guide.dangerSigns": "Watch For (Danger Signs)", "guide.ancSchedule": "ANC Visit Schedule",
+      "guide.dangerSigns": "Watch For (Danger Signs)", "guide.ancSchedule": "Pregnancy Check-up Schedule (ANC)",
       "guide.schemes": "Government Schemes",
       "psych.title": "Mental Health Check",
       "psych.sub": "The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've felt over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a diagnosis.",
@@ -307,26 +307,26 @@
       "hist.pph": "पहले प्रसवोत्तर रक्तस्राव हुआ था", "hist.stillbirth": "पहले मृत जन्म/गर्भपात हुआ था",
       "hist.hypertension": "पुराना उच्च रक्तचाप", "hist.diabetes": "पहले से मधुमेह",
       "history.current": "वर्तमान गर्भावस्था देखभाल",
-      "hist.anc": "नियमित एएनसी जांच", "hist.ifa": "आयरन/फोलिक सप्लीमेंट ले रही हूं",
+      "hist.anc": "नियमित गर्भावस्था जांच (एएनसी)", "hist.ifa": "आयरन/फोलिक सप्लीमेंट ले रही हूं",
       "hist.institutional": "संस्थागत प्रसव की योजना", "hist.birthplan": "प्रसव-तैयारी योजना है",
-      "hist.family": "सहायक परिवार", "hist.noanc": "अभी तक कोई एएनसी जांच नहीं",
+      "hist.family": "सहायक परिवार", "hist.noanc": "अभी तक कोई गर्भावस्था जांच (एएनसी) नहीं",
       includeEpds: "मेरा सहेजा गया मानसिक स्वास्थ्य (EPDS) स्कोर इस मूल्यांकन में शामिल करें",
       runAssessment: "मूल्यांकन करें",
-      riskGauge: "जोखिम गेज", mlPrediction: "एआई पूर्वानुमान", dangerLadder: "खतरे के संकेत सीढ़ी",
+      riskGauge: "जोखिम गेज", mlPrediction: "एआई जोखिम अनुमान", dangerLadder: "चेतावनी संकेत जांच",
       riskFactors: "जोखिम कारक", static: "स्थिर", dynamic: "गतिशील", protective: "सुरक्षात्मक",
-      anemiaGrading: "एनीमिया ग्रेडिंग (भारत)", psychEval: "मानसिक मूल्यांकन (EPDS)",
-      activeRules: "सक्रिय विशेषज्ञ नियम", recommendations: "सिफारिशें",
+      anemiaGrading: "एनीमिया ग्रेडिंग (भारत)", psychEval: "भावनात्मक स्वास्थ्य जांच (EPDS)",
+      activeRules: "पाई गई चिंताएं", recommendations: "सिफारिशें", clinicalImpression: "स्वास्थ्य आकलन",
       newAssessment: "नया मूल्यांकन", readAloud: "ज़ोर से पढ़ें", printReport: "रिपोर्ट प्रिंट करें",
       "wizard.vitals": "वाइटल्स", "wizard.symptoms": "लक्षण", "wizard.history": "इतिहास", "wizard.review": "समीक्षा",
       "wizard.back": "← पीछे", "wizard.nextSymptoms": "अगला: लक्षण →", "wizard.nextHistory": "अगला: इतिहास →",
       "wizard.nextReview": "अगला: समीक्षा →", "wizard.reviewHeading": "4 · समीक्षा",
       "wizard.reviewSub": "जमा करने से पहले अपनी जानकारी जांच लें।",
       "guide.title": "गर्भावस्था गाइड",
-      "guide.sub": "साप्ताहिक एएनसी यात्रा कार्यक्रम, पोषण सुझाव, और खतरे के संकेत — भारत के RCH कार्यक्रम के अनुसार।",
+      "guide.sub": "साप्ताहिक गर्भावस्था जांच (एएनसी) कार्यक्रम, पोषण सुझाव, और खतरे के संकेत — भारत के RCH कार्यक्रम के अनुसार।",
       "guide.byLmp": "अंतिम मासिक धर्म तिथि (LMP) से", "guide.byWeek": "वर्तमान सप्ताह से",
       "guide.lmpLabel": "अंतिम मासिक धर्म तिथि", "guide.weekLabel": "वर्तमान गर्भावधि सप्ताह",
       "guide.getGuide": "मेरी गाइड प्राप्त करें", "guide.nutrition": "पोषण सुझाव",
-      "guide.dangerSigns": "ध्यान दें (खतरे के संकेत)", "guide.ancSchedule": "एएनसी यात्रा कार्यक्रम",
+      "guide.dangerSigns": "ध्यान दें (खतरे के संकेत)", "guide.ancSchedule": "गर्भावस्था जांच कार्यक्रम (एएनसी)",
       "guide.schemes": "सरकारी योजनाएं",
       "psych.title": "मानसिक स्वास्थ्य जांच",
       "psych.sub": "एडिनबर्ग प्रसवोत्तर अवसाद स्केल (EPDS) — पिछले 7 दिनों में आप कैसा महसूस कर रही हैं, इसके लिए एक मान्य 10-प्रश्न जांच उपकरण। यह एक जांच सहायता है, निदान नहीं।",
@@ -842,6 +842,22 @@
       tierPill.textContent = clinicalExplanation.actionTierLabel;
       tierPill.className = "action-tier-pill tier-" + clinicalExplanation.actionTier.toLowerCase();
       $("#action-instruction").textContent = clinicalExplanation.recommendedNextAction;
+
+      const ctaRow = $("#explain-cta-row");
+      if (clinicalExplanation.actionTier === "Emergency") {
+        ctaRow.innerHTML = `
+          <a class="cta-btn cta-emergency" href="tel:108">🚨 Call 108</a>
+          <a class="cta-btn cta-emergency" href="tel:102">🚑 Call 102</a>
+          <button type="button" class="cta-btn cta-secondary" data-goto-view="help-view">View Emergency Info →</button>`;
+      } else if (clinicalExplanation.actionTier === "Urgent") {
+        ctaRow.innerHTML = `<button type="button" class="cta-btn cta-urgent" data-goto-view="help-view">📞 Find a Healthcare Professional →</button>`;
+      } else {
+        ctaRow.innerHTML = "";
+      }
+      ctaRow.querySelectorAll("[data-goto-view]").forEach((btn) => {
+        btn.addEventListener("click", () => showView(btn.dataset.gotoView));
+      });
+
       $("#explain-why").innerHTML = clinicalExplanation.whyThisResult.map((w) => `<li>${w}</li>`).join("");
       const warningGroup = $("#explain-warning-group");
       if (clinicalExplanation.warningSigns.length) {
@@ -923,7 +939,9 @@
       $("#hb-content").innerHTML = `
         <div class="epds-total-display"><span class="big">${hemoglobinAssessment.hemoglobin}</span><span>g/dL</span></div>
         <p><strong>${hemoglobinAssessment.grade}</strong></p>
-        <p class="footnote">${hemoglobinAssessment.methodology}</p>`;
+        <p class="footnote">${hemoglobinAssessment.methodology}</p>
+        ${hemoglobinAssessment.grade !== "Normal" ? `<button type="button" class="cta-btn cta-secondary" data-goto-view="nutrition-view">🥗 View Nutrition Guidance →</button>` : ""}`;
+      $("#hb-content").querySelectorAll("[data-goto-view]").forEach((btn) => btn.addEventListener("click", () => showView(btn.dataset.gotoView)));
     } else {
       hbCard.hidden = true;
     }
@@ -936,7 +954,7 @@
       $("#psych-content").innerHTML = `
         <div class="epds-total-display"><span class="big">${p.total}</span><span>/ ${p.maxScore}</span></div>
         <p><strong>${p.classification}</strong></p>
-        ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out to the KIRAN helpline (1800-599-0019) or someone you trust now.</div>` : ""}`;
+        ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019</a></div>` : ""}`;
     } else {
       psychCard.hidden = true;
     }
@@ -1308,7 +1326,7 @@
     $("#epds-result-content").innerHTML = `
       <div class="epds-total-display"><span class="big">${result.total}</span><span>/ ${result.maxScore}</span></div>
       <p><strong>${result.classification}</strong></p>
-      ${result.selfHarmFlagged ? `<div class="self-harm-alert">🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now, or call the KIRAN mental health helpline: 1800-599-0019 (toll-free, 24x7).</div>` : ""}
+      ${result.selfHarmFlagged ? `<div class="self-harm-alert">🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019 (toll-free, 24x7)</a></div>` : ""}
       <p class="footnote">${result.methodology}</p>`;
     $("#epds-result-card").scrollIntoView({ behavior: "smooth", block: "center" });
   }
