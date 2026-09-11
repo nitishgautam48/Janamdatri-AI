@@ -1007,6 +1007,8 @@
       recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression,
       clinicalExplanation, gestationalContext } = data;
 
+    $("#referral-summary-card").hidden = true;
+
     const banner = $("#severity-banner");
     banner.className = "severity-banner level-" + severity.level.toLowerCase();
     $("#severity-emoji").textContent = severity.emoji;
@@ -1025,15 +1027,20 @@
         ctaRow.innerHTML = `
           <a class="cta-btn cta-emergency" href="tel:108">🚨 Call 108</a>
           <a class="cta-btn cta-emergency" href="tel:102">🚑 Call 102</a>
-          <button type="button" class="cta-btn cta-secondary" data-goto-view="help-view">View Emergency Info →</button>`;
+          <button type="button" class="cta-btn cta-secondary" data-goto-view="help-view">View Emergency Info →</button>
+          <button type="button" class="cta-btn cta-secondary" id="explain-referral-btn">📋 Generate Referral Summary</button>`;
       } else if (clinicalExplanation.actionTier === "Urgent") {
-        ctaRow.innerHTML = `<button type="button" class="cta-btn cta-urgent" data-goto-view="help-view">📞 Find a Healthcare Professional →</button>`;
+        ctaRow.innerHTML = `
+          <button type="button" class="cta-btn cta-urgent" data-goto-view="help-view">📞 Find a Healthcare Professional →</button>
+          <button type="button" class="cta-btn cta-secondary" id="explain-referral-btn">📋 Generate Referral Summary</button>`;
       } else {
         ctaRow.innerHTML = "";
       }
       ctaRow.querySelectorAll("[data-goto-view]").forEach((btn) => {
         btn.addEventListener("click", () => showView(btn.dataset.gotoView));
       });
+      const referralBtn = $("#explain-referral-btn");
+      if (referralBtn) referralBtn.addEventListener("click", () => renderReferralSummary(data));
 
       $("#explain-why").innerHTML = clinicalExplanation.whyThisResult.map((w) => `<li>${w}</li>`).join("");
       const warningGroup = $("#explain-warning-group");
@@ -1178,6 +1185,111 @@
       span.textContent = item.replace(/_/g, " ");
       el.appendChild(span);
     });
+  }
+
+  // Compiles what a provider would actually want to see about THIS result
+  // into one plain-text document - everything here comes from the
+  // person's own inputs (this page's DOM, the result object, the pregnancy
+  // profile, the confirmed report-vitals log), nothing fabricated.
+  function buildReferralSummaryText(data) {
+    const guide = loadLastGuide();
+    const extra = loadProfileExtra();
+    const lines = [];
+    lines.push("JANAMDATRI AI - REFERRAL SUMMARY");
+    lines.push(`Generated: ${new Date().toLocaleString()}`);
+    lines.push("");
+
+    lines.push("PREGNANCY");
+    lines.push(guide ? `Week ${guide.week} (Trimester ${guide.trimester})${guide.estimatedDueDate ? `, EDD ${guide.estimatedDueDate}` : ""}` : "Pregnancy week not recorded.");
+    if (extra) {
+      lines.push(extra.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy");
+      if (extra.conditions) lines.push(`Existing conditions: ${extra.conditions}`);
+    }
+    lines.push("");
+
+    lines.push("RISK ASSESSMENT RESULT");
+    lines.push(`${data.severity.level} (Maternal Risk Index: ${data.mri})`);
+    if (data.severity.escalatedBy) lines.push(`Escalated by: ${data.severity.escalatedBy.replace(/_/g, " ")}`);
+    if (data.clinicalExplanation) {
+      lines.push(`Recommended action: ${data.clinicalExplanation.recommendedNextAction}`);
+      lines.push("Why:");
+      data.clinicalExplanation.whyThisResult.forEach((w) => lines.push(`  - ${w}`));
+    }
+    lines.push("");
+
+    const symptomTextValue = symptomText.value.trim();
+    lines.push("SYMPTOMS REPORTED");
+    lines.push(symptomTextValue || "None entered for this assessment.");
+    lines.push("");
+
+    if (data.vitalsInput) {
+      const v = data.vitalsInput;
+      lines.push("VITALS");
+      lines.push(`Age ${v.Age}, BP ${v.SystolicBP}/${v.DiastolicBP} mmHg, Blood Sugar ${v.BS} mmol/L, Temp ${v.BodyTemp}°F, Heart Rate ${v.HeartRate} bpm`);
+      lines.push("");
+    }
+
+    if (data.hemoglobinAssessment) {
+      lines.push("HEMOGLOBIN");
+      lines.push(`${data.hemoglobinAssessment.hemoglobin} g/dL - ${data.hemoglobinAssessment.grade}`);
+      lines.push("");
+    }
+
+    if (data.riskFormulation) {
+      lines.push("RISK FACTORS");
+      lines.push(`Static: ${(data.riskFormulation.staticRiskFactors || []).map((f) => f.replace(/_/g, " ")).join(", ") || "None"}`);
+      lines.push(`Dynamic: ${(data.riskFormulation.dynamicRiskFactors || []).map((f) => f.replace(/_/g, " ")).join(", ") || "None"}`);
+      lines.push(`Protective: ${(data.riskFormulation.protectiveFactors || []).map((f) => f.replace(/_/g, " ")).join(", ") || "None"}`);
+      lines.push("");
+    }
+
+    if (data.clinicalExplanation && data.clinicalExplanation.warningSigns.length) {
+      lines.push("WARNING SIGNS");
+      data.clinicalExplanation.warningSigns.forEach((w) => lines.push(`  - ${w.replace(/_/g, " ")}`));
+      lines.push("");
+    }
+
+    const reportLog = loadReportVitalsLog();
+    if (reportLog.length) {
+      lines.push("RECENT UPLOADED REPORT VALUES");
+      reportLog.slice(-5).forEach((r) => {
+        const parts = [];
+        if (r.hemoglobin != null) parts.push(`Hb ${r.hemoglobin} g/dL`);
+        if (r.systolicBP != null) parts.push(`BP ${r.systolicBP}/${r.diastolicBP} mmHg`);
+        if (r.bloodSugar != null) parts.push(`Blood Sugar ${r.bloodSugar} mmol/L`);
+        lines.push(`  ${new Date(r.timestamp).toLocaleDateString()}: ${parts.join(", ")}`);
+      });
+      lines.push("");
+    }
+
+    if (data.recommendations && data.recommendations.length) {
+      lines.push("RECOMMENDATIONS");
+      data.recommendations.forEach((r) => lines.push(`  - ${r}`));
+      lines.push("");
+    }
+
+    lines.push("---");
+    lines.push("This is an automated screening/support aid, not a diagnosis. Please discuss all of this with a qualified healthcare professional.");
+    return lines.join("\n");
+  }
+
+  function renderReferralSummary(data) {
+    const summaryText = buildReferralSummaryText(data);
+    $("#referral-summary-card").hidden = false;
+    $("#referral-summary-text").textContent = summaryText;
+    $("#referral-summary-card").scrollIntoView({ behavior: "smooth", block: "start" });
+
+    $("#referral-download-btn").onclick = () => {
+      const blob = new Blob([summaryText], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `janamdatri-referral-summary-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
   }
 
   $("#new-assessment-btn").addEventListener("click", () => {
