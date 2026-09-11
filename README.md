@@ -106,6 +106,18 @@ curl -X POST http://localhost:8000/assess \
   -d '{"text": "I had a fit and I am bleeding heavily, soaked through a pad"}'
 ```
 
+Open http://localhost:8000/ for the UI.
+
+## Run with Docker
+
+```bash
+docker build -t janamdatri-ai .
+docker run -p 8000:8000 janamdatri-ai
+```
+
+Then open http://localhost:8000/. The committed model under `models/` ships
+in the image, so no training step is needed to try it.
+
 ## Dataset citation
 
 Ahmed, M., Kashem, M.A. (2020). *Maternal Health Risk* [Dataset]. UCI
