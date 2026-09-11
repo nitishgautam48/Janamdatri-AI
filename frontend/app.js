@@ -428,7 +428,7 @@
   // ==================================================================
 
   const SEVERITY_COLOR = {
-    Critical: "#d63031", Severe: "#e17055", Moderate: "#e0a300", Mild: "#00b894", Minimal: "#00b894",
+    Critical: "#c23b2e", Severe: "#d9713f", Moderate: "#c98a1a", Mild: "#2f8f5f", Minimal: "#2f8f5f",
   };
 
   let lastResult = null;
@@ -460,7 +460,7 @@
 
     const frac = Math.max(0, Math.min(mri, 100)) / 100;
     const fill = $("#gauge-fill");
-    fill.style.stroke = SEVERITY_COLOR[severity.level] || "#00b894";
+    fill.style.stroke = SEVERITY_COLOR[severity.level] || "#2f8f5f";
     fill.style.strokeDasharray = `${frac * GAUGE_ARC_LENGTH} ${GAUGE_ARC_LENGTH}`;
     animateGaugeValue(mri);
 
@@ -468,7 +468,7 @@
     mlBars.innerHTML = "";
     if (mlPrediction) {
       $("#ml-model-name").textContent = mlPrediction.modelName.replace(/_/g, " ");
-      const order = [["low risk", "#00b894"], ["mid risk", "#e0a300"], ["high risk", "#d63031"]];
+      const order = [["low risk", "#2f8f5f"], ["mid risk", "#c98a1a"], ["high risk", "#c23b2e"]];
       order.forEach(([label, color]) => {
         const pct = Math.round((mlPrediction.probabilities[label] || 0) * 100);
         const row = document.createElement("div");
@@ -871,7 +871,14 @@
   const CHAT_HISTORY_KEY = "janamdatri_chat";
   const chatFab = $("#chat-fab");
   const chatPanel = $("#chat-panel");
+  const chatBackdrop = $("#chat-backdrop");
   const chatMessages = $("#chat-messages");
+
+  function closeChat() {
+    chatPanel.hidden = true;
+    chatBackdrop.hidden = true;
+    chatFab.hidden = false;
+  }
 
   function loadChatHistory() {
     try { return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY)) || []; } catch { return []; }
@@ -902,15 +909,14 @@
 
   chatFab.addEventListener("click", () => {
     chatPanel.hidden = false;
+    chatBackdrop.hidden = false;
     chatFab.hidden = true;
     if (!chatMessages.children.length) renderChatHistory();
     $("#chat-input").focus();
   });
 
-  $("#chat-close-btn").addEventListener("click", () => {
-    chatPanel.hidden = true;
-    chatFab.hidden = false;
-  });
+  $("#chat-close-btn").addEventListener("click", closeChat);
+  chatBackdrop.addEventListener("click", closeChat);
 
   $("#chat-form").addEventListener("submit", async (e) => {
     e.preventDefault();
