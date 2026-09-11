@@ -103,7 +103,11 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     contextMessage: Optional[str] = Field(
         default=None,
-        description="The prior user message, when this reply follows up on the bot's own clarifying question",
+        description="The prior user message(s), when this reply follows up on the bot's own clarifying question",
+    )
+    unresolvedRounds: int = Field(
+        default=0,
+        description="How many consecutive clarifying/fallback replies have already failed to resolve this thread",
     )
 
 
@@ -272,7 +276,7 @@ def pregnancy_guide_endpoint(req: PregnancyGuideRequest):
 
 @app.post("/chat")
 def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
-    result = chat_assistant.respond(req.message, context_message=req.contextMessage)
+    result = chat_assistant.respond(req.message, context_message=req.contextMessage, unresolved_rounds=req.unresolvedRounds)
 
     user = _current_user(x_user_token)
     if user:

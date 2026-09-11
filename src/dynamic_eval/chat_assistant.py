@@ -107,18 +107,65 @@ FAQ_INTENTS = [
 # its own ("I'm in pain", "I don't feel well") - rather than a flat "I
 # didn't understand," ask a clarifying question the way a triage nurse
 # would, so the person can give the detail that actually determines urgency.
-VAGUE_SYMPTOM_WORDS = [
-    "pain", "hurt", "hurting", "ache", "aching", "discomfort", "not feeling well",
-    "dont feel well", "don't feel well", "feel sick", "feeling sick", "unwell", "not well",
-    "something wrong", "not right", "worried about my body",
+# Grouped by topic (not one generic bucket) so the follow-up question
+# actually engages with what the person said, instead of reading like a
+# canned response no matter what they typed.
+VAGUE_TOPICS = [
+    {
+        "id": "pain",
+        "keywords": ["pain", "hurt", "hurting", "ache", "aching", "cramp", "cramping", "discomfort"],
+        "question": (
+            "Tell me more about the pain so I can judge how urgent this is: where is it (head, "
+            "abdomen, chest, back)? Is it mild, or severe enough that it's hard to ignore? Did it "
+            "start suddenly, and is there any bleeding, fever, or reduced baby movement with it? "
+            "If it's sudden or severe, treat it as urgent - go to a facility or call 108 now."
+        ),
+    },
+    {
+        "id": "energy",
+        "keywords": ["tired all the time", "always tired", "no energy", "exhausted",
+                     "low energy", "feeling weak", "so weak"],
+        "question": (
+            "How long has this tiredness/weakness been going on, and does it happen even after "
+            "resting? Are you also breathless, dizzy, or looking unusually pale? Ongoing fatigue in "
+            "pregnancy is very often anemia (worth a hemoglobin check), but sudden or severe weakness "
+            "needs same-day evaluation - don't wait if it's severe."
+        ),
+    },
+    {
+        "id": "mood",
+        "keywords": ["not myself", "off today", "emotionally", "cant cope", "can't cope"],
+        "question": (
+            "Do you mean this is more about how you're feeling emotionally, or is something physical "
+            "going on too (pain, fever, bleeding)? If it's your mood, the Mental Health Check tab has "
+            "a proper screening tool - and if you ever have thoughts of harming yourself, please call "
+            "KIRAN right now: 1800-599-0019 (toll-free, 24x7)."
+        ),
+    },
+    {
+        "id": "generic_unwell",
+        "keywords": ["not feeling well", "dont feel well", "don't feel well", "feel sick",
+                     "feeling sick", "unwell", "not well", "something wrong", "not right",
+                     "worried about my body"],
+        "question": (
+            "Can you say a bit more about what's going on? Is it more physical - pain, fever, "
+            "bleeding, breathlessness, reduced baby movement - or more about your mood or energy? "
+            "And roughly how long has this been going on?"
+        ),
+    },
 ]
 
-CLARIFYING_REPLY = (
-    "I'm sorry you're feeling that way. Can you tell me more so I can help properly? "
-    "For example: where is it (head, abdomen, chest, back)? How severe is it (mild, "
-    "moderate, severe)? Did it start suddenly? Is there any bleeding, fever, or reduced "
-    "baby movement along with it? If it's sudden, severe, or you're bleeding, please "
-    "treat it as urgent - go to a facility or call 108 now rather than waiting to describe it further."
+# After this many back-and-forth exchanges that STILL haven't resolved into
+# a real answer, repeating another open-ended question stops being useful -
+# a health worker would move to a concrete next step instead of asking the
+# same thing a third time, so this bot should too.
+MAX_CLARIFYING_ROUNDS = 2
+
+NUDGE_REPLY = (
+    "I don't want to keep going back and forth without actually helping. Please open the Assessment "
+    "tab and run a full check (it takes about a minute and looks at a lot more than I can in chat), "
+    "or contact your ASHA/ANM worker directly so they can properly examine what you're describing. "
+    "If anything about this feels sudden, severe, or you're unsure, treat it as urgent and call 108 now."
 )
 
 FALLBACK_REPLY = (
@@ -135,11 +182,14 @@ def _match_faq(normalized_text: str):
     return None
 
 
-def _matches_vague_symptom(normalized_text: str) -> bool:
-    return any(word in normalized_text for word in VAGUE_SYMPTOM_WORDS)
+def _match_topic(normalized_text: str):
+    for topic in VAGUE_TOPICS:
+        if any(kw in normalized_text for kw in topic["keywords"]):
+            return topic
+    return None
 
 
-def respond(message: str, context_message: str = None) -> dict:
+def respond(message: str, context_message: str = None, unresolved_rounds: int = 0) -> dict:
     text = (message or "").strip()
 
     # One-turn memory: when the PREVIOUS bot reply was a clarifying
@@ -186,7 +236,16 @@ def respond(message: str, context_message: str = None) -> dict:
             "intent": "mild_symptom",
         }
 
-    if _matches_vague_symptom(normalized):
-        return {"reply": CLARIFYING_REPLY, "isEmergency": False, "intent": "clarify_symptom"}
+    # Neither a danger sign, an FAQ topic, nor a scored symptom matched -
+    # this is genuinely vague or unrecognized. Ask a targeted follow-up (at
+    # most MAX_CLARIFYING_ROUNDS times) rather than either a flat "I don't
+    # understand" or an endless loop of open-ended questions that never
+    # actually gets the person help.
+    if unresolved_rounds >= MAX_CLARIFYING_ROUNDS:
+        return {"reply": NUDGE_REPLY, "isEmergency": False, "intent": "nudge_to_assessment"}
+
+    topic = _match_topic(normalized)
+    if topic:
+        return {"reply": topic["question"], "isEmergency": False, "intent": "clarify_symptom", "topic": topic["id"]}
 
     return {"reply": FALLBACK_REPLY, "isEmergency": False, "intent": "fallback"}

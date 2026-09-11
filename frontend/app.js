@@ -6,9 +6,15 @@
   const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
 
-  // Chat one-turn memory: the original message when the bot's last reply
-  // was a clarifying question - see the chat form submit handler below.
+  // Chat conversation memory: accumulates while the bot's replies keep
+  // failing to resolve (clarifying question or fallback), so a multi-turn
+  // back-and-forth still has the full thread to analyze, not just the
+  // single most recent message. Resets the moment a reply actually
+  // resolves (emergency, FAQ answer, mild-symptom note, or the "go use
+  // the Assessment tab" nudge) - see the chat form submit handler below.
   let pendingClarificationContext = null;
+  let unresolvedChatRounds = 0;
+  const UNRESOLVED_CHAT_INTENTS = new Set(["clarify_symptom", "fallback"]);
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -76,6 +82,7 @@
     if (epdsForm) epdsForm.querySelectorAll('input[type="radio"]:checked').forEach((el) => { el.checked = false; });
     syncEpdsIncludeVisibility();
     pendingClarificationContext = null;
+    unresolvedChatRounds = 0;
     renderHome();
   }
 
@@ -1070,12 +1077,13 @@
 
     const typingEl = appendChatMessage("bot typing", "…thinking…");
     const contextMessage = pendingClarificationContext;
+    const unresolvedRounds = unresolvedChatRounds;
 
     try {
       const res = await fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ message, contextMessage }),
+        body: JSON.stringify({ message, contextMessage, unresolvedRounds }),
       });
       const payload = await res.json();
       typingEl.remove();
@@ -1083,7 +1091,15 @@
       appendChatMessage("bot", payload.data.reply, payload.data.isEmergency);
       history.push({ sender: "bot", text: payload.data.reply, isEmergency: payload.data.isEmergency });
       saveChatHistory(history);
-      pendingClarificationContext = payload.data.intent === "clarify_symptom" ? message : null;
+      if (UNRESOLVED_CHAT_INTENTS.has(payload.data.intent)) {
+        pendingClarificationContext = pendingClarificationContext
+          ? pendingClarificationContext + ". " + message
+          : message;
+        unresolvedChatRounds += 1;
+      } else {
+        pendingClarificationContext = null;
+        unresolvedChatRounds = 0;
+      }
     } catch (err) {
       typingEl.remove();
       appendChatMessage("bot", "Sorry, I couldn't reach the help service. Please check your connection or call 108 if this is urgent.");

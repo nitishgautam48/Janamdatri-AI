@@ -36,6 +36,7 @@ CATEGORIES = {
                    "vision is blurry", "cant see properly", "face is swollen",
                    "swelling in my face", "sudden swelling", "convulsions", "had a fit",
                    "seizure", "lost consciousness", "blacked out",
+                   "yellow skin", "yellow eyes", "jaundice", "skin turned yellow",
                    "तेज़ सिरदर्द", "धुंधला दिखना", "चेहरे पर सूजन", "दौरा पड़ा", "बेहोश हो गई"],
     },
     "hemorrhage": {
@@ -49,6 +50,7 @@ CATEGORIES = {
     },
     "infection": {
         "moderate": ["mild fever", "feeling feverish", "slight fever", "chills", "fever",
+                     "loose motions", "diarrhea", "diarrhoea",
                      "हल्का बुखार"],
         "severe": ["high fever", "foul smelling discharge", "bad smelling discharge",
                    "discharge smells bad", "too weak to get out of bed", "burning while urinating",
@@ -60,8 +62,11 @@ CATEGORIES = {
                      "weak", "tired",
                      "हमेशा थकान रहती है"],
         "severe": ["extremely weak", "breathless even resting", "short of breath easily",
+                   "short of breath", "not able to breath", "not able to breathe",
+                   "cant breathe", "cannot breathe", "unable to breathe", "unable to breath",
+                   "breathless", "gasping for air", "gasping",
                    "heart racing", "fainting spells", "very pale",
-                   "बहुत कमज़ोरी", "सांस फूलना"],
+                   "बहुत कमज़ोरी", "सांस फूलना", "सांस नहीं आ रही"],
     },
     "fetal_distress": {
         "moderate": ["baby is moving less", "less movement than usual", "fewer kicks today",
