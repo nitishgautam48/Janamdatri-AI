@@ -31,6 +31,7 @@ class RiskClassifier:
         self.cv_macro_f1_mean = bundle.get("cv_macro_f1_mean")
         self.cv_macro_f1_std = bundle.get("cv_macro_f1_std")
         self.feature_importances = bundle.get("feature_importances")
+        self.best_params = bundle.get("best_params")
 
     def predict(self, vitals: dict) -> dict:
         missing = [f for f in BASE_FEATURES if vitals.get(f) is None]
@@ -59,6 +60,7 @@ class RiskClassifier:
         return {
             "modelName": self.model_name,
             "features": self.features,
+            "bestParams": self.best_params,
             "testAccuracy": self.test_accuracy,
             "testMacroF1": self.test_macro_f1,
             "cvMacroF1Mean": self.cv_macro_f1_mean,

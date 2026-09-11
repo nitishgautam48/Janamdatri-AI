@@ -23,17 +23,23 @@ raw BP reading alone.
   Fitting the scaler on the full dataset before splitting — a common mistake —
   leaks each held-out fold's statistics into training and quietly inflates
   reported scores.
-- 5-fold stratified cross-validation on the training split picks the model
-  (logistic regression vs. random forest), since a single train/test split's
-  score is noisy at ~1000 rows.
-- A held-out test split, untouched during CV or model selection, gives the
-  final reported accuracy/F1.
-- Random forest was selected: 5-fold CV macro F1 = 0.827 ± 0.024, held-out
-  test accuracy 84.7%, test macro F1 0.852 — versus logistic regression's
-  0.597 ± 0.034 CV / 0.640 test accuracy.
-- Feature importances are persisted and exposed via `GET /model/info` for
-  transparency, rather than leaving the model a black box. Blood sugar (BS)
-  is the single most important feature (~34%), consistent with the
+- Each candidate (logistic regression, random forest, gradient boosting) is
+  tuned with `GridSearchCV` over its own hyperparameter grid, using 5-fold
+  stratified cross-validation on the training split only. This is not a
+  single guessed hyperparameter set - model selection and hyperparameter
+  selection both use the grid search's own cross-validated score, so neither
+  decision rests on a lucky default.
+- A held-out test split, untouched during grid search or model selection,
+  gives the final reported accuracy/F1.
+- Gradient boosting was selected (learning_rate=0.1, max_depth=4,
+  n_estimators=200): best 5-fold CV macro F1 = 0.834, held-out test accuracy
+  84.2%, test macro F1 0.847 - narrowly ahead of a tuned random forest
+  (CV macro F1 0.831) and well ahead of tuned logistic regression (CV macro
+  F1 0.612).
+- Feature importances and the winning hyperparameters are persisted and
+  exposed via `GET /model/info` for transparency, rather than leaving the
+  model a black box. Blood sugar (BS)
+  is the single most important feature (~47%), consistent with the
   literature on gestational diabetes as a major driver of pregnancy risk.
 
 **Scope, honestly stated.** The model only knows what the dataset recorded.
@@ -83,6 +89,22 @@ A rule-based system covering everything the ML model structurally cannot see:
   nutrition guidance, and trimester-specific danger signs aligned with
   India's RCH programme and PMSMA (free ANC checkup on the 9th of every
   month).
+- **`human_intelligence.py`** — cross-signal clinical reasoning. Two things
+  a per-category rule structurally cannot express: (1) CROSS-CATEGORY
+  PATTERNS - some combinations are more dangerous together than either
+  finding alone (hypertensive symptoms + fetal distress resembles severe
+  pre-eclampsia with fetal compromise; hemorrhage + anemia raises
+  hemorrhagic-shock risk; infection + obstructed labor raises concern for
+  intrapartum sepsis); (2) MULTI-SOURCE CONFIDENCE - how many independent
+  signals (ML model, symptom text, danger ladder, an activated expert rule,
+  an elevated risk-history multiplier, psychological screening) corroborate
+  a result, surfaced as a confidence label rather than presenting every
+  finding with the same implied certainty.
+- **`chat_assistant.py`** — the Instant Help chat's rule-based intent
+  matcher. Deliberately reuses `danger_ladder`/`text_analyzer` rather than
+  its own separate keyword list: a symptom typed into chat gets exactly the
+  same emergency detection as one entered in the assessment form, and
+  safety-checking always runs before FAQ matching.
 - **`triage.py`** — the synthesis point. Combines the ML-derived Maternal
   Risk Index with the risk-formulation multiplier, then escalates via
   worst-signal-wins across the danger ladder, the expert rules, and the
@@ -90,6 +112,16 @@ A rule-based system covering everything the ML model structurally cannot see:
   rule, or an EPDS self-harm flag can each independently push the overall
   result to Critical — none of them can be hidden behind a good score from
   the other layers.
+
+## Accounts (`src/auth.py`)
+
+Optional SQLite-backed accounts: PBKDF2-HMAC-SHA256 password hashing
+(stdlib `hashlib`, per-user random salt, 200k iterations - no extra
+dependency needed) and bearer-token sessions. Logging in ties assessment
+history and chat messages to the account server-side; "Continue as Guest"
+skips all of this and keeps everything in the browser's localStorage
+instead. Neither path is required by the other - the triage engine itself
+has no idea whether a request came from a logged-in account or a guest.
 
 ## India-context adaptations
 
@@ -127,3 +159,12 @@ A rule-based system covering everything the ML model structurally cannot see:
 - Any Critical/Severe result, or an EPDS self-harm flag, should always be
   treated as "seek care now" regardless of how confident the underlying
   score is.
+- The Instant Help chat is a scripted keyword-intent matcher, not a real
+  conversational AI - it exists to give an instant answer or emergency
+  escalation when no health worker is reachable, not to replace one. It
+  will fall back to a generic response for anything outside its fixed
+  intent list.
+- Accounts are intentionally minimal for a hackathon prototype: no email
+  verification, password reset, or rate limiting on login attempts. Fine
+  for a demo; a real deployment handling real health data needs all three,
+  plus encryption at rest for the SQLite database.

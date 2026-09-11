@@ -9,6 +9,56 @@
 </head>
 <body>
 
+<!-- ========================= WELCOME / AUTH OVERLAY ========================= -->
+<div id="welcome-overlay" class="welcome-overlay">
+  <div class="welcome-card">
+    <div class="welcome-brand">
+      <span class="welcome-mark">🤰</span>
+      <h1>Janamdatri AI</h1>
+      <p>Maternal Risk Triage — screening, guidance, and instant help, built for India.</p>
+    </div>
+
+    <div class="welcome-tabs">
+      <button type="button" class="welcome-tab active" data-auth-tab="login">Log In</button>
+      <button type="button" class="welcome-tab" data-auth-tab="signup">Sign Up</button>
+    </div>
+
+    <form id="login-form" class="welcome-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required />
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required />
+      </div>
+      <button type="submit" class="submit-btn">Log In</button>
+      <p class="error-msg" id="login-error" hidden></p>
+    </form>
+
+    <form id="signup-form" class="welcome-form" hidden>
+      <div class="field">
+        <label for="signup-name">Name (optional)</label>
+        <input type="text" id="signup-name" />
+      </div>
+      <div class="field">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" required />
+      </div>
+      <div class="field">
+        <label for="signup-password">Password (min 6 characters)</label>
+        <input type="password" id="signup-password" minlength="6" required />
+      </div>
+      <button type="submit" class="submit-btn">Create Account</button>
+      <p class="error-msg" id="signup-error" hidden></p>
+    </form>
+
+    <div class="welcome-divider"><span>or</span></div>
+    <button type="button" class="secondary-btn" id="guest-btn">Continue as Guest</button>
+    <p class="welcome-note">An account saves your assessment history and chat across visits. Guest mode keeps everything only on this device.</p>
+  </div>
+</div>
+
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
@@ -26,6 +76,10 @@
       <button class="navlink" data-view="help-view" data-i18n="nav.help">Helplines</button>
     </nav>
     <button class="lang-toggle" id="lang-toggle" type="button">हिंदी</button>
+    <div class="user-area" id="user-area" hidden>
+      <span class="user-name" id="user-name-display"></span>
+      <button class="user-logout-btn" id="logout-btn" type="button" title="Log out">Log out</button>
+    </div>
     <a class="emergency-btn" href="tel:108" data-i18n="emergencyBtn">🚨 Call 108</a>
   </div>
 </header>
@@ -41,6 +95,17 @@
 
     <form id="assess-form" class="card form-card">
 
+      <div class="wizard-progress" id="wizard-progress">
+        <div class="wizard-step-dot active" data-step-dot="1"><span>1</span><label data-i18n="wizard.vitals">Vitals</label></div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-dot" data-step-dot="2"><span>2</span><label data-i18n="wizard.symptoms">Symptoms</label></div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-dot" data-step-dot="3"><span>3</span><label data-i18n="wizard.history">History</label></div>
+        <div class="wizard-step-line"></div>
+        <div class="wizard-step-dot" data-step-dot="4"><span>4</span><label data-i18n="wizard.review">Review</label></div>
+      </div>
+
+      <div class="wizard-step" data-step="1">
       <div class="form-section">
         <div class="section-head">
           <h2><span data-i18n="section.vitals">1 · Vitals</span></h2>
@@ -87,7 +152,10 @@
           <input type="number" step="0.1" id="v-hb" min="2" max="18" placeholder="e.g. 10.5" />
         </div>
       </div>
+      <div class="wizard-nav"><span></span><button type="button" class="wizard-next-btn" data-goto="2" data-i18n="wizard.nextSymptoms">Next: Symptoms →</button></div>
+      </div>
 
+      <div class="wizard-step" data-step="2" hidden>
       <div class="form-section">
         <h2 data-i18n="section.symptoms">2 · Symptoms</h2>
         <p class="section-sub" data-i18n="symptoms.sub">Tap any that apply — they'll be added to the description below, or type your own.</p>
@@ -105,7 +173,10 @@
         </div>
         <textarea id="symptom-text" rows="4" data-i18n-placeholder="symptoms.placeholder" placeholder="Describe how you're feeling in your own words…"></textarea>
       </div>
+      <div class="wizard-nav"><button type="button" class="wizard-back-btn" data-goto="1" data-i18n="wizard.back">← Back</button><button type="button" class="wizard-next-btn" data-goto="3" data-i18n="wizard.nextHistory">Next: History →</button></div>
+      </div>
 
+      <div class="wizard-step" data-step="3" hidden>
       <div class="form-section">
         <h2 data-i18n="section.history">3 · History</h2>
         <p class="section-sub" data-i18n="history.sub">Optional — helps weigh background risk factors.</p>
@@ -130,7 +201,10 @@
           </div>
         </div>
       </div>
+      <div class="wizard-nav"><button type="button" class="wizard-back-btn" data-goto="2" data-i18n="wizard.back">← Back</button><button type="button" class="wizard-next-btn" data-goto="4" data-i18n="wizard.nextReview">Next: Review →</button></div>
+      </div>
 
+      <div class="wizard-step" data-step="4" hidden>
       <div class="form-section" id="epds-include-section" hidden>
         <label class="check">
           <input type="checkbox" id="include-epds" checked />
@@ -138,11 +212,20 @@
         </label>
       </div>
 
+      <div class="form-section">
+        <h2 data-i18n="wizard.reviewHeading">4 · Review</h2>
+        <p class="section-sub" data-i18n="wizard.reviewSub">Check what you're about to submit, then run the assessment.</p>
+        <div id="review-summary" class="review-summary"></div>
+      </div>
+
+      <div class="wizard-nav"><button type="button" class="wizard-back-btn" data-goto="3" data-i18n="wizard.back">← Back</button><span></span></div>
+
       <button type="submit" class="submit-btn" id="submit-btn">
         <span class="btn-label" data-i18n="runAssessment">Run Assessment</span>
         <span class="spinner" hidden></span>
       </button>
       <p class="error-msg" id="form-error" hidden></p>
+      </div>
     </form>
 
     <section id="results" class="results" hidden>
@@ -207,6 +290,11 @@
           <div id="psych-content"></div>
         </div>
 
+      </div>
+
+      <div class="card">
+        <h3>Clinical Impression <span class="badge-soft" id="ci-confidence">—</span></h3>
+        <ul class="recs-list" id="ci-impressions"></ul>
       </div>
 
       <div class="card">
@@ -338,6 +426,20 @@
   Automated screening/prioritization aid combining an ML classifier trained on the UCI Maternal Health Risk dataset
   with a rule-based danger-sign evaluation layer covering physical AND psychological (EPDS) risk. Not a diagnosis.
 </footer>
+
+<!-- ========================= INSTANT HELP CHAT WIDGET ========================= -->
+<button id="chat-fab" class="chat-fab" type="button" aria-label="Open instant help chat">💬</button>
+<div id="chat-panel" class="chat-panel" hidden>
+  <div class="chat-panel-header">
+    <span>💬 Instant Help</span>
+    <button id="chat-close-btn" type="button" aria-label="Close chat">✕</button>
+  </div>
+  <div id="chat-messages" class="chat-messages"></div>
+  <form id="chat-form" class="chat-input-row">
+    <input type="text" id="chat-input" placeholder="Ask a question or describe symptoms…" autocomplete="off" />
+    <button type="submit" aria-label="Send">➤</button>
+  </form>
+</div>
 
 <script src="/static/app.js"></script>
 </body>

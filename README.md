@@ -41,16 +41,21 @@ Trained on the **UCI Maternal Health Risk Data Set** (1014 records,
 Age/SystolicBP/DiastolicBP/BS/BodyTemp/HeartRate → RiskLevel, collected via
 an IoT monitoring system across rural Bangladeshi clinics; DOI:
 10.24432/C5DP5D), enriched with an engineered **Mean Arterial Pressure**
-feature. Model selection uses leakage-free 5-fold cross-validation
-(scaler + classifier in one `sklearn.Pipeline`, refit per fold):
+feature. Each candidate model is tuned with `GridSearchCV` over its own
+hyperparameter grid using leakage-free 5-fold cross-validation (scaler +
+classifier in one `sklearn.Pipeline`, refit per fold) — model selection
+and hyperparameter selection both use the same procedure, not a guessed
+default configuration:
 
-| Model | 5-fold CV macro F1 | Held-out test accuracy | Held-out test macro F1 |
+| Model | Best 5-fold CV macro F1 | Held-out test accuracy | Held-out test macro F1 |
 |---|---|---|---|
-| Logistic Regression | 0.597 ± 0.034 | 0.640 | 0.630 |
-| **Random Forest (selected)** | **0.827 ± 0.024** | **0.847** | **0.852** |
+| Logistic Regression | 0.612 | 0.660 | 0.644 |
+| Random Forest | 0.831 | 0.847 | 0.852 |
+| **Gradient Boosting (selected)** | **0.834** | **0.842** | **0.847** |
 
 Retrain with `python -m src.ml.train` (writes `models/risk_classifier.joblib`).
-Feature importances are exposed via `GET /model/info` for transparency.
+Feature importances and the winning hyperparameters are exposed via
+`GET /model/info` for transparency.
 
 This model only knows what the dataset recorded — it has no notion of
 bleeding, fetal movement, labor progress, or psychological state. That's
@@ -77,38 +82,74 @@ Fills in what the ML model can't see:
   fetal distress, obstructed labor, and anemia
 - **`pregnancy_guide.py`** — trimester/week ANC schedule, nutrition tips,
   and danger signs aligned with India's RCH programme + PMSMA
+- **`human_intelligence.py`** — cross-signal clinical reasoning: detects
+  named combinations of findings that are more dangerous together than
+  any single-category rule can express (e.g. hypertensive symptoms +
+  fetal distress → "resembles severe pre-eclampsia with fetal compromise";
+  hemorrhage + anemia → "hemorrhagic shock risk"), and reports how many
+  independent sources (ML model, symptom text, danger ladder, expert
+  rules, risk history, psychological screening) corroborate the result
+- **`chat_assistant.py`** — the Instant Help chat's rule-based brain:
+  answers common questions (ANC schedule, nutrition, anemia, mental
+  health, helplines) and reuses the same danger-sign detection as the
+  assessment flow, so a symptom typed into chat gets the same emergency
+  escalation as one entered in the assessment form
 - **`triage.py`** — combines everything with worst-signal-wins escalation:
   a WHO danger sign, a Critical expert rule, or an EPDS self-harm flag can
   each independently push the result to Critical
 
+### 3. Accounts — `src/auth.py`
+
+Optional SQLite-backed accounts (stdlib-only PBKDF2-HMAC-SHA256 password
+hashing, bearer-token sessions) - signing up/in ties assessment history
+and chat to the account instead of the browser's localStorage. Entirely
+optional: "Continue as Guest" skips all of this and keeps everything
+device-local.
+
 ## API — `src/api/main.py`
 
 ```
+POST /auth/register, /auth/login   optional accounts (bearer token via x-user-token)
+GET  /auth/me                       current user profile
 GET  /health
-POST /predict/ml         { Age, SystolicBP, DiastolicBP, BS, BodyTemp, HeartRate }
-GET  /model/info          model transparency: features, importances, CV/test metrics
-POST /assess               { text?, vitals?, history?, hemoglobin?, epdsResponses? }
-GET  /psych-assess/items  the 10 EPDS questions + response options
-POST /psych-assess         EPDS scoring alone: { responses: [0-3 x10] }
-POST /pregnancy-guide      { lmp? (ISO date), week? } -> trimester guide
-GET  /helplines            India helplines + government scheme references
+POST /predict/ml                    { Age, SystolicBP, DiastolicBP, BS, BodyTemp, HeartRate }
+GET  /model/info                     model transparency: features, hyperparameters, CV/test metrics
+POST /assess                          { text?, vitals?, history?, hemoglobin?, epdsResponses? }
+GET  /assessments/mine               a logged-in user's server-side assessment history
+GET  /psych-assess/items             the 10 EPDS questions + response options
+POST /psych-assess                    EPDS scoring alone: { responses: [0-3 x10] }
+POST /pregnancy-guide                 { lmp? (ISO date), week? } -> trimester guide
+POST /chat                            { message } -> rule-based instant-help assistant
+GET  /helplines                       India helplines + government scheme references
 ```
 
 `POST /assess` requires at least one of `text`, `vitals`, `hemoglobin`, or
 `epdsResponses`. `history` is an optional structured-flags object matching
 the factor names in `risk_formulation.py` (e.g. `{"prior_csection": true,
-"regular_anc_visits": true}`).
+"regular_anc_visits": true}`). Passing `x-user-token` persists the result
+server-side for that account.
 
 ## Frontend — `frontend/`
 
 A single-page app (vanilla HTML/CSS/JS, no build step) served directly by
-FastAPI: the assessment form (vitals, bilingual symptom chips, history
-checklist, optional hemoglobin), a results view (risk gauge, ML
-probability bars, danger-sign ladder, risk-factor tags, anemia/EPDS
-cards), a Pregnancy Guide tab, a Mental Health Check (EPDS) tab, a
-localStorage assessment history, a Helplines page, a English/Hindi
-language toggle, and a text-to-speech "Read Aloud" button for
-low-literacy accessibility.
+FastAPI:
+
+- A **welcome screen** (Log In / Sign Up / Continue as Guest) on first
+  visit — never re-shown to a returning guest or logged-in user
+- A **4-step assessment wizard** (Vitals → Symptoms → History → Review)
+  with a progress bar and a review summary before submission, instead of
+  one long scrolling form
+- A **results view**: risk gauge (animated count-up), ML probability
+  bars, danger-sign ladder, risk-factor tags, anemia/EPDS cards, and a
+  **Clinical Impression** card (cross-signal patterns + corroboration
+  confidence from `human_intelligence.py`)
+- A **Pregnancy Guide** tab, a **Mental Health Check (EPDS)** tab, an
+  assessment **History** tab (server-backed when logged in, localStorage
+  otherwise), and a **Helplines** page
+- A floating **Instant Help chat** widget on every page, with real-time
+  emergency detection
+- A full **English/Hindi** language toggle, bilingual symptom chips, and
+  a text-to-speech **Read Aloud** button for low-literacy accessibility
 
 ## Setup
 

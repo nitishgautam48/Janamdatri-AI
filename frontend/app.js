@@ -9,6 +9,124 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   // ==================================================================
+  // Auth (optional accounts) + welcome overlay
+  // ==================================================================
+
+  const TOKEN_KEY = "janamdatri_token";
+  const USER_KEY = "janamdatri_user";
+  const GUEST_KEY = "janamdatri_guest";
+
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  function authHeaders() {
+    const token = getToken();
+    return token ? { "x-user-token": token } : {};
+  }
+
+  function setSession(token, user) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    localStorage.removeItem(GUEST_KEY);
+  }
+
+  function clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+
+  function getSavedUser() {
+    try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }
+  }
+
+  function syncUserArea() {
+    const user = getSavedUser();
+    const area = $("#user-area");
+    if (user && getToken()) {
+      area.hidden = false;
+      $("#user-name-display").textContent = "Hi, " + (user.name || user.email.split("@")[0]);
+    } else {
+      area.hidden = true;
+    }
+  }
+
+  function showWelcomeOverlay(show) {
+    $("#welcome-overlay").hidden = !show;
+  }
+
+  // Show the overlay unless the person already has a session or
+  // previously chose to continue as a guest - never nag a returning user.
+  if (!getToken() && !localStorage.getItem(GUEST_KEY)) {
+    showWelcomeOverlay(true);
+  } else {
+    showWelcomeOverlay(false);
+  }
+  syncUserArea();
+
+  $$('.welcome-tab').forEach((tab) => {
+    tab.addEventListener("click", () => {
+      $$('.welcome-tab').forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      $("#login-form").hidden = tab.dataset.authTab !== "login";
+      $("#signup-form").hidden = tab.dataset.authTab !== "signup";
+    });
+  });
+
+  $("#login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorEl = $("#login-error");
+    errorEl.hidden = true;
+    try {
+      const res = await fetch("/auth/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: $("#login-email").value, password: $("#login-password").value }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Login failed.");
+      setSession(payload.data.token, payload.data.user);
+      syncUserArea();
+      showWelcomeOverlay(false);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    }
+  });
+
+  $("#signup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorEl = $("#signup-error");
+    errorEl.hidden = true;
+    try {
+      const res = await fetch("/auth/register", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: $("#signup-email").value, password: $("#signup-password").value, name: $("#signup-name").value || null,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Sign up failed.");
+      setSession(payload.data.token, payload.data.user);
+      syncUserArea();
+      showWelcomeOverlay(false);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    }
+  });
+
+  $("#guest-btn").addEventListener("click", () => {
+    localStorage.setItem(GUEST_KEY, "true");
+    showWelcomeOverlay(false);
+  });
+
+  $("#logout-btn").addEventListener("click", () => {
+    clearSession();
+    syncUserArea();
+    showWelcomeOverlay(true);
+  });
+
+  // ==================================================================
   // i18n
   // ==================================================================
 
@@ -44,6 +162,10 @@
       anemiaGrading: "Anemia Grading (India)", psychEval: "Psychological Evaluation (EPDS)",
       activeRules: "Active Expert Rules", recommendations: "Recommendations",
       newAssessment: "New Assessment", readAloud: "Read Aloud", printReport: "Print Report",
+      "wizard.vitals": "Vitals", "wizard.symptoms": "Symptoms", "wizard.history": "History", "wizard.review": "Review",
+      "wizard.back": "← Back", "wizard.nextSymptoms": "Next: Symptoms →", "wizard.nextHistory": "Next: History →",
+      "wizard.nextReview": "Next: Review →", "wizard.reviewHeading": "4 · Review",
+      "wizard.reviewSub": "Check what you're about to submit, then run the assessment.",
       "guide.title": "Pregnancy Guide",
       "guide.sub": "Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.",
       "guide.byLmp": "By last menstrual period (LMP)", "guide.byWeek": "By current week",
@@ -93,6 +215,10 @@
       anemiaGrading: "एनीमिया ग्रेडिंग (भारत)", psychEval: "मानसिक मूल्यांकन (EPDS)",
       activeRules: "सक्रिय विशेषज्ञ नियम", recommendations: "सिफारिशें",
       newAssessment: "नया मूल्यांकन", readAloud: "ज़ोर से पढ़ें", printReport: "रिपोर्ट प्रिंट करें",
+      "wizard.vitals": "वाइटल्स", "wizard.symptoms": "लक्षण", "wizard.history": "इतिहास", "wizard.review": "समीक्षा",
+      "wizard.back": "← पीछे", "wizard.nextSymptoms": "अगला: लक्षण →", "wizard.nextHistory": "अगला: इतिहास →",
+      "wizard.nextReview": "अगला: समीक्षा →", "wizard.reviewHeading": "4 · समीक्षा",
+      "wizard.reviewSub": "जमा करने से पहले अपनी जानकारी जांच लें।",
       "guide.title": "गर्भावस्था गाइड",
       "guide.sub": "साप्ताहिक एएनसी यात्रा कार्यक्रम, पोषण सुझाव, और खतरे के संकेत — भारत के RCH कार्यक्रम के अनुसार।",
       "guide.byLmp": "अंतिम मासिक धर्म तिथि (LMP) से", "guide.byWeek": "वर्तमान सप्ताह से",
@@ -259,7 +385,7 @@
     try {
       const res = await fetch("/assess", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ text: text || null, vitals, history, hemoglobin, epdsResponses }),
       });
       const payload = await res.json();
@@ -286,10 +412,23 @@
 
   let lastResult = null;
 
+  function animateGaugeValue(target) {
+    const el = $("#gauge-value");
+    const start = 0;
+    const duration = 600;
+    const startTime = performance.now();
+    function step(now) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      el.textContent = Math.round(start + (target - start) * progress);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
   function renderResult(data) {
     lastResult = data;
     const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules,
-      recommendations, hemoglobinAssessment, psychologicalEvaluation } = data;
+      recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression } = data;
 
     const banner = $("#severity-banner");
     banner.className = "severity-banner level-" + severity.level.toLowerCase();
@@ -302,7 +441,7 @@
     const fill = $("#gauge-fill");
     fill.style.stroke = SEVERITY_COLOR[severity.level] || "#00b894";
     fill.style.strokeDasharray = `${frac * GAUGE_ARC_LENGTH} ${GAUGE_ARC_LENGTH}`;
-    $("#gauge-value").textContent = mri;
+    animateGaugeValue(mri);
 
     const mlBars = $("#ml-bars");
     mlBars.innerHTML = "";
@@ -368,6 +507,11 @@
         ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out to the KIRAN helpline (1800-599-0019) or someone you trust now.</div>` : ""}`;
     } else {
       psychCard.hidden = true;
+    }
+
+    if (clinicalImpression) {
+      $("#ci-confidence").textContent = clinicalImpression.confidence.label;
+      $("#ci-impressions").innerHTML = clinicalImpression.impressions.map((i) => `<li>${i}</li>`).join("");
     }
 
     const rulesList = $("#rules-list");
@@ -443,9 +587,27 @@
     } catch { /* localStorage unavailable - non-fatal */ }
   }
 
-  function renderHistory() {
+  async function loadServerHistory() {
+    if (!getToken()) return null;
+    try {
+      const res = await fetch("/assessments/mine", { headers: authHeaders() });
+      if (!res.ok) return null;
+      const payload = await res.json();
+      return payload.data.assessments.map((a) => ({
+        timestamp: new Date(a.created_at * 1000).toISOString(),
+        severityLevel: a.severity_level,
+        mri: a.mri,
+        result: a.result,
+      }));
+    } catch {
+      return null;
+    }
+  }
+
+  async function renderHistory() {
     const container = $("#history-list");
-    const history = loadHistory();
+    const serverHistory = await loadServerHistory();
+    const history = serverHistory !== null ? serverHistory : loadHistory();
     container.innerHTML = "";
 
     if (history.length === 0) {
@@ -618,4 +780,123 @@
   };
   $("#help-schemes").innerHTML = Object.entries(STATIC_SCHEMES).map(([name, desc]) => `
     <div class="scheme-tile"><strong>${name}</strong><span>${desc}</span></div>`).join("");
+
+  // ==================================================================
+  // Assessment wizard (step navigation + review summary)
+  // ==================================================================
+
+  function goToWizardStep(step) {
+    $$(".wizard-step").forEach((el) => { el.hidden = el.dataset.step !== String(step); });
+    $$(".wizard-step-dot").forEach((dot) => {
+      const dotStep = Number(dot.dataset.stepDot);
+      dot.classList.toggle("active", dotStep === step);
+      dot.classList.toggle("done", dotStep < step);
+    });
+    if (step === 4) renderReviewSummary();
+    $("#assess-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  $$(".wizard-next-btn, .wizard-back-btn").forEach((btn) => {
+    btn.addEventListener("click", () => goToWizardStep(Number(btn.dataset.goto)));
+  });
+
+  function renderReviewSummary() {
+    const rows = [];
+    if (vitalsEnable.checked) {
+      rows.push(["Vitals", `Age ${$("#v-age").value}, BP ${$("#v-sbp").value}/${$("#v-dbp").value}, BS ${$("#v-bs").value}, Temp ${$("#v-temp").value}°F, HR ${$("#v-hr").value}`]);
+    } else {
+      rows.push(["Vitals", "Not included"]);
+    }
+    if ($("#v-hb").value) rows.push(["Hemoglobin", `${$("#v-hb").value} g/dL`]);
+    rows.push(["Symptoms", symptomText.value.trim() || "None described"]);
+    const flags = Object.keys(collectHistoryFlags());
+    rows.push(["History factors", flags.length ? flags.map((f) => f.replace(/_/g, " ")).join(", ") : "None selected"]);
+    const savedEpds = loadSavedEpds();
+    if (savedEpds) rows.push(["Mental Health Check", `EPDS ${savedEpds.result.total}/30 saved`]);
+
+    $("#review-summary").innerHTML = rows.map(([label, value]) => `
+      <div class="review-row"><span class="review-label">${label}</span><span class="review-value">${value}</span></div>`).join("");
+  }
+
+  // Reset to step 1 whenever a fresh assessment starts.
+  $("#new-assessment-btn").addEventListener("click", () => goToWizardStep(1));
+
+  // ==================================================================
+  // Instant Help Chat widget
+  // ==================================================================
+
+  const CHAT_HISTORY_KEY = "janamdatri_chat";
+  const chatFab = $("#chat-fab");
+  const chatPanel = $("#chat-panel");
+  const chatMessages = $("#chat-messages");
+
+  function loadChatHistory() {
+    try { return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY)) || []; } catch { return []; }
+  }
+
+  function saveChatHistory(messages) {
+    try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-40))); } catch { /* non-fatal */ }
+  }
+
+  function appendChatMessage(sender, text, isEmergency = false) {
+    const div = document.createElement("div");
+    div.className = "chat-msg " + sender + (isEmergency ? " emergency" : "");
+    div.textContent = text;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return div;
+  }
+
+  function renderChatHistory() {
+    chatMessages.innerHTML = "";
+    const history = loadChatHistory();
+    if (history.length === 0) {
+      appendChatMessage("bot", "Hi! Ask me about ANC visits, nutrition, anemia, mental health, or describe a symptom and I'll check for danger signs.");
+      return;
+    }
+    history.forEach((m) => appendChatMessage(m.sender, m.text, m.isEmergency));
+  }
+
+  chatFab.addEventListener("click", () => {
+    chatPanel.hidden = false;
+    chatFab.hidden = true;
+    if (!chatMessages.children.length) renderChatHistory();
+    $("#chat-input").focus();
+  });
+
+  $("#chat-close-btn").addEventListener("click", () => {
+    chatPanel.hidden = true;
+    chatFab.hidden = false;
+  });
+
+  $("#chat-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = $("#chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = "";
+
+    const history = loadChatHistory();
+    history.push({ sender: "user", text: message });
+    appendChatMessage("user", message);
+
+    const typingEl = appendChatMessage("bot typing", "…thinking…");
+
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ message }),
+      });
+      const payload = await res.json();
+      typingEl.remove();
+      if (!res.ok) throw new Error(payload.detail || "Chat failed.");
+      appendChatMessage("bot", payload.data.reply, payload.data.isEmergency);
+      history.push({ sender: "bot", text: payload.data.reply, isEmergency: payload.data.isEmergency });
+      saveChatHistory(history);
+    } catch (err) {
+      typingEl.remove();
+      appendChatMessage("bot", "Sorry, I couldn't reach the help service. Please check your connection or call 108 if this is urgent.");
+    }
+  });
 })();

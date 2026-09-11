@@ -15,7 +15,7 @@ Any Critical/Severe result always means "seek facility care now",
 regardless of how confident the underlying score is.
 """
 
-from . import danger_ladder, expert_system, hemoglobin_rules, psych_eval, risk_formulation, text_analyzer
+from . import danger_ladder, expert_system, hemoglobin_rules, human_intelligence, psych_eval, risk_formulation, text_analyzer
 
 LEVEL_ORDER = ["Minimal", "Mild", "Moderate", "Severe", "Critical"]
 META = {
@@ -119,6 +119,10 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
 
     display_mri = max(adjusted_mri, TIER_FLOOR[level]) if level != original_level else adjusted_mri
 
+    clinical_impression = human_intelligence.synthesize(
+        text_scores, ml_result, text_result, ladder_result, expert_rules, risk_formulation_result, psych_result
+    )
+
     return {
         "mri": display_mri,
         "severity": {"level": level, "escalatedBy": escalated_by, **META[level]},
@@ -129,7 +133,10 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         "riskFormulation": risk_formulation_result,
         "activeExpertRules": [r for r in expert_rules if r["activated"]],
         "psychologicalEvaluation": psych_result,
-        "recommendations": _generate_recommendations(level, expert_rules, ladder_result, psych_result),
+        "clinicalImpression": clinical_impression,
+        "recommendations": _generate_recommendations(
+            level, expert_rules, ladder_result, psych_result, clinical_impression
+        ),
         "methodology": (
             "Combines a machine-learning risk classifier trained on the UCI Maternal Health Risk "
             "dataset (vitals only) with a rule-based dynamic-evaluation layer covering symptoms the "
@@ -140,7 +147,8 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     }
 
 
-def _generate_recommendations(level: str, expert_rules: list, ladder_result: dict, psych_result: dict = None) -> list:
+def _generate_recommendations(level: str, expert_rules: list, ladder_result: dict, psych_result: dict = None,
+                               clinical_impression: dict = None) -> list:
     recs = []
 
     if level == "Critical":
@@ -175,6 +183,10 @@ def _generate_recommendations(level: str, expert_rules: list, ladder_result: dic
             )
         elif psych_result["classification"] == "Possible depression":
             recs.append("Consider mentioning your mood or anxiety to your ANC provider at the next visit")
+
+    if clinical_impression:
+        for pattern in clinical_impression["patterns"]:
+            recs.append(f"⚠️ Pattern detected: {pattern['note']}")
 
     if len(recs) == 1:
         recs.append("No danger signs identified from the information provided - keep attending scheduled ANC visits")
