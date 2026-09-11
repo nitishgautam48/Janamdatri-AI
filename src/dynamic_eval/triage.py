@@ -362,6 +362,17 @@ def _generate_recommendations(level: str, expert_rules: list, ladder_result: dic
         elif psych_result["classification"] == "Possible depression":
             recs.append("Consider mentioning your mood or anxiety to your ANC provider at the next visit")
 
+        # Independent of the depression classification above - a LOW
+        # depression total can still sit alongside a flagged anxiety
+        # subscale (EPDS-3A), and that would otherwise never get its own
+        # recommendation line.
+        if psych_result.get("anxietySubscale", {}).get("flagged") and not psych_result["selfHarmFlagged"]:
+            recs.append(
+                "Your responses suggest possible anxiety (EPDS-3A subscale) even though your overall "
+                "mood score is lower - mention this to your ANC provider or try the Mental Health Check "
+                "again if it continues"
+            )
+
     if clinical_impression:
         for pattern in clinical_impression["patterns"]:
             recs.append(f"⚠️ Pattern detected: {pattern['note']}")

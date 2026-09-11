@@ -37,6 +37,16 @@ CATEGORIES = {
                    "swelling in my face", "sudden swelling", "convulsions", "had a fit",
                    "seizure", "lost consciousness", "blacked out",
                    "yellow skin", "yellow eyes", "jaundice", "skin turned yellow",
+                   # Chest pain in pregnancy is a recognized red flag for
+                   # severe pre-eclampsia (epigastric/chest pain) as well as
+                   # cardiac/pulmonary emergencies - it had no home in ANY
+                   # category before, so it was invisible to both the chat
+                   # assistant and the Assessment's expert-rule layer.
+                   # Filed here (not a new category) so it reuses the
+                   # existing pre-eclampsia workup rule/intervention rather
+                   # than needing its own expert_system.py wiring.
+                   "chest pain", "pain in my chest", "chest tightness", "tightness in my chest",
+                   "सीने में दर्द", "छाती में दर्द",
                    "तेज़ सिरदर्द", "धुंधला दिखना", "चेहरे पर सूजन", "दौरा पड़ा", "बेहोश हो गई"],
     },
     "hemorrhage": {

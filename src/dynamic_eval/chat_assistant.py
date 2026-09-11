@@ -16,7 +16,8 @@ specific enough to match a category on its own - asking a follow-up
 question is far more useful than a flat "I didn't understand that."
 """
 
-from . import danger_ladder, text_analyzer
+from . import danger_ladder, expert_system, text_analyzer
+from .phrase_match import contains_phrase, normalize
 
 FAQ_INTENTS = [
     {
@@ -101,6 +102,48 @@ FAQ_INTENTS = [
                   "available) is safer than a home birth, especially if any risk factors are present. "
                   "JSY provides cash assistance for institutional delivery - ask your ASHA worker."),
     },
+    {
+        "id": "blood_pressure",
+        "phrases": ["blood pressure", "bp check", "whats normal bp", "what is normal bp", "is my bp high",
+                    "bp reading", "hypertension", "high bp"],
+        "reply": ("Normal BP in pregnancy is under 140/90 - readings at or above that (especially with "
+                  "headache, blurred vision, or swelling) can mean pre-eclampsia and need same-day checking. "
+                  "Get it checked at every ANC visit, and enter a reading in the Assessment tab if you have one."),
+    },
+    {
+        "id": "gestational_diabetes",
+        "phrases": ["gestational diabetes", "high blood sugar", "gdm", "sugar test", "glucose test",
+                    "diabetes in pregnancy"],
+        "reply": ("Gestational diabetes is usually screened with a glucose tolerance test around 24-28 weeks - "
+                  "it's common and manageable with diet, activity, and monitoring, and usually resolves after "
+                  "delivery. Unmanaged, it raises risks for both you and the baby, so don't skip the test."),
+    },
+    {
+        "id": "leg_swelling_dvt",
+        "phrases": ["one leg is swollen", "swollen leg", "leg pain and swelling", "red swollen leg",
+                    "calf pain", "leg is red and warm", "one leg more swollen than the other"],
+        "reply": ("Swelling in BOTH legs is common in pregnancy, but swelling, redness, warmth, or pain in "
+                  "just ONE leg (especially the calf) can be a blood clot (DVT) - this needs same-day medical "
+                  "evaluation, not a wait-and-see approach."),
+    },
+    {
+        "id": "itching_cholestasis",
+        "phrases": ["itching all over", "severe itching", "itchy skin no rash", "itching hands and feet",
+                    "itching at night", "very itchy"],
+        "reply": ("Intense itching, especially on the palms/soles and worse at night, with no rash, can be "
+                  "obstetric cholestasis - a liver condition that's treatable but needs a blood test (liver "
+                  "function/bile acids) to confirm. Mention it to your ANC provider rather than just managing "
+                  "the itch."),
+    },
+    {
+        "id": "warning_signs_list",
+        "phrases": ["what are the warning signs", "list of danger signs", "what should i watch for",
+                    "danger signs list", "warning signs of pregnancy"],
+        "reply": ("Go to a facility now for any of: heavy vaginal bleeding, severe headache with blurred "
+                  "vision, convulsions/fits, severe abdominal pain, high fever, fast/difficult breathing, "
+                  "reduced or no baby movement, or chest pain. See the Pregnancy Guide tab for the full list "
+                  "with more detail."),
+    },
 ]
 
 # Vague distress language that isn't specific enough to match a category on
@@ -143,6 +186,15 @@ VAGUE_TOPICS = [
         ),
     },
     {
+        "id": "palpitations",
+        "keywords": ["heart racing", "heart is racing", "palpitations", "heart pounding", "heart beating fast"],
+        "question": (
+            "Does this happen at rest or only with activity, and how long does it last? Is it with any "
+            "chest pain, breathlessness, dizziness, or fainting? A racing heart alone is often harmless in "
+            "pregnancy, but with any of those together, or if it doesn't settle, get checked the same day."
+        ),
+    },
+    {
         "id": "generic_unwell",
         "keywords": ["not feeling well", "dont feel well", "don't feel well", "feel sick",
                      "feeling sick", "unwell", "not well", "something wrong", "not right",
@@ -174,6 +226,42 @@ FALLBACK_REPLY = (
     "check for danger signs. For anything urgent, please contact your ASHA/ANM worker or call 108."
 )
 
+# Checked BEFORE anything else, independent of the EPDS tool - someone
+# typing this in chat should never be routed into a physical-symptom flow
+# or a generic FAQ answer first. Brief crisis-intervention structure
+# (validate -> assess immediate safety -> reduce access to means -> connect
+# with someone -> give a way to act right now), not just a phone number,
+# following the same "ANY self-harm signal overrides everything else"
+# principle this project already applies to EPDS item 10.
+CRISIS_PHRASES = [
+    "kill myself", "kill me", "end my life", "end it all", "want to die", "wanna die",
+    "dont want to live", "don't want to live", "no reason to live", "better off dead",
+    "harm myself", "hurt myself", "hurting myself", "suicide", "suicidal",
+    "खुद को नुकसान", "आत्महत्या", "मरना चाहती हूं", "जीना नहीं चाहती",
+]
+
+CRISIS_REPLY = (
+    "I'm really glad you told me this - these feelings are taken seriously, and this is not your "
+    "fault. Are you safe right now, in this moment? If there's anything nearby you could use to harm "
+    "yourself, please try to move away from it, and stay with someone you trust if you can. Please "
+    "call KIRAN right now: 1800-599-0019 (toll-free, 24x7, trained counsellors) - if you feel you might "
+    "act on these thoughts right now, call 108 or go to the nearest hospital immediately instead of "
+    "waiting. The Mental Health Check tab can help you talk through this further too. You don't have "
+    "to go through this alone."
+)
+
+# A friendly label for each text_analyzer.py category, and a fallback note
+# for the one category (malnutrition) with no matching expert_system.py
+# rule to borrow "why" text from.
+CATEGORY_LABELS = {
+    "hemorrhage": "bleeding", "hypertensive_disorder": "blood pressure/pre-eclampsia symptoms",
+    "infection": "possible infection", "anemia": "anemia/fatigue", "fetal_distress": "baby's movement",
+    "obstructed_labor": "labor progress", "malnutrition": "nutrition/appetite",
+}
+CATEGORY_FALLBACK_NOTES = {
+    "malnutrition": "Not eating well for more than a day or two can affect both you and the baby.",
+}
+
 
 def _match_faq(normalized_text: str):
     for intent in FAQ_INTENTS:
@@ -189,6 +277,52 @@ def _match_topic(normalized_text: str):
     return None
 
 
+def _match_crisis(normalized_text: str) -> bool:
+    return any(contains_phrase(normalized_text, phrase) for phrase in CRISIS_PHRASES)
+
+
+def _mild_symptom_reply(text_scores: dict) -> str:
+    # Names the ACTUAL category and reuses the same clinical "why" the
+    # Assessment tab would give (via expert_system's rules), instead of
+    # one flat "worth keeping an eye on" sentence no matter what was
+    # described - that genericness was the core of the "vague chat" gap.
+    category = max(text_scores, key=text_scores.get)
+    label = CATEGORY_LABELS.get(category, category.replace("_", " "))
+
+    activated_rules = [r for r in expert_system.apply_rules(text_scores) if r.get("activated")]
+    # Prefer a rule scoped to ONLY this category (e.g. severe_anemia_rule
+    # for "anemia") over a multi-condition rule that also happens to read
+    # this category (e.g. pph_rule, which activates from anemia alone but
+    # whose "why" text is written about active bleeding) - a rule whose
+    # text is actually about the category that scored highest, not just
+    # any rule that happens to share it.
+    why = next(
+        (r["why"] for r in activated_rules if RULES_BY_CATEGORY.get(r["id"]) == [category]),
+        next((r["why"] for r in activated_rules if category in RULES_BY_CATEGORY.get(r["id"], [])), None),
+    )
+    if not why:
+        why = CATEGORY_FALLBACK_NOTES.get(category, f"This sounds related to {label}.")
+
+    return (
+        f"{why} It's worth having this properly checked - run a full Assessment in the Assessment "
+        f"tab (it looks at a lot more than I can in chat), or contact your ASHA/ANM worker if it "
+        f"doesn't improve. If it gets suddenly worse, treat it as urgent."
+    )
+
+
+# Maps each expert_system rule id to the categories it reads, so
+# _mild_symptom_reply can find the rule that actually explains the
+# category that scored highest, instead of guessing from the rule list.
+RULES_BY_CATEGORY = {
+    "pph_rule": ["hemorrhage", "anemia"],
+    "sepsis_rule": ["infection"],
+    "fetal_distress_rule": ["fetal_distress"],
+    "obstructed_labor_rule": ["obstructed_labor"],
+    "hypertensive_symptom_rule": ["hypertensive_disorder"],
+    "severe_anemia_rule": ["anemia"],
+}
+
+
 def respond(message: str, context_message: str = None, unresolved_rounds: int = 0) -> dict:
     text = (message or "").strip()
 
@@ -202,7 +336,13 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     # deliberate one-step "tell me more" exchange rather than open-ended
     # state the caller has to manage.
     analysis_text = f"{context_message}. {text}" if context_message else text
-    normalized = analysis_text.lower()
+    normalized = normalize(analysis_text)
+
+    # Psychological safety comes first, before ANY physical-symptom check
+    # or FAQ matching - the same never-let-a-critical-signal-hide-behind-
+    # something-else rule this project applies to EPDS item 10.
+    if _match_crisis(normalized):
+        return {"reply": CRISIS_REPLY, "isEmergency": True, "intent": "crisis_self_harm"}
 
     # Safety first: reuse the same danger-sign detection the assessment
     # flow uses. A matched danger sign always overrides FAQ matching.
@@ -227,14 +367,7 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
         return {"reply": intent["reply"], "isEmergency": False, "intent": intent["id"]}
 
     if high_category_score >= 0.4:
-        return {
-            "reply": (
-                "That sounds like it's worth keeping an eye on. Consider running a full Assessment in "
-                "the Assessment tab, or contacting your ASHA/ANM worker if it doesn't improve."
-            ),
-            "isEmergency": False,
-            "intent": "mild_symptom",
-        }
+        return {"reply": _mild_symptom_reply(text_scores), "isEmergency": False, "intent": "mild_symptom"}
 
     # Neither a danger sign, an FAQ topic, nor a scored symptom matched -
     # this is genuinely vague or unrecognized. Ask a targeted follow-up (at

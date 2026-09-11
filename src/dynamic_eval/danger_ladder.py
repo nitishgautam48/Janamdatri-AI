@@ -44,6 +44,13 @@ PHRASES_BY_RUNG = {
     3: ["blurred vision", "vision is blurry", "seeing spots", "face is swollen",
         "hands are swollen", "moderate bleeding", "high fever with chills", "high fever",
         "yellow skin", "yellow eyes", "jaundice", "skin turned yellow",
+        # Bare/unqualified bleeding (no "mild"/"heavy" qualifier) previously
+        # matched no rung at all - only "mild spotting" (rung 2) and
+        # explicitly qualified moderate/heavy bleeding did. Any vaginal
+        # bleeding in pregnancy of UNKNOWN severity should default to
+        # "concerning, needs a facility visit today" rather than silently
+        # falling through the ladder as if nothing was said.
+        "started bleeding", "im bleeding", "i am bleeding", "bleeding today",
         "धुंधला दिखना", "चेहरे पर सूजन", "तेज़ बुखार"],
     4: ["severe headache", "cant see properly", "severe abdominal pain", "heavy bleeding",
         "bleeding heavily", "soaked through a pad", "soaking a pad every hour",
@@ -52,8 +59,15 @@ PHRASES_BY_RUNG = {
         "not able to breathe", "not able to breath", "unable to breathe", "unable to breath",
         "cant breathe", "cannot breathe", "breathless", "gasping for air", "gasping",
         "foul smelling discharge", "discharge smells bad", "too weak to get out of bed",
+        # Chest pain in pregnancy/postpartum is its own recognized red-flag
+        # trigger in obstetric early-warning protocols (a possible sign of
+        # pulmonary embolism, a cardiac event, or severe pre-eclampsia) -
+        # it was previously invisible here (and to text_analyzer.py) even
+        # though "difficulty breathing" right next to it was already rung 4.
+        "chest pain", "pain in my chest", "chest tightness", "tightness in my chest",
         "तेज़ सिरदर्द", "तेज़ पेट दर्द", "भारी रक्तस्राव", "बच्चा हिलना बंद हो गया",
-        "सांस लेने में तकलीफ़", "सांस नहीं आ रही", "बदबूदार स्राव"],
+        "सांस लेने में तकलीफ़", "सांस नहीं आ रही", "बदबूदार स्राव",
+        "सीने में दर्द", "छाती में दर्द"],
     5: ["convulsions", "had a fit", "seizure", "lost consciousness", "blacked out",
         "fainted", "cold and clammy", "labor for more than a day", "stuck baby",
         "baby not coming out", "bleeding and passed out",

@@ -40,18 +40,37 @@ approach, and stated limitations.
 Trained on the **UCI Maternal Health Risk Data Set** (1014 records,
 Age/SystolicBP/DiastolicBP/BS/BodyTemp/HeartRate → RiskLevel, collected via
 an IoT monitoring system across rural Bangladeshi clinics; DOI:
-10.24432/C5DP5D), enriched with an engineered **Mean Arterial Pressure**
-feature. Each candidate model is tuned with `GridSearchCV` over its own
-hyperparameter grid using leakage-free 5-fold cross-validation (scaler +
-classifier in one `sklearn.Pipeline`, refit per fold) — model selection
-and hyperparameter selection both use the same procedure, not a guessed
-default configuration:
+10.24432/C5DP5D), enriched with engineered **Mean Arterial Pressure**,
+**pulse pressure**, and hypertension/hyperglycemia/fever/tachycardia
+threshold-flag features. Each candidate model (logistic regression, random
+forest, gradient boosting, SVM, and a soft-voting ensemble of all four,
+each class-weight- or sample-weight-balanced) is tuned with `GridSearchCV`
+over its own hyperparameter grid using leakage-free 5-fold cross-validation
+(scaler + classifier in one `sklearn.Pipeline`, refit per fold) — model
+selection and hyperparameter selection both use the same procedure, not a
+guessed default configuration.
+
+**A note on the numbers below**: this dataset has 562 exact-duplicate rows
+out of 1014. An earlier version of this pipeline split into train/test
+*before* deduping, so a duplicate row's twin could land in training
+whenever its copy landed in test — the model could score well on "held
+out" rows by memorizing a row it had already seen verbatim. That leakage
+inflated the previously-reported test accuracy to ~84%. The numbers below
+are post-fix (dedupe before splitting) and reflect genuine generalization:
 
 | Model | Best 5-fold CV macro F1 | Held-out test accuracy | Held-out test macro F1 |
 |---|---|---|---|
-| Logistic Regression | 0.612 | 0.660 | 0.644 |
-| Random Forest | 0.831 | 0.847 | 0.852 |
-| **Gradient Boosting (selected)** | **0.834** | **0.842** | **0.847** |
+| Logistic Regression | 0.564 | 0.637 | 0.597 |
+| Random Forest | 0.655 | 0.725 | 0.645 |
+| Gradient Boosting | 0.648 | 0.692 | 0.618 |
+| SVM (RBF) | 0.646 | 0.714 | 0.638 |
+| **Voting ensemble (selected)** | **0.661** | **0.714** | **0.625** |
+
+"Mid risk" is the weakest class across every candidate — it sits between
+low and high risk in a continuous feature space with real overlap, which
+is a property of this specific dataset, not something more grid search or
+model variety fixes. Meaningfully closing that gap needs more or better
+labeled data.
 
 Retrain with `python -m src.ml.train` (writes `models/risk_classifier.joblib`).
 Feature importances and the winning hyperparameters are exposed via

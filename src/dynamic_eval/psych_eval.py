@@ -19,6 +19,18 @@ of the total score: ANY non-zero response there is a critical safety
 signal on its own, regardless of the rest of the score - the same
 never-let-one-dangerous-signal-hide-behind-an-average principle this
 project already applies to physical danger signs.
+
+Also scores the validated EPDS-3A anxiety subscale (items 3, 4, and 5 -
+Matthey, S. (2008). "Using the Edinburgh Postnatal Depression Scale to
+screen for anxiety disorders." Depression and Anxiety, 25(11), 926-931;
+cutoff of >=6 further validated in Matthey, S., Fisher, J., & Rowe, H.
+(2013), Journal of Affective Disorders, 146(2), 224-230) alongside the
+main depression total, since EPDS was designed to screen depression and
+can miss a person whose predominant perinatal symptom is anxiety rather
+than low mood - the two commonly co-occur but are clinically distinct,
+and a tool that only reports the depression total risks telling an
+anxious-but-not-depressed person their screen is reassuring when it
+shouldn't be.
 """
 
 ITEMS = [
@@ -50,10 +62,22 @@ OPTIONS = [
 ]
 
 SELF_HARM_ITEM_INDEX = 9  # zero-indexed item 10
+# EPDS-3A anxiety subscale: items 3, 4, 5 (zero-indexed 2, 3, 4) - "blamed
+# myself unnecessarily," "anxious or worried for no good reason," "scared
+# or panicky for no very good reason." Max 9; >=6 is the validated cutoff
+# for probable anxiety.
+ANXIETY_SUBSCALE_INDICES = [2, 3, 4]
+ANXIETY_SUBSCALE_CUTOFF = 6
+
 CITATION = (
     "Edinburgh Postnatal Depression Scale (EPDS) - Cox, J.L., Holden, J.M., & Sagovsky, R. (1987), "
     "British Journal of Psychiatry, 150, 782-786. A validated screening tool, not a diagnosis - "
     "refer for clinical mental health assessment on a raised score or any self-harm item response."
+)
+ANXIETY_CITATION = (
+    "EPDS-3A anxiety subscale (items 3-5) - Matthey, S. (2008), Depression and Anxiety, 25(11), "
+    "926-931; cutoff validated in Matthey, Fisher, & Rowe (2013), Journal of Affective Disorders, "
+    "146(2), 224-230. A raised score means possible anxiety even when the depression total is low."
 )
 
 
@@ -79,12 +103,28 @@ def score(responses: list) -> dict:
     else:
         classification = "Low probability"
 
+    anxiety_total = sum(responses[i] for i in ANXIETY_SUBSCALE_INDICES)
+    anxiety_flagged = anxiety_total >= ANXIETY_SUBSCALE_CUTOFF
+    # Reported independently of the depression classification above - a
+    # low depression total does NOT mean a low anxiety subscale, and
+    # reporting only the total would silently miss someone whose main
+    # perinatal symptom is anxiety.
+    anxiety_classification = "Probable anxiety" if anxiety_flagged else "Low probability"
+
     return {
         "total": total,
         "maxScore": 30,
         "classification": classification,
         "selfHarmItemScore": self_harm_score,
         "selfHarmFlagged": self_harm_flagged,
+        "anxietySubscale": {
+            "total": anxiety_total,
+            "maxScore": 9,
+            "cutoff": ANXIETY_SUBSCALE_CUTOFF,
+            "classification": anxiety_classification,
+            "flagged": anxiety_flagged,
+            "methodology": ANXIETY_CITATION,
+        },
         "methodology": CITATION,
     }
 
@@ -98,5 +138,12 @@ def severity_for(psych_result: dict) -> str:
     if psych_result["total"] >= 13:
         return "Moderate"
     if psych_result["total"] >= 10:
+        return "Mild"
+    # A low depression TOTAL can still hide a flagged anxiety subscale -
+    # someone whose main perinatal symptom is anxiety rather than low mood
+    # would otherwise land on "Minimal" despite a clinically meaningful
+    # anxiety signal, the same kind of average-hides-a-signal gap this
+    # project refuses to allow for self-harm or physical danger signs.
+    if psych_result.get("anxietySubscale", {}).get("flagged"):
         return "Mild"
     return "Minimal"

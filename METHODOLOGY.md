@@ -12,10 +12,26 @@ an IoT risk-monitoring system across rural Bangladeshi clinics (DOI:
 10.24432/C5DP5D). South Asian, not India-specific, but the closest publicly
 available labeled dataset for this risk profile.
 
-**Feature engineering.** Mean Arterial Pressure (`MAP = DBP + (SBP-DBP)/3`) is
-added as a 7th feature. MAP weighs diastolic pressure more heavily than
-systolic and is a better single predictor of pre-eclampsia risk than either
-raw BP reading alone.
+**Feature engineering.** Mean Arterial Pressure (`MAP = DBP + (SBP-DBP)/3`)
+and Pulse Pressure (`SBP-DBP`) are added as continuous features, plus four
+binary threshold flags mirroring a health worker's own clinical checklist:
+hypertension (≥140/90), hyperglycemia (BS ≥7.8 mmol/L), fever (≥100.4°F),
+and tachycardia (heart rate ≥100 bpm). On a dataset this small, handing a
+tree/linear model a pre-computed clinical threshold is a standard way to
+bake in domain knowledge a much larger dataset would otherwise be needed to
+learn from raw values alone.
+
+**Data-quality fix: deduplication before splitting.** This dataset has 562
+exact-duplicate rows (same vitals AND same label) out of 1014, and an
+earlier version of this pipeline split into train/test *before* removing
+them. That let a duplicate row's twin land in training whenever its copy
+landed in test, so the model could score well on "held-out" rows by
+memorizing a row it had already seen verbatim rather than by generalizing —
+textbook leakage. It inflated the previously-reported test accuracy to
+~84%; the real generalization accuracy, measured honestly by deduping
+first, is materially lower (see below). This is very likely the reason
+predictions have felt less reliable in practice than an 84%-accuracy label
+implied — the number itself, not the model behind it, was the bug.
 
 **Model selection and validation.**
 - `StandardScaler` + classifier are wrapped in one `sklearn.Pipeline`, so
@@ -23,28 +39,43 @@ raw BP reading alone.
   Fitting the scaler on the full dataset before splitting — a common mistake —
   leaks each held-out fold's statistics into training and quietly inflates
   reported scores.
-- Each candidate (logistic regression, random forest, gradient boosting) is
-  tuned with `GridSearchCV` over its own hyperparameter grid, using 5-fold
-  stratified cross-validation on the training split only. This is not a
-  single guessed hyperparameter set - model selection and hyperparameter
-  selection both use the grid search's own cross-validated score, so neither
-  decision rests on a lucky default.
+- Each candidate (logistic regression, random forest, gradient boosting,
+  SVM, and a soft-voting ensemble of all four) is tuned with `GridSearchCV`
+  over its own hyperparameter grid, using 5-fold stratified cross-validation
+  on the training split only. This is not a single guessed hyperparameter
+  set - model selection and hyperparameter selection both use the grid
+  search's own cross-validated score, so neither decision rests on a lucky
+  default, and the ensemble is compared against the individual candidates
+  by that same score rather than a different yardstick.
+- Every candidate is class-weight-balanced (or, for GradientBoostingClassifier,
+  which has no `class_weight` param, sample-weight-balanced at fit time) -
+  "mid risk" is both the minority class and the hardest to separate here,
+  and an unweighted fit tends to sacrifice it for the easier classes.
 - A held-out test split, untouched during grid search or model selection,
   gives the final reported accuracy/F1.
-- Gradient boosting was selected (learning_rate=0.1, max_depth=4,
-  n_estimators=200): best 5-fold CV macro F1 = 0.834, held-out test accuracy
-  84.2%, test macro F1 0.847 - narrowly ahead of a tuned random forest
-  (CV macro F1 0.831) and well ahead of tuned logistic regression (CV macro
-  F1 0.612).
+- The soft-voting ensemble was selected: best 5-fold CV macro F1 = 0.661
+  (std 0.022, the tightest/most stable of any candidate), held-out test
+  accuracy 71.4%, test macro F1 0.625 - narrowly ahead of a tuned random
+  forest (CV macro F1 0.655) on cross-validated score, though random
+  forest's single held-out test split happened to score slightly higher on
+  raw accuracy (72.5%) - a reminder that on ~450 rows, test-set numbers
+  carry real sampling noise and the cross-validated score is the more
+  reliable selection signal, which is why that's what decides.
 - Feature importances and the winning hyperparameters are persisted and
   exposed via `GET /model/info` for transparency, rather than leaving the
-  model a black box. Blood sugar (BS)
-  is the single most important feature (~47%), consistent with the
+  model a black box (omitted for the ensemble, which has no single
+  importance vector). Blood sugar (BS) remains the single most important
+  individual feature among the tree-based candidates, consistent with the
   literature on gestational diabetes as a major driver of pregnancy risk.
 
 **Scope, honestly stated.** The model only knows what the dataset recorded.
 It has no notion of bleeding, fetal movement, labor progress, or
-psychological state — that's what layer 2 is for.
+psychological state — that's what layer 2 is for. And after deduping, only
+452 rows remain; "mid risk" stays the weakest class across every candidate
+because it sits between low and high risk in a continuous feature space
+with real overlap - a property of this specific dataset, not something
+more grid search or model variety can fix. Meaningfully closing that gap
+needs more or better labeled data, not more tuning of what's already here.
 
 ## 2. Dynamic-evaluation layer (`src/dynamic_eval/`)
 

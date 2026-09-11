@@ -1372,7 +1372,8 @@
         <div class="epds-total-display"><span class="big">${p.total}</span><span>/ ${p.maxScore}</span></div>
         <p><strong>${p.classification}</strong></p>
         ${p.selfHarmFlagged ? `<div class="self-harm-alert">🚨 Self-harm item flagged — please reach out now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019</a></div>` : ""}
-        ${!p.selfHarmFlagged && EPDS_SUPPORTIVE_INFO[p.classification] ? `<p class="epds-supportive-note">💛 ${EPDS_SUPPORTIVE_INFO[p.classification]}</p>` : ""}`;
+        ${!p.selfHarmFlagged && EPDS_SUPPORTIVE_INFO[p.classification] ? `<p class="epds-supportive-note">💛 ${EPDS_SUPPORTIVE_INFO[p.classification]}</p>` : ""}
+        ${p.anxietySubscale && p.anxietySubscale.flagged ? `<p class="epds-supportive-note">💛 Your responses also suggest possible anxiety (a validated EPDS subscale) - worth mentioning to your ANC provider too.</p>` : ""}`;
     } else {
       psychCard.hidden = true;
     }
@@ -2223,6 +2224,7 @@
       <p><strong>${result.classification}</strong></p>
       ${result.selfHarmFlagged ? `<div class="self-harm-alert">🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now.<br><a class="cta-btn cta-emergency" style="margin-top:8px;" href="tel:1800-599-0019">📞 Call KIRAN: 1800-599-0019 (toll-free, 24x7)</a></div>` : ""}
       ${supportiveNote ? `<p class="epds-supportive-note">💛 ${supportiveNote}</p>` : ""}
+      ${result.anxietySubscale && result.anxietySubscale.flagged ? `<p class="epds-supportive-note">💛 Your responses also suggest possible anxiety (a validated EPDS subscale), even ${result.classification === "Low probability" ? "though your overall mood score is low" : "alongside your mood score"} - this is worth mentioning to your ANC provider too.</p>` : ""}
       ${!result.selfHarmFlagged && result.classification !== "Low probability" ? `<p class="footnote">We'll suggest a follow-up check in about 2 weeks - feelings during pregnancy can change, and it helps to keep checking in.</p>` : ""}
       <p class="footnote">${result.methodology}</p>`;
     $("#epds-result-card").scrollIntoView({ behavior: "smooth", block: "center" });
