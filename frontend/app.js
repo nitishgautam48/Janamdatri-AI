@@ -2,8 +2,13 @@
   const GAUGE_ARC_LENGTH = 283;
   const HISTORY_KEY = "janamdatri_history";
   const EPDS_KEY = "janamdatri_last_epds";
+  const GUIDE_KEY = "janamdatri_last_guide";
   const LANG_KEY = "janamdatri_lang";
   const MAX_HISTORY = 20;
+
+  // Chat one-turn memory: the original message when the bot's last reply
+  // was a clarifying question - see the chat form submit handler below.
+  let pendingClarificationContext = null;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -38,6 +43,40 @@
 
   function getSavedUser() {
     try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }
+  }
+
+  // Every piece of per-person data (assessment history, saved EPDS score,
+  // chat log) MUST be keyed to who's actually logged in - otherwise two
+  // different accounts sharing a browser see each other's data the moment
+  // the second one logs in, which is exactly the kind of leak a health app
+  // can't have. Guest mode has no identity, so all guests on one device
+  // intentionally share one 'guest' bucket (consistent with "guest mode
+  // keeps everything on this device"); a logged-in user's data is scoped
+  // to their own account id and nothing else can read it.
+  function currentScopeId() {
+    const user = getSavedUser();
+    return user ? "user_" + user.id : "guest";
+  }
+
+  function scopedKey(baseKey) {
+    return baseKey + "::" + currentScopeId();
+  }
+
+  // Called on every identity change (login, signup, guest, logout). Scoped
+  // storage keys alone aren't enough - anything already rendered into the
+  // DOM from the PREVIOUS identity (an open chat log, a shown EPDS result)
+  // has to be cleared too, or it stays visible until a full page reload
+  // even though the next read would correctly come from the new scope.
+  function resetPerUserUIState() {
+    const chatMessagesEl = document.getElementById("chat-messages");
+    if (chatMessagesEl) chatMessagesEl.innerHTML = "";
+    const epdsResultCard = document.getElementById("epds-result-card");
+    if (epdsResultCard) epdsResultCard.hidden = true;
+    const epdsForm = document.getElementById("epds-form");
+    if (epdsForm) epdsForm.querySelectorAll('input[type="radio"]:checked').forEach((el) => { el.checked = false; });
+    syncEpdsIncludeVisibility();
+    pendingClarificationContext = null;
+    renderHome();
   }
 
   function syncUserArea() {
@@ -86,6 +125,7 @@
       if (!res.ok) throw new Error(payload.detail || "Login failed.");
       setSession(payload.data.token, payload.data.user);
       syncUserArea();
+      resetPerUserUIState();
       showWelcomeOverlay(false);
     } catch (err) {
       errorEl.textContent = err.message;
@@ -108,6 +148,7 @@
       if (!res.ok) throw new Error(payload.detail || "Sign up failed.");
       setSession(payload.data.token, payload.data.user);
       syncUserArea();
+      resetPerUserUIState();
       showWelcomeOverlay(false);
     } catch (err) {
       errorEl.textContent = err.message;
@@ -117,12 +158,14 @@
 
   $("#guest-btn").addEventListener("click", () => {
     localStorage.setItem(GUEST_KEY, "true");
+    resetPerUserUIState();
     showWelcomeOverlay(false);
   });
 
   $("#logout-btn").addEventListener("click", () => {
     clearSession();
     syncUserArea();
+    resetPerUserUIState();
     showWelcomeOverlay(true);
   });
 
@@ -133,8 +176,17 @@
   const TRANSLATIONS = {
     en: {
       tagline: "Maternal Risk Triage",
-      "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.psych": "Mental Health",
+      "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.psych": "Mental Health",
       "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
+      "home.sub": "Screening, guidance, and instant help for a healthier pregnancy — built for India.",
+      "home.lastAssessment": "Last Assessment", "home.pregnancyWeek": "Pregnancy Week", "home.mentalHealth": "Mental Health",
+      "home.quickActions": "Quick Actions",
+      "home.actionAssess": "Run Assessment", "home.actionGuide": "Pregnancy Guide",
+      "home.actionPsych": "Mental Health Check", "home.actionReports": "My Reports",
+      "home.actionChat": "Instant Help Chat", "home.actionHelp": "Helplines",
+      "home.tipLabel": "Tip of the day",
+      "home.greetingMorning": "Good morning", "home.greetingAfternoon": "Good afternoon", "home.greetingEvening": "Good evening",
+      "home.noneYet": "None yet", "home.notSet": "Not set",
       emergencyBtn: "🚨 Call 108",
       disclaimer: "⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.",
       "section.vitals": "1 · Vitals", includeVitals: "Include vitals",
@@ -192,8 +244,17 @@
     },
     hi: {
       tagline: "मातृ जोखिम मूल्यांकन",
-      "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.psych": "मानसिक स्वास्थ्य",
+      "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.psych": "मानसिक स्वास्थ्य",
       "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
+      "home.sub": "एक स्वस्थ गर्भावस्था के लिए जांच, मार्गदर्शन और तुरंत सहायता — भारत के लिए बनाया गया।",
+      "home.lastAssessment": "अंतिम मूल्यांकन", "home.pregnancyWeek": "गर्भावस्था सप्ताह", "home.mentalHealth": "मानसिक स्वास्थ्य",
+      "home.quickActions": "त्वरित कार्य",
+      "home.actionAssess": "मूल्यांकन करें", "home.actionGuide": "गर्भावस्था गाइड",
+      "home.actionPsych": "मानसिक स्वास्थ्य जांच", "home.actionReports": "मेरी रिपोर्ट",
+      "home.actionChat": "तुरंत सहायता चैट", "home.actionHelp": "हेल्पलाइन",
+      "home.tipLabel": "आज की सलाह",
+      "home.greetingMorning": "सुप्रभात", "home.greetingAfternoon": "नमस्ते", "home.greetingEvening": "शुभ संध्या",
+      "home.noneYet": "अभी तक कोई नहीं", "home.notSet": "सेट नहीं है",
       emergencyBtn: "🚨 108 पर कॉल करें",
       disclaimer: "⚠️ यह केवल एक जांच सहायता है — निदान नहीं। <strong>गंभीर</strong> या <strong>अति गंभीर</strong> परिणाम का मतलब है तुरंत अस्पताल जाएं।",
       "section.vitals": "1 · महत्वपूर्ण संकेत", includeVitals: "Vitals शामिल करें",
@@ -275,6 +336,7 @@
     currentLang = currentLang === "hi" ? "en" : "hi";
     localStorage.setItem(LANG_KEY, currentLang);
     applyTranslations();
+    renderHome();
   });
 
   applyTranslations();
@@ -291,7 +353,83 @@
   $$(".navlink").forEach((btn) => btn.addEventListener("click", () => {
     showView(btn.dataset.view);
     if (btn.dataset.view === "history-view") renderHistory();
+    if (btn.dataset.view === "home-view") renderHome();
   }));
+
+  // ==================================================================
+  // Home Dashboard
+  // ==================================================================
+
+  const TIPS = {
+    en: [
+      "Take your iron/folic acid tablet at the same time every day — it's easier to remember with a meal.",
+      "Drink plenty of water and eat fibre-rich foods to help with pregnancy constipation.",
+      "Kick counts matter — get to know your baby's usual movement pattern so you notice if it changes.",
+      "Rest on your left side when lying down — it improves blood flow to the baby.",
+      "Never skip an ANC visit, even if you're feeling fine — many risks show no symptoms early on.",
+      "Keep your maternal health (MCP) card and any lab reports together and easy to find.",
+      "It's normal to have mixed emotions during pregnancy — the Mental Health Check is here whenever you need it.",
+    ],
+    hi: [
+      "हर दिन एक ही समय पर आयरन/फोलिक एसिड टैबलेट लें — भोजन के साथ याद रखना आसान होता है।",
+      "पर्याप्त पानी पिएं और फाइबर युक्त भोजन खाएं ताकि गर्भावस्था में कब्ज़ की समस्या न हो।",
+      "बच्चे की हलचल पर ध्यान दें — सामान्य पैटर्न जानना जरूरी है ताकि बदलाव तुरंत पता चल सके।",
+      "लेटते समय बाईं करवट लेटें — इससे बच्चे तक रक्त प्रवाह बेहतर होता है।",
+      "कभी भी एएनसी जांच न छोड़ें, भले ही आप ठीक महसूस कर रही हों — कई जोखिमों के शुरुआती लक्षण नहीं दिखते।",
+      "अपना मातृ स्वास्थ्य (MCP) कार्ड और लैब रिपोर्ट एक साथ और आसानी से मिल सकें ऐसी जगह रखें।",
+      "गर्भावस्था के दौरान मिश्रित भावनाएं होना सामान्य है — जब भी जरूरत हो, मानसिक स्वास्थ्य जांच यहां उपलब्ध है।",
+    ],
+  };
+
+  function dayOfYear() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    return Math.floor((now - start) / 86400000);
+  }
+
+  function saveLastGuide(guide) {
+    try { localStorage.setItem(scopedKey(GUIDE_KEY), JSON.stringify({ week: guide.week, savedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
+  }
+
+  function loadLastGuide() {
+    try { return JSON.parse(localStorage.getItem(scopedKey(GUIDE_KEY))); } catch { return null; }
+  }
+
+  async function renderHome() {
+    const user = getSavedUser();
+    const dict = TRANSLATIONS[currentLang];
+    const hour = new Date().getHours();
+    const greetingKey = hour < 12 ? "home.greetingMorning" : hour < 17 ? "home.greetingAfternoon" : "home.greetingEvening";
+    const name = user ? (user.name || user.email.split("@")[0]) : "";
+    $("#home-greeting").textContent = dict[greetingKey] + (name ? ", " + name : "") + " 👋";
+
+    const serverHistory = await loadServerHistory();
+    const history = serverHistory !== null ? serverHistory : loadHistory();
+    $("#home-stat-assessment").textContent = history.length
+      ? `${history[0].severityLevel} · ${new Date(history[0].timestamp).toLocaleDateString()}`
+      : dict["home.noneYet"];
+
+    const lastGuide = loadLastGuide();
+    $("#home-stat-week").textContent = lastGuide ? `Week ${lastGuide.week}` : dict["home.notSet"];
+
+    const savedEpds = loadSavedEpds();
+    $("#home-stat-epds").textContent = savedEpds ? savedEpds.result.classification : dict["home.noneYet"];
+
+    const tips = TIPS[currentLang] || TIPS.en;
+    $("#home-tip-text").textContent = tips[dayOfYear() % tips.length];
+  }
+
+  $$("[data-goto-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showView(btn.dataset.gotoView);
+      if (btn.dataset.gotoView === "history-view") renderHistory();
+      if (btn.dataset.gotoView === "psych-view" && !$("#epds-form").children.length) renderEpdsForm();
+    });
+  });
+
+  $("#home-chat-action").addEventListener("click", () => chatFab.click());
+
+  renderHome();
 
   // ==================================================================
   // Vitals enable toggle
@@ -597,14 +735,14 @@
   // ==================================================================
 
   function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(scopedKey(HISTORY_KEY))) || []; } catch { return []; }
   }
 
   function saveToHistory(result) {
     try {
       const history = loadHistory();
       history.unshift({ timestamp: new Date().toISOString(), severityLevel: result.severity.level, mri: result.mri, result });
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+      localStorage.setItem(scopedKey(HISTORY_KEY), JSON.stringify(history.slice(0, MAX_HISTORY)));
     } catch { /* localStorage unavailable - non-fatal */ }
   }
 
@@ -654,7 +792,7 @@
   }
 
   $("#clear-history-btn").addEventListener("click", () => {
-    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(scopedKey(HISTORY_KEY));
     renderHistory();
   });
 
@@ -682,6 +820,7 @@
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.detail);
       renderGuide(payload.data);
+      saveLastGuide(payload.data);
     } catch (err) {
       alert(err.message || "Could not load pregnancy guide.");
     }
@@ -779,12 +918,12 @@
 
   function saveEpds(responses, result) {
     try {
-      localStorage.setItem(EPDS_KEY, JSON.stringify({ responses, result, savedAt: new Date().toISOString() }));
+      localStorage.setItem(scopedKey(EPDS_KEY), JSON.stringify({ responses, result, savedAt: new Date().toISOString() }));
     } catch { /* non-fatal */ }
   }
 
   function loadSavedEpds() {
-    try { return JSON.parse(localStorage.getItem(EPDS_KEY)); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem(scopedKey(EPDS_KEY))); } catch { return null; }
   }
 
   syncEpdsIncludeVisibility();
@@ -881,11 +1020,11 @@
   }
 
   function loadChatHistory() {
-    try { return JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY)) || []; } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(scopedKey(CHAT_HISTORY_KEY))) || []; } catch { return []; }
   }
 
   function saveChatHistory(messages) {
-    try { localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-40))); } catch { /* non-fatal */ }
+    try { localStorage.setItem(scopedKey(CHAT_HISTORY_KEY), JSON.stringify(messages.slice(-40))); } catch { /* non-fatal */ }
   }
 
   function appendChatMessage(sender, text, isEmergency = false) {
@@ -930,12 +1069,13 @@
     appendChatMessage("user", message);
 
     const typingEl = appendChatMessage("bot typing", "…thinking…");
+    const contextMessage = pendingClarificationContext;
 
     try {
       const res = await fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, contextMessage }),
       });
       const payload = await res.json();
       typingEl.remove();
@@ -943,6 +1083,7 @@
       appendChatMessage("bot", payload.data.reply, payload.data.isEmergency);
       history.push({ sender: "bot", text: payload.data.reply, isEmergency: payload.data.isEmergency });
       saveChatHistory(history);
+      pendingClarificationContext = payload.data.intent === "clarify_symptom" ? message : null;
     } catch (err) {
       typingEl.remove();
       appendChatMessage("bot", "Sorry, I couldn't reach the help service. Please check your connection or call 108 if this is urgent.");

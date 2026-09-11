@@ -101,6 +101,10 @@ class LoginRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
+    contextMessage: Optional[str] = Field(
+        default=None,
+        description="The prior user message, when this reply follows up on the bot's own clarifying question",
+    )
 
 
 def _current_user(x_user_token: Optional[str]) -> Optional[dict]:
@@ -268,7 +272,7 @@ def pregnancy_guide_endpoint(req: PregnancyGuideRequest):
 
 @app.post("/chat")
 def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
-    result = chat_assistant.respond(req.message)
+    result = chat_assistant.respond(req.message, context_message=req.contextMessage)
 
     user = _current_user(x_user_token)
     if user:

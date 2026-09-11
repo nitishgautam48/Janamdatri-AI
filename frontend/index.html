@@ -69,7 +69,8 @@
       </div>
     </div>
     <nav class="topnav">
-      <button class="navlink active" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
+      <button class="navlink active" data-view="home-view" data-i18n="nav.home">Home</button>
+      <button class="navlink" data-view="assess-view" data-i18n="nav.assess">Assessment</button>
       <button class="navlink" data-view="guide-view" data-i18n="nav.guide">Pregnancy Guide</button>
       <button class="navlink" data-view="psych-view" data-i18n="nav.psych">Mental Health</button>
       <button class="navlink" data-view="history-view" data-i18n="nav.history">History</button>
@@ -91,8 +92,80 @@
     ⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.
   </div>
 
+  <!-- ========================= HOME DASHBOARD ========================= -->
+  <section id="home-view" class="view active">
+    <div class="card home-hero">
+      <div>
+        <div class="home-greeting" id="home-greeting">Welcome</div>
+        <p class="home-sub" data-i18n="home.sub">Screening, guidance, and instant help for a healthier pregnancy — built for India.</p>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <span class="stat-icon">📊</span>
+        <div>
+          <div class="stat-label" data-i18n="home.lastAssessment">Last Assessment</div>
+          <div class="stat-value" id="home-stat-assessment">—</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🗓️</span>
+        <div>
+          <div class="stat-label" data-i18n="home.pregnancyWeek">Pregnancy Week</div>
+          <div class="stat-value" id="home-stat-week">—</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">💜</span>
+        <div>
+          <div class="stat-label" data-i18n="home.mentalHealth">Mental Health</div>
+          <div class="stat-value" id="home-stat-epds">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="home.quickActions">Quick Actions</h3>
+      <div class="action-grid">
+        <button type="button" class="action-card" data-goto-view="assess-view">
+          <span class="action-icon">📝</span>
+          <span data-i18n="home.actionAssess">Run Assessment</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="guide-view">
+          <span class="action-icon">🤰</span>
+          <span data-i18n="home.actionGuide">Pregnancy Guide</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="psych-view">
+          <span class="action-icon">💜</span>
+          <span data-i18n="home.actionPsych">Mental Health Check</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="reports-view">
+          <span class="action-icon">📄</span>
+          <span data-i18n="home.actionReports">My Reports</span>
+        </button>
+        <button type="button" class="action-card" id="home-chat-action">
+          <span class="action-icon">💬</span>
+          <span data-i18n="home.actionChat">Instant Help Chat</span>
+        </button>
+        <button type="button" class="action-card" data-goto-view="help-view">
+          <span class="action-icon">📞</span>
+          <span data-i18n="home.actionHelp">Helplines</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card tip-card">
+      <span class="tip-icon">💡</span>
+      <div>
+        <div class="tip-label" data-i18n="home.tipLabel">Tip of the day</div>
+        <div id="home-tip-text"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ========================= ASSESSMENT VIEW ========================= -->
-  <section id="assess-view" class="view active">
+  <section id="assess-view" class="view">
 
     <form id="assess-form" class="card form-card">
 

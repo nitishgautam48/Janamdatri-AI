@@ -139,14 +139,25 @@ def _matches_vague_symptom(normalized_text: str) -> bool:
     return any(word in normalized_text for word in VAGUE_SYMPTOM_WORDS)
 
 
-def respond(message: str) -> dict:
+def respond(message: str, context_message: str = None) -> dict:
     text = (message or "").strip()
-    normalized = text.lower()
+
+    # One-turn memory: when the PREVIOUS bot reply was a clarifying
+    # question ("tell me more"), the caller passes that original message
+    # back as context_message. A short follow-up like "yes it started
+    # bleeding" has almost no signal analyzed alone - combined with what
+    # prompted the question in the first place, danger-sign detection has
+    # something real to work with. Only the immediately preceding turn is
+    # carried, not an unbounded conversation history, which keeps this a
+    # deliberate one-step "tell me more" exchange rather than open-ended
+    # state the caller has to manage.
+    analysis_text = f"{context_message}. {text}" if context_message else text
+    normalized = analysis_text.lower()
 
     # Safety first: reuse the same danger-sign detection the assessment
     # flow uses. A matched danger sign always overrides FAQ matching.
-    ladder_result = danger_ladder.classify(text)
-    text_scores = text_analyzer.analyze(text)["scores"]
+    ladder_result = danger_ladder.classify(analysis_text)
+    text_scores = text_analyzer.analyze(analysis_text)["scores"]
     high_category_score = max(text_scores.values()) if text_scores else 0.0
 
     if ladder_result["rung"] >= 4 or high_category_score >= 0.85:

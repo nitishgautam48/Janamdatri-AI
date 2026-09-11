@@ -24,8 +24,13 @@ CATEGORIES = {
     # covering the highest-severity items in each category - not a
     # complete translation of every English phrase.
     "hypertensive_disorder": {
+        # Bare "headache"/"dizzy"/"swelling"/"swollen" are included alongside
+        # the more specific multi-word phrases - real messages are often as
+        # short as "yes headache" or "my feet are swollen today", and
+        # requiring the exact qualified phrasing missed those entirely.
         "moderate": ["mild headache", "feet are swollen", "swelling in my feet",
                      "hands feel swollen", "a bit dizzy", "occasional headache",
+                     "headache", "dizzy", "swelling", "swollen",
                      "हल्का सिरदर्द", "पैरों में सूजन"],
         "severe": ["severe headache", "blurred vision", "seeing spots",
                    "vision is blurry", "cant see properly", "face is swollen",
@@ -35,6 +40,7 @@ CATEGORIES = {
     },
     "hemorrhage": {
         "moderate": ["light bleeding", "spotting", "slight bleeding", "little bit of blood",
+                     "bleeding", "started bleeding",
                      "हल्का रक्तस्राव"],
         "severe": ["heavy bleeding", "bleeding a lot", "soaked through a pad",
                    "soaking a pad every hour", "blood clots", "bleeding heavily",
@@ -42,7 +48,7 @@ CATEGORIES = {
                    "भारी रक्तस्राव", "बहुत खून बह रहा है"],
     },
     "infection": {
-        "moderate": ["mild fever", "feeling feverish", "slight fever", "chills",
+        "moderate": ["mild fever", "feeling feverish", "slight fever", "chills", "fever",
                      "हल्का बुखार"],
         "severe": ["high fever", "foul smelling discharge", "bad smelling discharge",
                    "discharge smells bad", "too weak to get out of bed", "burning while urinating",
@@ -51,6 +57,7 @@ CATEGORIES = {
     },
     "anemia": {
         "moderate": ["feel tired all the time", "always tired", "weak and tired", "pale skin",
+                     "weak", "tired",
                      "हमेशा थकान रहती है"],
         "severe": ["extremely weak", "breathless even resting", "short of breath easily",
                    "heart racing", "fainting spells", "very pale",
@@ -58,6 +65,7 @@ CATEGORIES = {
     },
     "fetal_distress": {
         "moderate": ["baby is moving less", "less movement than usual", "fewer kicks today",
+                     "not moving much",
                      "बच्चे की हलचल कम हो गई"],
         "severe": ["baby stopped moving", "no movement since yesterday", "cant feel the baby move",
                    "no kicks at all", "baby not moving at all",
