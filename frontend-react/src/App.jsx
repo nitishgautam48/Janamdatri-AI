@@ -3,6 +3,7 @@ import AppShell from "./components/layout/AppShell";
 import HomePage from "./pages/HomePage";
 import ProviderPage from "./pages/ProviderPage";
 import AssessPage from "./pages/AssessPage";
+import GuidePage from "./pages/GuidePage";
 import ComingSoon from "./pages/ComingSoon";
 
 export default function App() {
@@ -12,7 +13,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/provider" element={<ProviderPage />} />
         <Route path="/assess" element={<AssessPage />} />
-        <Route path="/guide" element={<ComingSoon title="Pregnancy Guide" />} />
+        <Route path="/guide" element={<GuidePage />} />
         <Route path="/nutrition" element={<ComingSoon title="Nutrition Analysis" />} />
         <Route path="/mental-wellness" element={<ComingSoon title="Mental Wellness" />} />
         <Route path="/postpartum" element={<ComingSoon title="Postpartum Care" />} />
