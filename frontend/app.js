@@ -211,6 +211,7 @@
       "profile.conditionsLabel": "Existing medical conditions (optional)",
       "profile.conditionsPlaceholder": "e.g. thyroid, diabetes, hypertension - leave blank if none",
       "profile.saveBtn": "Save My Profile", "profile.summaryTitle": "Current Profile",
+      "profile.vaccinationLabel": "Td/TT Vaccination", "profile.vaccineDose1": "Dose 1 given", "profile.vaccineDose2": "Dose 2 given",
       "home.weekNotSet": "Set your pregnancy week",
       "home.snapshotTitle": "Health Snapshot", "home.nutritionTitle": "Nutrition", "home.viewNutrition": "View Nutrition Analysis →",
       "home.todaysCare": "Today's Care", "home.thisWeek": "This Week", "home.urgentAlerts": "Urgent Alerts",
@@ -237,6 +238,10 @@
       "section.gestation": "1c · Pregnancy Stage",
       "gestation.sub": "If you know your current week, this lets the assessment factor in trimester-specific risks (like preterm labor) and show week-appropriate warning signs.",
       "field.week": "Current gestational week",
+      "section.clinicalInputs": "1d · Additional Checks",
+      "clinicalInputs.sub": "The trained ML model and symptom check don't cover these on their own - each is a well-established antenatal screening check, not a diagnosis.",
+      "field.weight": "Current weight (kg)", "field.fetalMovement": "Fetal movements felt in the last hour",
+      "field.fundalHeight": "Fundal height (cm), if measured",
       "section.symptoms": "2 · Symptoms",
       "symptoms.sub": "Tap any that apply — they'll be added to the description below, or type your own.",
       "symptoms.placeholder": "Describe how you're feeling in your own words…",
@@ -254,6 +259,7 @@
       riskGauge: "Risk Gauge", mlPrediction: "AI Risk Estimate", dangerLadder: "Warning Sign Check",
       riskFactors: "Risk Factors", static: "Static", dynamic: "Dynamic", protective: "Protective",
       anemiaGrading: "Anemia Grading (India)", psychEval: "Emotional Well-being Screening (EPDS)",
+      weightCheck: "Weight Check", fetalMovementCheck: "Fetal Movement Check", fundalHeightCheck: "Fundal Height Check",
       activeRules: "Concerns Identified", recommendations: "Recommendations", clinicalImpression: "Health Assessment",
       newAssessment: "New Assessment", readAloud: "Read Aloud", printReport: "Print Report",
       "wizard.vitals": "Vitals", "wizard.symptoms": "Symptoms", "wizard.history": "History", "wizard.review": "Review",
@@ -319,6 +325,7 @@
       "profile.conditionsLabel": "मौजूदा चिकित्सा स्थितियां (वैकल्पिक)",
       "profile.conditionsPlaceholder": "उदा. थायरॉइड, मधुमेह, उच्च रक्तचाप - यदि कोई नहीं है तो खाली छोड़ें",
       "profile.saveBtn": "मेरी प्रोफ़ाइल सहेजें", "profile.summaryTitle": "वर्तमान प्रोफ़ाइल",
+      "profile.vaccinationLabel": "Td/TT टीकाकरण", "profile.vaccineDose1": "पहली डोज़ दी गई", "profile.vaccineDose2": "दूसरी डोज़ दी गई",
       "home.weekNotSet": "अपना गर्भावस्था सप्ताह सेट करें",
       "home.snapshotTitle": "स्वास्थ्य स्नैपशॉट", "home.nutritionTitle": "पोषण", "home.viewNutrition": "पोषण विश्लेषण देखें →",
       "home.todaysCare": "आज की देखभाल", "home.thisWeek": "इस सप्ताह", "home.urgentAlerts": "आपातकालीन चेतावनी",
@@ -345,6 +352,10 @@
       "section.gestation": "1c · गर्भावस्था चरण",
       "gestation.sub": "यदि आप अपना वर्तमान सप्ताह जानती हैं, तो मूल्यांकन ट्राइमेस्टर-विशिष्ट जोखिम (जैसे समय-पूर्व प्रसव) को ध्यान में रख सकता है और सप्ताह-उचित चेतावनी संकेत दिखा सकता है।",
       "field.week": "वर्तमान गर्भावधि सप्ताह",
+      "section.clinicalInputs": "1d · अतिरिक्त जांच",
+      "clinicalInputs.sub": "प्रशिक्षित एआई मॉडल और लक्षण जांच इन्हें अपने आप कवर नहीं करते - हर एक एक स्थापित प्रसवपूर्व जांच है, निदान नहीं।",
+      "field.weight": "वर्तमान वज़न (kg)", "field.fetalMovement": "पिछले एक घंटे में महसूस की गई हलचल",
+      "field.fundalHeight": "फंडल हाइट (cm), यदि मापी गई हो",
       "section.symptoms": "2 · लक्षण",
       "symptoms.sub": "जो लागू हो उसे टैप करें — यह नीचे विवरण में जुड़ जाएगा, या अपने शब्दों में लिखें।",
       "symptoms.placeholder": "आप कैसा महसूस कर रही हैं, अपने शब्दों में बताएं…",
@@ -362,6 +373,7 @@
       riskGauge: "जोखिम गेज", mlPrediction: "एआई जोखिम अनुमान", dangerLadder: "चेतावनी संकेत जांच",
       riskFactors: "जोखिम कारक", static: "स्थिर", dynamic: "गतिशील", protective: "सुरक्षात्मक",
       anemiaGrading: "एनीमिया ग्रेडिंग (भारत)", psychEval: "भावनात्मक स्वास्थ्य जांच (EPDS)",
+      weightCheck: "वज़न जांच", fetalMovementCheck: "भ्रूण हलचल जांच", fundalHeightCheck: "फंडल हाइट जांच",
       activeRules: "पाई गई चिंताएं", recommendations: "सिफारिशें", clinicalImpression: "स्वास्थ्य आकलन",
       newAssessment: "नया मूल्यांकन", readAloud: "ज़ोर से पढ़ें", printReport: "रिपोर्ट प्रिंट करें",
       "wizard.vitals": "वाइटल्स", "wizard.symptoms": "लक्षण", "wizard.history": "इतिहास", "wizard.review": "समीक्षा",
@@ -669,6 +681,16 @@
       guide.nextAncVisit.checks.forEach((check, i) => {
         tasks.push({ id: `anc_${guide.nextAncVisit.visit}_${i}`, text: `${check} (Visit ${guide.nextAncVisit.visit}, ${guide.nextAncVisit.window})`, manual: true });
       });
+    }
+
+    // Td/TT dose 1 is typically due once the second trimester starts; dose
+    // 2 a few weeks after that - only nudge once it's actually relevant to
+    // the recorded week, not for someone who hasn't set a week at all.
+    const profileExtra = loadProfileExtra();
+    if (guide && guide.week >= 14 && !(profileExtra && profileExtra.vaccineDose1)) {
+      tasks.push({ id: "vaccine_dose1_due", text: "Td/TT vaccine dose 1 due", manual: false, done: false });
+    } else if (guide && guide.week >= 18 && profileExtra && profileExtra.vaccineDose1 && !profileExtra.vaccineDose2) {
+      tasks.push({ id: "vaccine_dose2_due", text: "Td/TT vaccine dose 2 due", manual: false, done: false });
     }
 
     if (latest && latest.result && latest.result.severity) {
@@ -990,15 +1012,22 @@
     const hemoglobin = hbVal ? Number(hbVal) : null;
     const weekVal = $("#v-week").value;
     const pregnancyWeek = weekVal ? Number(weekVal) : null;
+    const weightVal = $("#v-weight").value;
+    const weight = weightVal ? Number(weightVal) : null;
+    const previousWeight = weight != null ? lastKnownWeight() : null;
+    const fetalMovementVal = $("#v-fetal-movement").value;
+    const fetalMovementCount = fetalMovementVal ? Number(fetalMovementVal) : null;
+    const fundalHeightVal = $("#v-fundal-height").value;
+    const fundalHeight = fundalHeightVal ? Number(fundalHeightVal) : null;
 
     const savedEpds = loadSavedEpds();
     const includeEpds = savedEpds && $("#include-epds").checked;
     const epdsResponses = includeEpds ? savedEpds.responses : null;
 
-    if (!text && !vitals && hemoglobin === null && !epdsResponses) {
+    if (!text && !vitals && hemoglobin === null && !epdsResponses && weight === null && fetalMovementCount === null && fundalHeight === null) {
       errorMsg.textContent = currentLang === "hi"
-        ? "मूल्यांकन चलाने से पहले Vitals, लक्षण, हीमोग्लोबिन या EPDS में से कुछ दर्ज करें।"
-        : "Provide vitals, symptoms, hemoglobin, or an EPDS score before running an assessment.";
+        ? "मूल्यांकन चलाने से पहले Vitals, लक्षण, हीमोग्लोबिन, वज़न, हलचल, फंडल हाइट या EPDS में से कुछ दर्ज करें।"
+        : "Provide vitals, symptoms, hemoglobin, weight, fetal movement, fundal height, or an EPDS score before running an assessment.";
       errorMsg.hidden = false;
       return;
     }
@@ -1008,7 +1037,10 @@
       const res = await fetch("/assess", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ text: text || null, vitals, history, hemoglobin, epdsResponses, pregnancyWeek }),
+        body: JSON.stringify({
+          text: text || null, vitals, history, hemoglobin, epdsResponses, pregnancyWeek,
+          weight, previousWeight, fetalMovementCount, fundalHeight,
+        }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.detail || "Assessment failed.");
@@ -1052,7 +1084,7 @@
     lastResult = data;
     const { severity, mri, mlPrediction, dangerLadder, riskFormulation, activeExpertRules,
       recommendations, hemoglobinAssessment, psychologicalEvaluation, clinicalImpression,
-      clinicalExplanation, gestationalContext } = data;
+      clinicalExplanation, gestationalContext, weightAssessment, fetalMovementAssessment, fundalHeightAssessment } = data;
 
     $("#referral-summary-card").hidden = true;
 
@@ -1189,6 +1221,36 @@
         ${!p.selfHarmFlagged && EPDS_SUPPORTIVE_INFO[p.classification] ? `<p class="epds-supportive-note">💛 ${EPDS_SUPPORTIVE_INFO[p.classification]}</p>` : ""}`;
     } else {
       psychCard.hidden = true;
+    }
+
+    const weightCard = $("#weight-card");
+    if (weightAssessment) {
+      weightCard.hidden = false;
+      $("#weight-content").innerHTML = `
+        <p><strong>${weightAssessment.status}</strong>${weightAssessment.diffKg != null ? ` (${weightAssessment.diffKg > 0 ? "+" : ""}${weightAssessment.diffKg} kg since last check)` : ""}</p>
+        ${weightAssessment.flag ? `<p class="footnote">${weightAssessment.flag}</p>` : ""}`;
+    } else {
+      weightCard.hidden = true;
+    }
+
+    const fetalMovementCard = $("#fetal-movement-card");
+    if (fetalMovementAssessment) {
+      fetalMovementCard.hidden = false;
+      $("#fetal-movement-content").innerHTML = `
+        <p><strong>${fetalMovementAssessment.status}</strong></p>
+        ${fetalMovementAssessment.flag ? `<p class="footnote">${fetalMovementAssessment.flag}</p>` : ""}`;
+    } else {
+      fetalMovementCard.hidden = true;
+    }
+
+    const fundalHeightCard = $("#fundal-height-card");
+    if (fundalHeightAssessment) {
+      fundalHeightCard.hidden = false;
+      $("#fundal-height-content").innerHTML = `
+        <p><strong>${fundalHeightAssessment.status}</strong> (expected ${fundalHeightAssessment.expectedRange[0]}-${fundalHeightAssessment.expectedRange[1]}cm)</p>
+        ${fundalHeightAssessment.flag ? `<p class="footnote">${fundalHeightAssessment.flag}</p>` : ""}`;
+    } else {
+      fundalHeightCard.hidden = true;
     }
 
     if (clinicalImpression) {
@@ -1457,6 +1519,12 @@
         ? `Your blood pressure has been trending up (${sbpFl.first} → ${sbpFl.last} mmHg systolic) - worth watching closely.`
         : `Your blood pressure has improved (${sbpFl.first} → ${sbpFl.last} mmHg systolic).`);
     }
+    const weightFl = firstLastValid(series.weight);
+    if (weightFl && weightFl.last < weightFl.first) {
+      notes.push(`Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.`);
+    } else if (weightFl && weightFl.last - weightFl.first >= 2) {
+      notes.push(`Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.`);
+    }
     if (chronological.length >= 2) {
       const prev = chronological[chronological.length - 2];
       const latest = chronological[chronological.length - 1];
@@ -1501,6 +1569,7 @@
       sbp: h.result && h.result.vitalsInput ? h.result.vitalsInput.SystolicBP : null,
       bs: h.result && h.result.vitalsInput ? h.result.vitalsInput.BS : null,
       hb: h.result && h.result.hemoglobinAssessment ? h.result.hemoglobinAssessment.hemoglobin : null,
+      weight: h.result && h.result.weightInput != null ? h.result.weightInput : null,
     }));
     const reportPoints = reportLog.map((r) => ({
       t: new Date(r.timestamp).getTime(),
@@ -1508,6 +1577,7 @@
       sbp: r.systolicBP != null ? r.systolicBP : null,
       bs: r.bloodSugar != null ? r.bloodSugar : null,
       hb: r.hemoglobin != null ? r.hemoglobin : null,
+      weight: null,
     }));
     const merged = [...assessPoints, ...reportPoints].sort((a, b) => a.t - b.t);
 
@@ -1516,6 +1586,7 @@
       sbp: merged.map((p) => p.sbp),
       bs: merged.map((p) => p.bs),
       hb: merged.map((p) => p.hb),
+      weight: merged.map((p) => p.weight),
     };
 
     const tiles = [
@@ -1523,6 +1594,7 @@
       trendTile("Systolic BP", series.sbp, "#c23b2e", " mmHg"),
       trendTile("Blood Sugar", series.bs, "#c98a1a", " mmol/L"),
       trendTile("Hemoglobin", series.hb, "#2f8f5f", " g/dL"),
+      trendTile("Weight", series.weight, "#7a5300", " kg"),
     ].filter(Boolean);
 
     if (!tiles.length) {
@@ -1659,7 +1731,8 @@
       <div class="epds-total-display"><span class="big">${guide.week}</span><span>weeks · Trimester ${guide.trimester}</span></div>
       ${guide.estimatedDueDate ? `<p class="footnote">Estimated due date: ${guide.estimatedDueDate}</p>` : ""}
       <p>${extra && extra.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy"}</p>
-      ${extra && extra.conditions ? `<p>Existing conditions: ${extra.conditions}</p>` : ""}`;
+      ${extra && extra.conditions ? `<p>Existing conditions: ${extra.conditions}</p>` : ""}
+      <p>Td/TT: ${extra && extra.vaccineDose1 ? "Dose 1 ✓" : "Dose 1 pending"}${extra && extra.vaccineDose2 ? ", Dose 2 ✓" : ", Dose 2 pending"}</p>`;
   }
 
   function prefillProfileForm() {
@@ -1679,6 +1752,8 @@
     if (extra) {
       if (extra.previousPregnancy === "yes") $('input[name="profile-previous"][value="yes"]').checked = true;
       $("#profile-conditions").value = extra.conditions || "";
+      $("#profile-vaccine-dose1").checked = !!extra.vaccineDose1;
+      $("#profile-vaccine-dose2").checked = !!extra.vaccineDose2;
     }
     renderProfileSummary();
   }
@@ -1702,7 +1777,9 @@
 
       const previousPregnancy = $('input[name="profile-previous"]:checked').value;
       const conditions = $("#profile-conditions").value.trim();
-      saveProfileExtra({ previousPregnancy, conditions });
+      const vaccineDose1 = $("#profile-vaccine-dose1").checked;
+      const vaccineDose2 = $("#profile-vaccine-dose2").checked;
+      saveProfileExtra({ previousPregnancy, conditions, vaccineDose1, vaccineDose2 });
 
       noteEl.textContent = currentLang === "hi"
         ? `प्रोफ़ाइल सहेजी गई - सप्ताह ${payload.data.week} के लिए व्यक्तिगत बनाई गई।`
@@ -1757,6 +1834,18 @@
     for (const entry of history) {
       const hb = entry.result && entry.result.hemoglobinAssessment;
       if (hb) return hb.hemoglobin;
+    }
+    return null;
+  }
+
+  // A single weight reading isn't gradable on its own (see
+  // clinical_inputs.py) - grading a CHANGE needs the last recorded
+  // weight, which the backend has no way to know unless the client
+  // sends it back.
+  function lastKnownWeight() {
+    const history = loadHistory();
+    for (const entry of history) {
+      if (entry.result && entry.result.weightInput != null) return entry.result.weightInput;
     }
     return null;
   }
@@ -2012,6 +2101,9 @@
     }
     if ($("#v-hb").value) rows.push(["Hemoglobin", `${$("#v-hb").value} g/dL`]);
     if ($("#v-week").value) rows.push(["Pregnancy week", `Week ${$("#v-week").value}`]);
+    if ($("#v-weight").value) rows.push(["Weight", `${$("#v-weight").value} kg`]);
+    if ($("#v-fetal-movement").value) rows.push(["Fetal movements (last hour)", $("#v-fetal-movement").value]);
+    if ($("#v-fundal-height").value) rows.push(["Fundal height", `${$("#v-fundal-height").value} cm`]);
     rows.push(["Symptoms", symptomText.value.trim() || "None described"]);
     const flags = Object.keys(collectHistoryFlags());
     rows.push(["History factors", flags.length ? flags.map((f) => f.replace(/_/g, " ")).join(", ") : "None selected"]);

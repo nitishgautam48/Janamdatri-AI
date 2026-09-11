@@ -283,6 +283,27 @@
           <input type="number" id="v-week" min="0" max="42" placeholder="e.g. 24" />
         </div>
       </div>
+
+      <div class="form-section">
+        <div class="section-head">
+          <h2><span data-i18n="section.clinicalInputs">1d · Additional Checks</span> <span class="badge-soft">optional</span></h2>
+        </div>
+        <p class="section-sub" data-i18n="clinicalInputs.sub">The trained ML model and symptom check don't cover these on their own - each is a well-established antenatal screening check, not a diagnosis.</p>
+        <div class="vitals-grid">
+          <div class="field">
+            <label for="v-weight" data-i18n="field.weight">Current weight (kg)</label>
+            <input type="number" step="0.1" id="v-weight" min="30" max="180" placeholder="e.g. 62" />
+          </div>
+          <div class="field">
+            <label for="v-fetal-movement"><span data-i18n="field.fetalMovement">Fetal movements felt in the last hour</span></label>
+            <input type="number" id="v-fetal-movement" min="0" max="50" placeholder="e.g. 6" />
+          </div>
+          <div class="field">
+            <label for="v-fundal-height" data-i18n="field.fundalHeight">Fundal height (cm), if measured</label>
+            <input type="number" step="0.1" id="v-fundal-height" min="10" max="45" placeholder="e.g. 27" />
+          </div>
+        </div>
+      </div>
       <div class="wizard-nav"><span></span><button type="button" class="wizard-next-btn" data-goto="2" data-i18n="wizard.nextSymptoms">Next: Symptoms →</button></div>
       </div>
 
@@ -445,6 +466,21 @@
           <div id="psych-content"></div>
         </div>
 
+        <div class="card" id="weight-card" hidden>
+          <h3 data-i18n="weightCheck">Weight Check</h3>
+          <div id="weight-content"></div>
+        </div>
+
+        <div class="card" id="fetal-movement-card" hidden>
+          <h3 data-i18n="fetalMovementCheck">Fetal Movement Check</h3>
+          <div id="fetal-movement-content"></div>
+        </div>
+
+        <div class="card" id="fundal-height-card" hidden>
+          <h3 data-i18n="fundalHeightCheck">Fundal Height Check</h3>
+          <div id="fundal-height-content"></div>
+        </div>
+
       </div>
 
       <div class="card">
@@ -503,6 +539,12 @@
       <div class="field">
         <label for="profile-conditions" data-i18n="profile.conditionsLabel">Existing medical conditions (optional)</label>
         <textarea id="profile-conditions" rows="2" data-i18n-placeholder="profile.conditionsPlaceholder" placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none"></textarea>
+      </div>
+
+      <div class="field">
+        <label data-i18n="profile.vaccinationLabel">Td/TT Vaccination</label>
+        <label class="check"><input type="checkbox" id="profile-vaccine-dose1" /> <span data-i18n="profile.vaccineDose1">Dose 1 given</span></label>
+        <label class="check"><input type="checkbox" id="profile-vaccine-dose2" /> <span data-i18n="profile.vaccineDose2">Dose 2 given</span></label>
       </div>
 
       <button type="button" class="submit-btn" id="profile-save-btn" data-i18n="profile.saveBtn">Save My Profile</button>

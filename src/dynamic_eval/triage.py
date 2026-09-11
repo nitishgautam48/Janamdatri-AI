@@ -15,8 +15,8 @@ Any Critical/Severe result always means "seek facility care now",
 regardless of how confident the underlying score is.
 """
 
-from . import (danger_ladder, expert_system, hemoglobin_rules, human_intelligence, pregnancy_guide,
-               psych_eval, risk_formulation, text_analyzer)
+from . import (clinical_inputs, danger_ladder, expert_system, hemoglobin_rules, human_intelligence,
+               pregnancy_guide, psych_eval, risk_formulation, text_analyzer)
 
 LEVEL_ORDER = ["Minimal", "Mild", "Moderate", "Severe", "Critical"]
 META = {
@@ -107,7 +107,8 @@ def _psych_mri(psych_result: dict) -> float:
 
 
 def _build_explanation(level: str, escalated_by: str, ladder_result: dict, expert_rules: list,
-                        risk_formulation_result: dict, ml_result: dict) -> dict:
+                        risk_formulation_result: dict, ml_result: dict,
+                        weight_result: dict = None, fetal_movement_result: dict = None) -> dict:
     """Turns the raw signals synthesize() already computed into a plain-language
     "why did I get this result" block - a patient-facing "High/Medium/Low" label
     on its own doesn't tell anyone what to actually do about it."""
@@ -136,6 +137,15 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
         rule = next((r for r in expert_rules if r["id"] == escalated_by), None)
         if rule:
             why.append(f"{rule['name']}: {rule['why']}")
+
+    # Additive, not exclusive - a flagged weight change or reduced fetal
+    # movement is worth surfacing regardless of whether it happened to be
+    # THE specific signal that crossed an escalation threshold, since
+    # worst-signal-wins already blends it into the category score above.
+    if weight_result and weight_result.get("flag"):
+        why.append(f"Weight check: {weight_result['flag']}")
+    if fetal_movement_result and fetal_movement_result.get("flag"):
+        why.append(f"Fetal movement check: {fetal_movement_result['flag']}")
 
     if not why:
         if ml_result:
@@ -174,7 +184,9 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
 
 
 def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
-                hemoglobin: float = None, epds_responses: list = None, pregnancy_week: int = None) -> dict:
+                hemoglobin: float = None, epds_responses: list = None, pregnancy_week: int = None,
+                weight: float = None, previous_weight: float = None, fetal_movement_count: int = None,
+                fundal_height: float = None) -> dict:
     history = history or {}
 
     text_result = text_analyzer.analyze(text) if text else None
@@ -188,6 +200,25 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     if hemoglobin is not None:
         hb_result = hemoglobin_rules.score(hemoglobin)
         text_scores["anemia"] = max(text_scores.get("anemia", 0.0), hb_result["score"])
+
+    # Same worst-signal-wins pattern for the other clinical inputs the ML
+    # model and text layer can't see on their own - see clinical_inputs.py
+    # for why each one maps onto the category it does (or, for weight
+    # loss and fundal height, why it deliberately does NOT auto-escalate
+    # and is only ever shown informationally).
+    weight_result = None
+    if weight is not None:
+        weight_result = clinical_inputs.assess_weight_change(weight, previous_weight)
+        text_scores["hypertensive_disorder"] = max(text_scores.get("hypertensive_disorder", 0.0), weight_result["hypertensiveScore"])
+
+    fetal_movement_result = None
+    if fetal_movement_count is not None:
+        fetal_movement_result = clinical_inputs.assess_fetal_movement(fetal_movement_count)
+        text_scores["fetal_distress"] = max(text_scores.get("fetal_distress", 0.0), fetal_movement_result["fetalDistressScore"])
+
+    fundal_height_result = None
+    if fundal_height is not None and pregnancy_week is not None:
+        fundal_height_result = clinical_inputs.assess_fundal_height(fundal_height, pregnancy_week)
 
     risk_formulation_result = risk_formulation.assess(text, history)
     ladder_result = danger_ladder.classify(text)
@@ -257,7 +288,8 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     clinical_impression = human_intelligence.synthesize(
         text_scores, ml_result, text_result, ladder_result, expert_rules, risk_formulation_result, psych_result
     )
-    explanation = _build_explanation(level, escalated_by, ladder_result, expert_rules, risk_formulation_result, ml_result)
+    explanation = _build_explanation(level, escalated_by, ladder_result, expert_rules, risk_formulation_result,
+                                      ml_result, weight_result, fetal_movement_result)
 
     gestational_context = None
     if pregnancy_week is not None:
@@ -272,6 +304,9 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         "mlPrediction": ml_result,
         "textAnalysis": text_result,
         "hemoglobinAssessment": hb_result,
+        "weightAssessment": weight_result,
+        "fetalMovementAssessment": fetal_movement_result,
+        "fundalHeightAssessment": fundal_height_result,
         "dangerLadder": ladder_result,
         "riskFormulation": risk_formulation_result,
         "activeExpertRules": [r for r in expert_rules if r["activated"]],
