@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
+import GlobalEmergencyBanner from "./GlobalEmergencyBanner";
 import ChatWidget from "../chat/ChatWidget";
 import { useAuth } from "../../context/AuthContext";
 import WelcomeGate from "../auth/WelcomeGate";
@@ -19,6 +20,7 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-bg text-ink">
       <TopBar />
+      {hasIdentity && <GlobalEmergencyBanner />}
       {hasIdentity || isPublicRoute ? (
         <div className="mx-auto flex max-w-7xl">
           {hasIdentity && <Sidebar />}

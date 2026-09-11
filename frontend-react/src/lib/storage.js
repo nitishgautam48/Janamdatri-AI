@@ -109,8 +109,84 @@ export function lastKnownWeight() {
   return null;
 }
 
+// weightAssessment carries status/diffKg/flag but never the raw weight
+// value itself (see clinical_inputs.assess_weight_change) - that lives
+// alongside it on the same history entry as weightInput, so this merges
+// the two rather than reporting a status with no number attached.
+export function lastKnownWeightAssessment() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  for (const entry of history) {
+    if (entry.result?.weightInput != null) {
+      return { ...(entry.result.weightAssessment || {}), valueKg: entry.result.weightInput, timestamp: entry.timestamp };
+    }
+  }
+  return null;
+}
+
+export function lastKnownHemoglobinAssessment() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  for (const entry of history) {
+    if (entry.result?.hemoglobinAssessment) return { ...entry.result.hemoglobinAssessment, timestamp: entry.timestamp };
+  }
+  return null;
+}
+
+// The backend already echoes back the exact vitals it was given
+// (main.py's triage_result["vitalsInput"]), so this just surfaces the
+// most recent one instead of re-deriving BP/blood sugar some other way.
+export function lastKnownVitals() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  for (const entry of history) {
+    if (entry.result?.vitalsInput) return { ...entry.result.vitalsInput, timestamp: entry.timestamp };
+  }
+  return null;
+}
+
 export function loadSavedEpds() {
   return scopedGet(KEYS.EPDS);
+}
+
+const EPDS_FOLLOWUP_DAYS = 14;
+
+export function epdsDaysSince(savedEpds) {
+  if (!savedEpds) return null;
+  return Math.floor((Date.now() - new Date(savedEpds.savedAt).getTime()) / 86400000);
+}
+
+// A real follow-up loop, not a one-time score: resolves itself the moment
+// the person retakes the check (which resets savedAt) rather than needing
+// to be manually dismissed.
+export function epdsFollowUpDue(savedEpds) {
+  if (!savedEpds || savedEpds.result.classification === "Low probability") return false;
+  const days = epdsDaysSince(savedEpds);
+  return days != null && days >= EPDS_FOLLOWUP_DAYS;
+}
+
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// "supplement"/"hydration" are the only two Today's Care tasks that mean
+// something different every day, so they're the only ones that reset when
+// the stored checklist date rolls over; everything else keeps its checked
+// state until the task itself is no longer relevant (e.g. a visit passes).
+const DAILY_RESET_TASK_IDS = new Set(["supplement", "hydration"]);
+
+export function loadTodayCareState() {
+  const raw = scopedGet(KEYS.TODAY_CARE);
+  if (!raw) return { date: todayDateStr(), checked: {} };
+  if (raw.date !== todayDateStr()) {
+    const kept = {};
+    Object.keys(raw.checked || {}).forEach((id) => {
+      if (!DAILY_RESET_TASK_IDS.has(id)) kept[id] = raw.checked[id];
+    });
+    return { date: todayDateStr(), checked: kept };
+  }
+  return raw;
+}
+
+export function saveTodayCareState(state) {
+  scopedSet(KEYS.TODAY_CARE, state);
 }
 
 export function addReportVitalsToHealthRecord(vitals) {
