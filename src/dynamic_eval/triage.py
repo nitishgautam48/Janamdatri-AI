@@ -61,6 +61,20 @@ def _rung_level(rung: int) -> str:
     return "Minimal"
 
 
+# Graduated MRI contribution per escalation source, so two DIFFERENT
+# triggers that both push the level to (say) "Critical" don't collapse to
+# an identical displayed number - rung 5 (an active emergency) and rung 4
+# (a WHO danger sign) both mean Critical, but they aren't equally urgent.
+RUNG_MRI = {1: 20, 2: 45, 3: 65, 4: 85, 5: 98}
+
+
+def _psych_mri(psych_result: dict) -> float:
+    total_pct = round(psych_result["total"] / psych_result["maxScore"] * 100)
+    if psych_result["selfHarmFlagged"]:
+        return max(90, total_pct)
+    return total_pct
+
+
 def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
                 hemoglobin: float = None, epds_responses: list = None) -> dict:
     history = history or {}
@@ -89,14 +103,15 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     adjusted_mri = min(round(base_mri * risk_formulation_result["multiplier"]), 100)
 
     level = _tier_for_mri(adjusted_mri)
-    original_level = level
     escalated_by = None
+    escalation_mri = 0.0
 
     if ladder_result["rung"] > 0:
         rung_level = _rung_level(ladder_result["rung"])
         if LEVEL_ORDER.index(rung_level) > LEVEL_ORDER.index(level):
             level = rung_level
             escalated_by = "danger_ladder"
+            escalation_mri = RUNG_MRI[ladder_result["rung"]]
 
     worst_rule = None
     for rule in expert_rules:
@@ -107,6 +122,7 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     if worst_rule and LEVEL_ORDER.index(worst_rule["severity"]) > LEVEL_ORDER.index(level):
         level = worst_rule["severity"]
         escalated_by = worst_rule["id"]
+        escalation_mri = round(worst_rule["maxScore"] * 100)
 
     # Psychological screening escalates the SAME overall severity scale -
     # a self-harm-flagged EPDS result is exactly as urgent as a physical
@@ -116,8 +132,14 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         if LEVEL_ORDER.index(psych_level) > LEVEL_ORDER.index(level):
             level = psych_level
             escalated_by = "self_harm_risk" if psych_result["selfHarmFlagged"] else "psychological_screening"
+            escalation_mri = _psych_mri(psych_result)
 
-    display_mri = max(adjusted_mri, TIER_FLOOR[level]) if level != original_level else adjusted_mri
+    # Never just snap to the tier's floor - that flattens every escalation
+    # within a level to one identical number. Take the strongest of what
+    # the ML+multiplier line actually computed and whatever specific
+    # signal caused the escalation (bounded below by the tier floor so the
+    # displayed number is always at least consistent with its own level).
+    display_mri = max(adjusted_mri, escalation_mri, TIER_FLOOR[level])
 
     clinical_impression = human_intelligence.synthesize(
         text_scores, ml_result, text_result, ladder_result, expert_rules, risk_formulation_result, psych_result

@@ -98,7 +98,13 @@ def analyze(text: str) -> dict:
 
         for phrase in tiers["severe"]:
             if contains_phrase(normalized, phrase):
-                score, matched = 0.85, phrase
+                # A single specific symptom on its own (e.g. "high fever" with
+                # nothing else reported) lands at "Severe", not "Critical" -
+                # the danger_ladder.py rung system is what decides whether a
+                # phrase is a true rung-5 emergency (convulsions, passed out,
+                # stuck baby...) and escalates independently when it is, so
+                # this score doesn't need to double as an emergency flag too.
+                score, matched = 0.70, phrase
                 break
 
         if score == 0.0:
