@@ -1,18 +1,22 @@
-# Janamdatri AI — Vite + React frontend (in progress)
+# Janamdatri AI — Vite + React frontend
 
 A ground-up rewrite of `frontend/` (vanilla JS) in Vite + React + Tailwind,
 in a dark, Vaadhan-inspired design system, adapted for a maternal-health
 context. It talks to the same existing FastAPI backend (`src/api/main.py`)
 - no backend changes.
 
-**Status: phase 1.** Built and working: design system, app shell/nav,
-auth (login/signup/guest), the chat widget (rebuilt as a proper
-corner-anchored drawer instead of the old full-viewport panel that
-overlapped the nav bar), the Home dashboard, and the Provider
-share-code lookup page. Every other screen (Assessment, Pregnancy
-Guide, Nutrition, Mental Wellness, Postpartum, History, Reports,
-Profile, Helplines, Privacy Centre) is a labeled placeholder for now -
-those still work in the original `frontend/`.
+**Status: feature-complete.** Every screen from the original app has a
+React equivalent: Home, Assessment, Pregnancy Guide, Nutrition, Mental
+Wellness (EPDS), Postpartum Care, History (with real SVG trend
+sparklines), Reports, My Profile, Helplines, Privacy & Consent Centre,
+the Provider share-code lookup, and the Instant Help chat widget
+(rebuilt as a corner-anchored drawer instead of the old full-viewport
+panel that overlapped the nav bar).
+
+Not yet wired into `src/api/main.py`'s static serving - `frontend/` is
+still the deployed frontend. Cutting over means changing the static
+mount/serve target in `main.py` to `frontend-react/dist` once this has
+had a full manual QA pass in the deployed environment.
 
 ## Dev
 
@@ -28,6 +32,3 @@ Run the FastAPI backend separately on port 8500 (`uvicorn src.api.main:app --por
 ```
 npm run build     # outputs dist/
 ```
-
-Not yet wired into `src/api/main.py`'s static serving - `frontend/` is
-still the deployed frontend until this rewrite is complete.
