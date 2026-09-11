@@ -42,6 +42,11 @@ from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, p
 from src.ml.predict import get_classifier
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+# The deployed frontend as of this cutover - a Vite+React rewrite of
+# everything under frontend/ (same design, dark Vaadhan-inspired UI,
+# calling these same endpoints). frontend/ itself is left in place and
+# still mounted at /static below as a fallback, not deleted.
+REACT_DIST_DIR = Path(__file__).resolve().parents[2] / "frontend-react" / "dist"
 
 app = FastAPI(
     title="Janamdatri-AI Maternal Risk Triage",
@@ -55,11 +60,12 @@ app = FastAPI(
 auth.init_db()
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+app.mount("/assets", StaticFiles(directory=REACT_DIST_DIR / "assets"), name="react-assets")
 
 
 @app.get("/")
 def serve_frontend():
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return FileResponse(REACT_DIST_DIR / "index.html")
 
 
 class Vitals(BaseModel):
@@ -528,3 +534,13 @@ def helplines():
             "nearestFacility": "Ask your ASHA/ANM worker for the nearest 24x7 PHC or FRU (First Referral Unit)",
         },
     }
+
+
+# Client-side routing (React Router) means a hard refresh or a direct link
+# to e.g. /assess has no server-side route of its own - without this, that
+# 404s instead of loading the SPA shell and letting the router take over.
+# Registered LAST so every real API route above still matches first; only
+# an unmatched GET path falls through to here.
+@app.get("/{full_path:path}")
+def serve_spa(full_path: str):
+    return FileResponse(REACT_DIST_DIR / "index.html")
