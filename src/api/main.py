@@ -221,6 +221,12 @@ def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    # Carried through so a Home-dashboard-style summary can show "BP: Normal /
+    # Needs Attention" etc. without re-deriving it from the ML probabilities -
+    # the raw vitals the person entered aren't reconstructable from those.
+    if req.vitals:
+        triage_result["vitalsInput"] = req.vitals.model_dump()
+
     user = _current_user(x_user_token)
     if user:
         try:

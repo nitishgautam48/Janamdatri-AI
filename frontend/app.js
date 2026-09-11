@@ -199,20 +199,19 @@
       tagline: "Maternal Risk Triage",
       "nav.home": "Home", "nav.assess": "Assessment", "nav.guide": "Pregnancy Guide", "nav.nutrition": "Nutrition",
       "nav.psych": "Mental Health", "nav.history": "History", "nav.reports": "My Reports", "nav.help": "Helplines",
-      "home.sub": "Screening, guidance, and instant help for a healthier pregnancy — built for India.",
-      "home.lastAssessment": "Last Assessment", "home.pregnancyWeek": "Pregnancy Week", "home.mentalHealth": "Mental Health",
+      "home.weekNotSet": "Set your pregnancy week",
+      "home.snapshotTitle": "Health Snapshot", "home.nutritionTitle": "Nutrition", "home.viewNutrition": "View Nutrition Analysis →",
+      "home.todaysCare": "Today's Care", "home.thisWeek": "This Week", "home.urgentAlerts": "Urgent Alerts",
       "home.quickActions": "Quick Actions",
       "home.actionAssess": "Run Assessment", "home.actionGuide": "Pregnancy Guide",
       "home.actionNutrition": "Nutrition Analysis",
       "home.actionPsych": "Mental Health Check", "home.actionReports": "My Reports",
       "home.actionChat": "Instant Help Chat", "home.actionHelp": "Helplines",
-      "home.nutritionStatus": "Nutrition",
       "home.tipLabel": "Tip of the day",
       "nutrition.title": "Nutrition Analysis",
       "nutrition.sub": "Tell me how often you eat these food groups, and I'll check your intake against pregnancy nutrient needs (iron, protein, folate, calcium, B12, vitamin D, iodine) and suggest specific, affordable Indian foods to close any gaps. Not a lab test - a starting point for the conversation with your ANC provider or a nutritionist.",
       "nutrition.analyze": "Analyze My Diet", "nutrition.result": "Your Nutrient Adequacy",
       "home.greetingMorning": "Good morning", "home.greetingAfternoon": "Good afternoon", "home.greetingEvening": "Good evening",
-      "home.noneYet": "None yet", "home.notSet": "Not set",
       emergencyBtn: "🚨 Call 108",
       disclaimer: "⚠️ Screening aid only — not a diagnosis. <strong>Critical</strong> or <strong>Severe</strong> always means seek facility care now.",
       "section.vitals": "1 · Vitals", includeVitals: "Include vitals",
@@ -275,20 +274,19 @@
       tagline: "मातृ जोखिम मूल्यांकन",
       "nav.home": "होम", "nav.assess": "मूल्यांकन", "nav.guide": "गर्भावस्था गाइड", "nav.nutrition": "पोषण",
       "nav.psych": "मानसिक स्वास्थ्य", "nav.history": "इतिहास", "nav.reports": "मेरी रिपोर्ट", "nav.help": "हेल्पलाइन",
-      "home.sub": "एक स्वस्थ गर्भावस्था के लिए जांच, मार्गदर्शन और तुरंत सहायता — भारत के लिए बनाया गया।",
-      "home.lastAssessment": "अंतिम मूल्यांकन", "home.pregnancyWeek": "गर्भावस्था सप्ताह", "home.mentalHealth": "मानसिक स्वास्थ्य",
+      "home.weekNotSet": "अपना गर्भावस्था सप्ताह सेट करें",
+      "home.snapshotTitle": "स्वास्थ्य स्नैपशॉट", "home.nutritionTitle": "पोषण", "home.viewNutrition": "पोषण विश्लेषण देखें →",
+      "home.todaysCare": "आज की देखभाल", "home.thisWeek": "इस सप्ताह", "home.urgentAlerts": "आपातकालीन चेतावनी",
       "home.quickActions": "त्वरित कार्य",
       "home.actionAssess": "मूल्यांकन करें", "home.actionGuide": "गर्भावस्था गाइड",
       "home.actionNutrition": "पोषण विश्लेषण",
       "home.actionPsych": "मानसिक स्वास्थ्य जांच", "home.actionReports": "मेरी रिपोर्ट",
       "home.actionChat": "तुरंत सहायता चैट", "home.actionHelp": "हेल्पलाइन",
-      "home.nutritionStatus": "पोषण",
       "home.tipLabel": "आज की सलाह",
       "nutrition.title": "पोषण विश्लेषण",
       "nutrition.sub": "बताएं कि आप ये खाद्य समूह कितनी बार खाती हैं, और मैं गर्भावस्था के पोषक तत्वों (आयरन, प्रोटीन, फोलेट, कैल्शियम, B12, विटामिन D, आयोडीन) से आपके सेवन की तुलना करूंगी और कमी को पूरा करने के लिए किफायती भारतीय भोजन सुझाऊंगी। यह लैब टेस्ट नहीं है - अपने ANC प्रदाता या न्यूट्रिशनिस्ट से बातचीत शुरू करने का एक तरीका है।",
       "nutrition.analyze": "मेरे आहार का विश्लेषण करें", "nutrition.result": "आपकी पोषक तत्व पर्याप्तता",
       "home.greetingMorning": "सुप्रभात", "home.greetingAfternoon": "नमस्ते", "home.greetingEvening": "शुभ संध्या",
-      "home.noneYet": "अभी तक कोई नहीं", "home.notSet": "सेट नहीं है",
       emergencyBtn: "🚨 108 पर कॉल करें",
       disclaimer: "⚠️ यह केवल एक जांच सहायता है — निदान नहीं। <strong>गंभीर</strong> या <strong>अति गंभीर</strong> परिणाम का मतलब है तुरंत अस्पताल जाएं।",
       "section.vitals": "1 · महत्वपूर्ण संकेत", includeVitals: "Vitals शामिल करें",
@@ -426,37 +424,232 @@
   }
 
   function saveLastGuide(guide) {
-    try { localStorage.setItem(scopedKey(GUIDE_KEY), JSON.stringify({ week: guide.week, savedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
+    // Stores the FULL guide (trimester, note, nutrition tips, danger signs,
+    // next ANC visit) - not just the week - so the Home dashboard's "This
+    // Week" section can render real content without an extra round trip.
+    try { localStorage.setItem(scopedKey(GUIDE_KEY), JSON.stringify({ ...guide, savedAt: new Date().toISOString() })); } catch { /* non-fatal */ }
   }
 
   function loadLastGuide() {
     try { return JSON.parse(localStorage.getItem(scopedKey(GUIDE_KEY))); } catch { return null; }
   }
 
+  // Collapses the 5-level clinical severity scale into the simple
+  // green/yellow/red read a "command centre" home screen needs at a
+  // glance - the full explanation still lives on the assessment result.
+  function riskPillInfo(level) {
+    if (level === "Critical" || level === "Severe") return { cls: "risk-high", label: "🔴 HIGH" };
+    if (level === "Moderate") return { cls: "risk-moderate", label: "🟡 MODERATE" };
+    if (level === "Mild" || level === "Minimal") return { cls: "risk-low", label: "🟢 LOW" };
+    return { cls: "", label: "—" };
+  }
+
+  function vitalStatusPill(value, isNormal) {
+    return `<span class="snapshot-status ${isNormal ? "status-normal" : "status-attention"}">${isNormal ? "Normal" : "Needs Attention"}</span>`;
+  }
+
+  function renderHealthSnapshot(history) {
+    const container = $("#home-snapshot");
+    const latestWithVitals = history.find((h) => h.result && h.result.vitalsInput);
+    const latestWithHb = history.find((h) => h.result && h.result.hemoglobinAssessment);
+
+    if (!latestWithVitals && !latestWithHb) {
+      container.innerHTML = `<p class="snapshot-empty">No vitals recorded yet - run an Assessment to see your snapshot here.</p>`;
+      return;
+    }
+
+    const tiles = [];
+    if (latestWithVitals) {
+      const v = latestWithVitals.result.vitalsInput;
+      const bpNormal = v.SystolicBP < 140 && v.DiastolicBP < 90;
+      tiles.push(`<div class="snapshot-tile"><div class="snapshot-label">Blood Pressure</div><div class="snapshot-value">${v.SystolicBP}/${v.DiastolicBP} mmHg</div>${vitalStatusPill(null, bpNormal)}</div>`);
+      const bsNormal = v.BS <= 7.8;
+      tiles.push(`<div class="snapshot-tile"><div class="snapshot-label">Blood Sugar</div><div class="snapshot-value">${v.BS} mmol/L</div>${vitalStatusPill(null, bsNormal)}</div>`);
+      const hrNormal = v.HeartRate >= 60 && v.HeartRate <= 100;
+      tiles.push(`<div class="snapshot-tile"><div class="snapshot-label">Heart Rate</div><div class="snapshot-value">${v.HeartRate} bpm</div>${vitalStatusPill(null, hrNormal)}</div>`);
+    }
+    if (latestWithHb) {
+      const hb = latestWithHb.result.hemoglobinAssessment;
+      tiles.push(`<div class="snapshot-tile"><div class="snapshot-label">Hemoglobin</div><div class="snapshot-value">${hb.hemoglobin} g/dL</div>${vitalStatusPill(null, hb.grade === "Normal")}</div>`);
+    }
+    container.innerHTML = tiles.join("");
+  }
+
+  function renderNutritionMiniBars() {
+    const saved = loadSavedNutrition();
+    const barsEl = $("#home-nutrition-bars");
+    const gapsTextEl = $("#home-nutrition-gaps-text");
+    if (!saved) {
+      barsEl.innerHTML = "";
+      gapsTextEl.textContent = "No nutrition check yet - tap above to get started.";
+      return;
+    }
+    const shown = ["Iron", "Protein", "Calcium", "Folate"];
+    barsEl.innerHTML = shown.map((name) => {
+      const n = saved.result.nutrients[name];
+      return `<div class="mini-bar-row">
+        <span class="mini-bar-label">${name}</span>
+        <span class="mini-bar-track"><span class="mini-bar-fill" style="width:${n.percent}%;background:${NUTRIENT_STATUS_COLOR[n.status]}"></span></span>
+        <span>${n.status}</span>
+      </div>`;
+    }).join("");
+    const gapCount = saved.result.gaps.length;
+    gapsTextEl.textContent = gapCount
+      ? `${gapCount} possible nutritional gap${gapCount > 1 ? "s" : ""} found`
+      : "All tracked nutrients look adequate.";
+  }
+
+  // Today's Care: two daily habits that reset each day, plus a couple of
+  // longer-lived reminders that stay checked until the person unchecks
+  // them (an ANC visit or a weekly warning-signs review isn't a "daily"
+  // task) - and one auto-derived item that just reflects real state
+  // (has a nutrition check actually been done) rather than being another
+  // manual box to tick.
+  const TODAY_CARE_KEY = "janamdatri_today_care";
+  const DAILY_RESET_TASK_IDS = new Set(["supplement", "hydration"]);
+
+  function todayDateStr() { return new Date().toISOString().slice(0, 10); }
+
+  function loadTodayCareState() {
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem(scopedKey(TODAY_CARE_KEY))); } catch { raw = null; }
+    if (!raw) return { date: todayDateStr(), checked: {} };
+    if (raw.date !== todayDateStr()) {
+      const kept = {};
+      Object.keys(raw.checked || {}).forEach((id) => { if (!DAILY_RESET_TASK_IDS.has(id)) kept[id] = raw.checked[id]; });
+      return { date: todayDateStr(), checked: kept };
+    }
+    return raw;
+  }
+
+  function saveTodayCareState(state) {
+    try { localStorage.setItem(scopedKey(TODAY_CARE_KEY), JSON.stringify(state)); } catch { /* non-fatal */ }
+  }
+
+  function renderTodayCare() {
+    const state = loadTodayCareState();
+    const guide = loadLastGuide();
+    const nutritionDone = !!loadSavedNutrition();
+
+    const tasks = [
+      { id: "supplement", text: "Take your prescribed iron-folic acid supplement", manual: true },
+      { id: "hydration", text: "Stay hydrated through the day", manual: true },
+      { id: "nutrition_check", text: "Complete your nutrition check", manual: false, done: nutritionDone },
+    ];
+    if (guide && guide.nextAncVisit) {
+      tasks.push({ id: "anc_followup", text: `ANC follow-up: Visit ${guide.nextAncVisit.visit} (${guide.nextAncVisit.window})`, manual: true });
+    }
+    tasks.push({ id: "warning_signs_review", text: "Review this week's warning signs", manual: true });
+
+    const container = $("#home-today-care");
+    container.innerHTML = tasks.map((t) => {
+      const checked = t.manual ? !!state.checked[t.id] : !!t.done;
+      return `<div class="today-care-item ${checked ? "checked" : ""}" data-task-id="${t.id}" data-manual="${t.manual}">
+        <input type="checkbox" ${checked ? "checked" : ""} ${t.manual ? "" : "disabled"} />
+        <span>${t.text}</span>
+      </div>`;
+    }).join("");
+
+    container.querySelectorAll(".today-care-item[data-manual='true']").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.dataset.taskId;
+        const s = loadTodayCareState();
+        s.checked[id] = !s.checked[id];
+        s.date = todayDateStr();
+        saveTodayCareState(s);
+        renderTodayCare();
+      });
+    });
+  }
+
+  function renderThisWeek() {
+    const guide = loadLastGuide();
+    const container = $("#home-this-week");
+    if (!guide) {
+      container.innerHTML = `<p class="footnote">Set your pregnancy week in the Pregnancy Guide tab to see week-specific guidance here.</p>`;
+      return;
+    }
+    const sections = [
+      { id: "mother", label: "Mother's Health", detail: `<p>${guide.note}</p>` },
+      { id: "nutrition", label: "Nutrition Tips", detail: `<ul>${guide.nutrition.map((n) => `<li>${n}</li>`).join("")}</ul>` },
+      { id: "tests", label: "Tests & Checkups", detail: `<ul>${guide.nextAncVisit.checks.map((c) => `<li>${c}</li>`).join("")}</ul>` },
+      { id: "warning", label: "Warning Signs", detail: `<ul>${guide.dangerSigns.map((d) => `<li>${d}</li>`).join("")}</ul>` },
+    ];
+    container.innerHTML = sections.map((s) => `
+      <button type="button" class="this-week-item" data-week-section="${s.id}"><span>${s.label}</span><span>→</span></button>
+      <div class="this-week-detail" id="this-week-detail-${s.id}">${s.detail}</div>`).join("");
+    container.querySelectorAll(".this-week-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $("#this-week-detail-" + btn.dataset.weekSection).classList.toggle("open");
+      });
+    });
+  }
+
+  function renderHomeAlerts(history) {
+    const card = $("#home-alerts-card");
+    const content = $("#home-alerts-content");
+    const latest = history[0];
+    const isDanger = latest && (latest.severityLevel === "Critical" || latest.severityLevel === "Severe");
+    const selfHarm = latest && latest.result && latest.result.psychologicalEvaluation && latest.result.psychologicalEvaluation.selfHarmFlagged;
+
+    if (isDanger || selfHarm) {
+      card.classList.add("has-alert");
+      content.innerHTML = `
+        <div class="home-alert-danger">🚨 Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.</div>
+        <div class="action-grid" style="margin-top:10px;">
+          <a class="action-card" href="tel:108"><span class="action-icon">🚨</span><span>Call 108</span></a>
+          <button type="button" class="action-card" data-goto-view="help-view"><span class="action-icon">📞</span><span>View Helplines</span></button>
+        </div>`;
+    } else {
+      card.classList.remove("has-alert");
+      content.innerHTML = `
+        <p class="home-alert-ok">✓ No current emergency signs</p>
+        <button type="button" class="link-btn" data-goto-view="guide-view">View Warning Signs →</button>`;
+    }
+    content.querySelectorAll("[data-goto-view]").forEach((btn) => {
+      btn.addEventListener("click", () => showView(btn.dataset.gotoView));
+    });
+  }
+
   async function renderHome() {
     const user = getSavedUser();
-    const dict = TRANSLATIONS[currentLang];
     const hour = new Date().getHours();
     const greetingKey = hour < 12 ? "home.greetingMorning" : hour < 17 ? "home.greetingAfternoon" : "home.greetingEvening";
     const name = user ? (user.name || user.email.split("@")[0]) : "";
-    $("#home-greeting").textContent = dict[greetingKey] + (name ? ", " + name : "") + " 👋";
+    $("#home-greeting").textContent = TRANSLATIONS[currentLang][greetingKey] + (name ? ", " + name : "") + " 👋";
+
+    const lastGuide = loadLastGuide();
+    const weekBadge = $("#home-week-badge");
+    const trimesterLabel = $("#home-trimester-label");
+    const progressTrack = $("#home-progress-track");
+    if (lastGuide) {
+      weekBadge.textContent = `${lastGuide.week} WEEKS PREGNANT`;
+      trimesterLabel.textContent = ["", "1st", "2nd", "3rd"][lastGuide.trimester] + " Trimester";
+      progressTrack.hidden = false;
+      $("#home-progress-fill").style.width = `${Math.min((lastGuide.week / 40) * 100, 100)}%`;
+    } else {
+      weekBadge.textContent = "Set your pregnancy week";
+      trimesterLabel.textContent = "";
+      progressTrack.hidden = true;
+    }
 
     const serverHistory = await loadServerHistory();
     const history = serverHistory !== null ? serverHistory : loadHistory();
-    $("#home-stat-assessment").textContent = history.length
-      ? `${history[0].severityLevel} · ${new Date(history[0].timestamp).toLocaleDateString()}`
-      : dict["home.noneYet"];
+    const riskPill = $("#home-risk-pill");
+    if (history.length) {
+      const info = riskPillInfo(history[0].severityLevel);
+      riskPill.textContent = info.label;
+      riskPill.className = "home-risk-pill " + info.cls;
+    } else {
+      riskPill.textContent = "No data yet";
+      riskPill.className = "home-risk-pill";
+    }
 
-    const lastGuide = loadLastGuide();
-    $("#home-stat-week").textContent = lastGuide ? `Week ${lastGuide.week}` : dict["home.notSet"];
-
-    const savedEpds = loadSavedEpds();
-    $("#home-stat-epds").textContent = savedEpds ? savedEpds.result.classification : dict["home.noneYet"];
-
-    const savedNutrition = loadSavedNutrition();
-    $("#home-stat-nutrition").textContent = savedNutrition
-      ? (savedNutrition.result.gaps.length ? `${savedNutrition.result.gaps.length} gap(s) found` : "All adequate")
-      : dict["home.noneYet"];
+    renderHealthSnapshot(history);
+    renderNutritionMiniBars();
+    renderTodayCare();
+    renderThisWeek();
+    renderHomeAlerts(history);
 
     const tips = TIPS[currentLang] || TIPS.en;
     $("#home-tip-text").textContent = tips[dayOfYear() % tips.length];

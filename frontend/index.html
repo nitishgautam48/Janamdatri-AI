@@ -96,41 +96,46 @@
   <!-- ========================= HOME DASHBOARD ========================= -->
   <section id="home-view" class="view active">
     <div class="card home-hero">
-      <div>
-        <div class="home-greeting" id="home-greeting">Welcome</div>
-        <p class="home-sub" data-i18n="home.sub">Screening, guidance, and instant help for a healthier pregnancy — built for India.</p>
+      <div class="home-greeting" id="home-greeting">Welcome</div>
+      <div class="home-week-row">
+        <div>
+          <div class="home-week-badge" id="home-week-badge" data-i18n="home.weekNotSet">Set your pregnancy week</div>
+          <div class="home-trimester" id="home-trimester-label"></div>
+        </div>
+        <div class="home-risk-pill" id="home-risk-pill">—</div>
+      </div>
+      <div class="progress-track" id="home-progress-track" hidden>
+        <div class="progress-fill" id="home-progress-fill"></div>
       </div>
     </div>
 
-    <div class="stat-row">
-      <div class="stat-card">
-        <span class="stat-icon">📊</span>
-        <div>
-          <div class="stat-label" data-i18n="home.lastAssessment">Last Assessment</div>
-          <div class="stat-value" id="home-stat-assessment">—</div>
-        </div>
+    <div class="card">
+      <h3 data-i18n="home.snapshotTitle">Health Snapshot</h3>
+      <div class="snapshot-grid" id="home-snapshot"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h3 data-i18n="home.nutritionTitle">Nutrition</h3>
+        <button type="button" class="link-btn" data-goto-view="nutrition-view" data-i18n="home.viewNutrition">View Nutrition Analysis →</button>
       </div>
-      <div class="stat-card">
-        <span class="stat-icon">🗓️</span>
-        <div>
-          <div class="stat-label" data-i18n="home.pregnancyWeek">Pregnancy Week</div>
-          <div class="stat-value" id="home-stat-week">—</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">💜</span>
-        <div>
-          <div class="stat-label" data-i18n="home.mentalHealth">Mental Health</div>
-          <div class="stat-value" id="home-stat-epds">—</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">🥗</span>
-        <div>
-          <div class="stat-label" data-i18n="home.nutritionStatus">Nutrition</div>
-          <div class="stat-value" id="home-stat-nutrition">—</div>
-        </div>
-      </div>
+      <div class="nutrition-mini-bars" id="home-nutrition-bars"></div>
+      <p class="footnote" id="home-nutrition-gaps-text"></p>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="home.todaysCare">Today's Care</h3>
+      <div class="today-care-list" id="home-today-care"></div>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="home.thisWeek">This Week</h3>
+      <div class="this-week-list" id="home-this-week"></div>
+    </div>
+
+    <div class="card" id="home-alerts-card">
+      <h3 data-i18n="home.urgentAlerts">Urgent Alerts</h3>
+      <div id="home-alerts-content"></div>
     </div>
 
     <div class="card">
