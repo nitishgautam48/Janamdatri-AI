@@ -930,6 +930,60 @@
   syncVitalsEnabled();
 
   // ==================================================================
+  // Voice input - Web Speech API, feature-detected. No backend change:
+  // this only fills a text field the same way typing would, so every
+  // existing danger-sign/chat pathway reads it identically either way.
+  // ==================================================================
+
+  function attachVoiceInput(buttonEl, targetEl, onResult) {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      buttonEl.disabled = true;
+      buttonEl.title = currentLang === "hi" ? "इस ब्राउज़र में वॉइस इनपुट समर्थित नहीं है।" : "Voice input isn't supported in this browser.";
+      return;
+    }
+
+    let recognition = null;
+    let listening = false;
+
+    function stopListening() {
+      listening = false;
+      buttonEl.classList.remove("listening");
+      buttonEl.textContent = "🎤";
+    }
+
+    buttonEl.addEventListener("click", () => {
+      if (listening) {
+        if (recognition) recognition.stop();
+        return;
+      }
+      recognition = new SpeechRecognitionCtor();
+      recognition.lang = currentLang === "hi" ? "hi-IN" : "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        listening = true;
+        buttonEl.classList.add("listening");
+        buttonEl.textContent = "🔴";
+      };
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (onResult) onResult(transcript);
+        else {
+          const current = targetEl.value.trim();
+          targetEl.value = current ? current.replace(/\.?\s*$/, ". ") + transcript : transcript;
+        }
+      };
+      recognition.onerror = stopListening;
+      recognition.onend = stopListening;
+      recognition.start();
+    });
+  }
+
+  attachVoiceInput($("#symptom-mic-btn"), $("#symptom-text"));
+
+  // ==================================================================
   // Symptom chips (bilingual)
   // ==================================================================
 
@@ -2126,6 +2180,8 @@
   const chatPanel = $("#chat-panel");
   const chatBackdrop = $("#chat-backdrop");
   const chatMessages = $("#chat-messages");
+
+  attachVoiceInput($("#chat-mic-btn"), $("#chat-input"), (transcript) => { $("#chat-input").value = transcript; });
 
   function closeChat() {
     chatPanel.hidden = true;

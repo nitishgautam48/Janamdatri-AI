@@ -837,7 +837,25 @@ textarea { width: 100%; resize: vertical; }
 .chat-input-row button {
   width: 36px; height: 36px; border-radius: 50%; border: none;
   background: var(--primary); color: white; font-size: 15px; cursor: pointer;
+  flex-shrink: 0;
 }
+
+/* ---------------- Voice input ---------------- */
+
+.voice-input-row { position: relative; }
+.voice-input-row textarea { padding-right: 46px; }
+.voice-input-row .mic-btn { position: absolute; top: 8px; right: 8px; }
+
+.mic-btn {
+  width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--primary);
+  background: white; color: var(--primary-dark); font-size: 14px; cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.mic-btn:hover { background: var(--tint-bg-strong); }
+.mic-btn:active { transform: scale(0.95); }
+.mic-btn.listening { background: var(--critical); border-color: var(--critical); color: white; animation: critical-pulse 1.2s infinite; }
+.mic-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.chat-input-row .mic-btn { width: 36px; height: 36px; background: white; }
 
 /* ---------------- Footer ---------------- */
 
