@@ -560,6 +560,22 @@ textarea { width: 100%; resize: vertical; }
 .secondary-btn:hover { background: var(--tint-bg-strong); }
 .secondary-btn:active { transform: scale(0.97); }
 
+/* ---------------- Health Trends ---------------- */
+
+.trend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.trend-tile {
+  background: var(--tint-bg); border: 1.5px solid var(--border); border-radius: var(--radius-md);
+  padding: 14px;
+}
+.trend-tile-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+.trend-arrow { font-size: 15px; }
+.trend-sparkline { width: 100%; height: 56px; display: block; }
+.trend-tile-value { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.trend-summary p {
+  background: var(--tint-bg); border-left: 3px solid var(--primary); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 13px; margin: 0 0 8px;
+}
+
 /* ---------------- History ---------------- */
 
 .link-btn { background: none; border: none; color: var(--primary-dark); font-size: 13px; cursor: pointer; text-decoration: underline; }

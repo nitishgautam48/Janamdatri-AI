@@ -256,6 +256,7 @@
       "psych.title": "Mental Health Check",
       "psych.sub": "The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've felt over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a diagnosis.",
       "psych.score": "Score My Mood", "psych.result": "Your Result",
+      "trends.title": "Health Trends", "trends.sub": "How your key numbers and risk level have changed across your assessments.",
       "history.title": "Assessment History", clear: "Clear",
       "history.stored": "Stored only in this browser (not sent anywhere).",
       "reports.title": "My Reports",
@@ -331,6 +332,7 @@
       "psych.title": "मानसिक स्वास्थ्य जांच",
       "psych.sub": "एडिनबर्ग प्रसवोत्तर अवसाद स्केल (EPDS) — पिछले 7 दिनों में आप कैसा महसूस कर रही हैं, इसके लिए एक मान्य 10-प्रश्न जांच उपकरण। यह एक जांच सहायता है, निदान नहीं।",
       "psych.score": "मेरा मूड स्कोर करें", "psych.result": "आपका परिणाम",
+      "trends.title": "स्वास्थ्य रुझान", "trends.sub": "आपके मूल्यांकनों में आपके प्रमुख आंकड़े और जोखिम स्तर कैसे बदले हैं।",
       "history.title": "मूल्यांकन इतिहास", clear: "साफ़ करें",
       "history.stored": "केवल इस ब्राउज़र में संग्रहीत (कहीं भेजा नहीं जाता)।",
       "reports.title": "मेरी रिपोर्ट",
@@ -1054,11 +1056,123 @@
     }
   }
 
+  // ==================================================================
+  // Health Trends - lightweight hand-rolled SVG sparklines over the
+  // existing assessment history (no charting library, no backend change:
+  // the raw vitals were already added to each assessment result last
+  // round specifically so a trend view like this could read them back).
+  // ==================================================================
+
+  function svgSparkline(values, color) {
+    const w = 240, h = 56, pad = 6;
+    const indexed = values.map((v, i) => ({ v, i })).filter((p) => p.v != null);
+    if (indexed.length < 2) return "";
+    const nums = indexed.map((p) => p.v);
+    const min = Math.min(...nums), max = Math.max(...nums);
+    const range = max - min || 1;
+    const stepX = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
+    const xy = (v, i) => [pad + i * stepX, h - pad - ((v - min) / range) * (h - pad * 2)];
+
+    let path = "";
+    let started = false;
+    values.forEach((v, i) => {
+      if (v == null) { started = false; return; }
+      const [x, y] = xy(v, i);
+      path += (started ? " L" : "M") + x.toFixed(1) + "," + y.toFixed(1);
+      started = true;
+    });
+    const dots = indexed.map(({ v, i }) => {
+      const [x, y] = xy(v, i);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}" />`;
+    }).join("");
+    return `<svg viewBox="0 0 ${w} ${h}" class="trend-sparkline">
+      <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />${dots}</svg>`;
+  }
+
+  function firstLastValid(values) {
+    const valid = values.filter((v) => v != null);
+    if (valid.length < 2) return null;
+    return { first: valid[0], last: valid[valid.length - 1] };
+  }
+
+  function trendTile(label, values, color, unit) {
+    const fl = firstLastValid(values);
+    const spark = svgSparkline(values, color);
+    if (!fl || !spark) return "";
+    const diff = fl.last - fl.first;
+    const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
+    return `<div class="trend-tile">
+      <div class="trend-tile-head"><span>${label}</span><span class="trend-arrow">${arrow}</span></div>
+      ${spark}
+      <div class="trend-tile-value">${fl.first}${unit} → ${fl.last}${unit}</div>
+    </div>`;
+  }
+
+  function buildTrendSummary(series, chronological) {
+    const notes = [];
+    const hbFl = firstLastValid(series.hb);
+    if (hbFl && Math.abs(hbFl.last - hbFl.first) >= 0.3) {
+      notes.push(hbFl.last > hbFl.first
+        ? `Your hemoglobin has improved across your recent checks (${hbFl.first} → ${hbFl.last} g/dL).`
+        : `Your hemoglobin has been declining across your recent checks (${hbFl.first} → ${hbFl.last} g/dL) - worth mentioning at your next visit.`);
+    }
+    const sbpFl = firstLastValid(series.sbp);
+    if (sbpFl && Math.abs(sbpFl.last - sbpFl.first) >= 5) {
+      notes.push(sbpFl.last > sbpFl.first
+        ? `Your blood pressure has been trending up (${sbpFl.first} → ${sbpFl.last} mmHg systolic) - worth watching closely.`
+        : `Your blood pressure has improved (${sbpFl.first} → ${sbpFl.last} mmHg systolic).`);
+    }
+    if (chronological.length >= 2) {
+      const prev = chronological[chronological.length - 2];
+      const latest = chronological[chronological.length - 1];
+      if (prev.severityLevel !== latest.severityLevel) {
+        const order = ["Minimal", "Mild", "Moderate", "Severe", "Critical"];
+        const increased = order.indexOf(latest.severityLevel) > order.indexOf(prev.severityLevel);
+        const escalatedBy = latest.result && latest.result.severity && latest.result.severity.escalatedBy;
+        const reason = escalatedBy ? ` because of ${escalatedBy.replace(/_/g, " ")}` : "";
+        notes.push(`Your risk level ${increased ? "increased" : "decreased"} from ${prev.severityLevel} to ${latest.severityLevel}${reason}.`);
+      }
+    }
+    if (!notes.length) return `<p class="footnote">No major changes detected across your recent assessments.</p>`;
+    return `<div class="trend-summary">${notes.map((n) => `<p>📈 ${n}</p>`).join("")}</div>`;
+  }
+
+  function renderHealthTrends(history) {
+    const container = $("#health-trends-content");
+    if (history.length < 2) {
+      container.innerHTML = `<p class="footnote">Not enough data yet - run at least 2 assessments to see trends here.</p>`;
+      return;
+    }
+
+    const chronological = [...history].reverse();
+    const series = {
+      mri: chronological.map((h) => h.mri),
+      sbp: chronological.map((h) => (h.result && h.result.vitalsInput ? h.result.vitalsInput.SystolicBP : null)),
+      bs: chronological.map((h) => (h.result && h.result.vitalsInput ? h.result.vitalsInput.BS : null)),
+      hb: chronological.map((h) => (h.result && h.result.hemoglobinAssessment ? h.result.hemoglobinAssessment.hemoglobin : null)),
+    };
+
+    const tiles = [
+      trendTile("Risk Score (MRI)", series.mri, "#a83a5c", ""),
+      trendTile("Systolic BP", series.sbp, "#c23b2e", " mmHg"),
+      trendTile("Blood Sugar", series.bs, "#c98a1a", " mmol/L"),
+      trendTile("Hemoglobin", series.hb, "#2f8f5f", " g/dL"),
+    ].filter(Boolean);
+
+    if (!tiles.length) {
+      container.innerHTML = `<p class="footnote">Not enough repeated vitals/hemoglobin data yet to chart a trend - the risk trend needs at least 2 assessments with vitals or hemoglobin entered.</p>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="trend-grid">${tiles.join("")}</div>` + buildTrendSummary(series, chronological);
+  }
+
   async function renderHistory() {
     const container = $("#history-list");
     const serverHistory = await loadServerHistory();
     const history = serverHistory !== null ? serverHistory : loadHistory();
     container.innerHTML = "";
+    renderHealthTrends(history);
 
     if (history.length === 0) {
       container.innerHTML = `<p class="history-empty">No assessments yet.</p>`;
