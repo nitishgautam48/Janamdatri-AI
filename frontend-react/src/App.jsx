@@ -9,6 +9,7 @@ import MentalWellnessPage from "./pages/MentalWellnessPage";
 import PostpartumPage from "./pages/PostpartumPage";
 import HistoryPage from "./pages/HistoryPage";
 import ReportsPage from "./pages/ReportsPage";
+import ReferralSummaryPage from "./pages/ReferralSummaryPage";
 import HelplinesPage from "./pages/HelplinesPage";
 import ProfilePage from "./pages/ProfilePage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/postpartum" element={<PostpartumPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/referral" element={<ReferralSummaryPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/help" element={<HelplinesPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />

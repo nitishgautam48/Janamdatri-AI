@@ -9,7 +9,7 @@ export default function Sidebar() {
   if (!hasIdentity) return null;
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 lg:flex">
+    <aside data-print-hide className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 lg:flex">
       <NavLink to="/" className="mb-6 flex items-center gap-2 px-2">
         <span className="text-2xl leading-none">🤰</span>
         <div className="flex flex-col leading-tight">

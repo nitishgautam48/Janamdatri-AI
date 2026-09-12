@@ -51,6 +51,7 @@ export default function GlobalEmergencyBanner() {
   return (
     <div
       style={{ top: "var(--app-header-h, 5rem)" }}
+      data-print-hide
       className="sticky z-30 border-b border-critical/40 bg-critical px-4 py-3 text-white"
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3">

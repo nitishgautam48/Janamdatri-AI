@@ -28,7 +28,7 @@ export default function TopBar() {
   }, []);
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-40 border-b border-border bg-bg/95 backdrop-blur">
+    <header ref={headerRef} data-print-hide className="sticky top-0 z-40 border-b border-border bg-bg/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:px-8">
         <NavLink to="/" className="flex items-center gap-2 shrink-0 lg:hidden">
           <span className="text-2xl leading-none">🤰</span>

@@ -21,7 +21,7 @@ export default function BottomNav() {
   return (
     <>
       {moreOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div data-print-hide className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
             aria-label="Close menu"
@@ -61,7 +61,7 @@ export default function BottomNav() {
         </div>
       )}
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav data-print-hide className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
         {PRIMARY_LINKS.map((l) => (
           <NavLink key={l.to} to={l.to} className={tabClass} end={l.to === "/"}>
             <span className="text-lg leading-none">{l.icon}</span>

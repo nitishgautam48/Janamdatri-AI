@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
@@ -183,6 +184,12 @@ export default function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex justify-end">
+        <Link to="/referral" className="text-sm font-semibold text-primary hover:underline">
+          📄 Referral Summary →
+        </Link>
+      </div>
+
       <Card>
         <h1 className="text-xl font-bold text-ink">Health Trends</h1>
         <p className="mb-3 text-sm text-muted">How your key numbers and risk level have changed across your assessments.</p>

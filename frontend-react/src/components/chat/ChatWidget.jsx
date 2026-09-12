@@ -79,6 +79,7 @@ export default function ChatWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("chat.title")}
+          data-print-hide
           className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl text-paper-ink shadow-lg shadow-black/40 hover:bg-primary-dark lg:bottom-5"
         >
           💬
@@ -88,6 +89,7 @@ export default function ChatWidget() {
       {open && (
         <div
           style={{ top: "calc(var(--app-header-h, 5rem) + 0.75rem)" }}
+          data-print-hide
           className="fixed bottom-24 right-5 z-30 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl shadow-black/50 lg:bottom-5">
           <div className="flex items-center justify-between border-b border-border bg-bg-soft px-4 py-3">
             <span className="text-sm font-semibold text-ink">💬 {t("chat.title")}</span>

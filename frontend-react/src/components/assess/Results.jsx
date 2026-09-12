@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Card from "../ui/Card";
 import Pill from "../ui/Pill";
 import Button from "../ui/Button";
@@ -209,7 +210,12 @@ export default function Results({ data, onReset }) {
         </div>
       )}
 
-      <Button variant="ghost" onClick={onReset}>← Run another assessment</Button>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button variant="ghost" onClick={onReset}>← Run another assessment</Button>
+        <Link to="/referral" className="text-sm font-semibold text-primary hover:underline">
+          📄 Generate Referral Summary →
+        </Link>
+      </div>
     </div>
   );
 }

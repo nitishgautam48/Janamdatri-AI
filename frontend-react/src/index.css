@@ -68,3 +68,15 @@ body {
 * {
   scrollbar-color: var(--color-border-strong) transparent;
 }
+
+/* Referral Summary's "Print / Save as PDF" button - hides the app chrome
+   (nav, header, chat widget, emergency banner) so only the summary card
+   itself prints, on any page a [data-print-hide] element ends up on. */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}
