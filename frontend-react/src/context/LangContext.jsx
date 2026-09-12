@@ -1,20 +1,26 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { LANG_KEY, translations } from "../lib/i18n";
+import { LANG_KEY, LANG_CYCLE, LANG_LABELS, translations } from "../lib/i18n";
 
 const LangContext = createContext(null);
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem(LANG_KEY) || "en");
+  const [lang, setLang] = useState(() => {
+    const saved = localStorage.getItem(LANG_KEY);
+    return LANG_CYCLE.includes(saved) ? saved : "en";
+  });
 
   const value = useMemo(() => {
     const dict = translations[lang] || translations.en;
     return {
       lang,
+      // Cycles en -> hi -> hinglish -> en, so the existing single toggle
+      // button reaches all three without adding a picker UI.
       toggleLang: () => {
-        const next = lang === "en" ? "hi" : "en";
+        const next = LANG_CYCLE[(LANG_CYCLE.indexOf(lang) + 1) % LANG_CYCLE.length];
         localStorage.setItem(LANG_KEY, next);
         setLang(next);
       },
+      nextLangLabel: LANG_LABELS[LANG_CYCLE[(LANG_CYCLE.indexOf(lang) + 1) % LANG_CYCLE.length]],
       t: (key) => dict[key] ?? translations.en[key] ?? key,
     };
   }, [lang]);

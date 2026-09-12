@@ -3,6 +3,10 @@
 // keys actually used by a built screen live here; add more as later
 // phases port more views.
 export const LANG_KEY = "janamdatri_lang";
+export const LANG_CYCLE = ["en", "hi", "hinglish"];
+// What each language's OWN toggle button shows - always the label for the
+// language it's about to switch you TO.
+export const LANG_LABELS = { en: "English", hi: "हिंदी", hinglish: "Hinglish" };
 
 export const translations = {
   en: {
@@ -90,5 +94,52 @@ export const translations = {
 
     "common.call108": "108 पर कॉल करें",
     "common.logout": "लॉग आउट",
+  },
+  // Roman-script Hindi-English mix - the register a lot of Indian users
+  // actually type/read day-to-day, distinct from formal Devanagari Hindi
+  // above. Kept as a genuine third dictionary (not a stub) so the toggle
+  // is real, not just architecture prep.
+  hinglish: {
+    tagline: "Maternal Risk Triage",
+    "nav.home": "Home",
+    "nav.health": "Health",
+    "nav.assess": "Assessment",
+    "nav.guide": "Pregnancy",
+    "nav.nutrition": "Nutrition",
+    "nav.psych": "Mental Wellness",
+    "nav.postpartum": "Postpartum",
+    "nav.history": "History",
+    "nav.reports": "Reports",
+    "nav.profile": "Profile",
+    "nav.help": "Helpline",
+    "nav.privacy": "Privacy",
+    "nav.more": "Aur",
+
+    "welcome.title": "Janamdatri AI",
+    "welcome.tagline": "Maternal Risk Triage — India ke liye screening, guidance, aur turant help.",
+    "welcome.login": "Log In",
+    "welcome.signup": "Sign Up",
+    "welcome.guest": "Guest ki tarah continue karein",
+    "welcome.guestNote": "Account banane se aapki history aur chat visits ke beech save rehti hai. Guest mode mein sab kuch sirf is device par rehta hai.",
+    "welcome.providerLink": "Main healthcare provider hoon aur patient ka share code hai mere paas →",
+
+    "home.greetingMorning": "Good morning",
+    "home.greetingAfternoon": "Namaste",
+    "home.greetingEvening": "Good evening",
+    "home.weekNotSet": "Apna pregnancy week set karein",
+    "home.noData": "Abhi koi data nahi hai",
+    "home.todaysCare": "Aaj Ka Khayal",
+    "home.thisWeek": "Is Hafte",
+    "home.urgentAlerts": "Zaroori Alerts",
+    "home.tipOfDay": "Aaj Ki Tip",
+    "home.noAlerts": "Koi emergency sign nahi hai abhi",
+    "home.viewWarningSigns": "Warning signs dekhein →",
+
+    "chat.title": "Turant Madad",
+    "chat.placeholder": "Sawaal poochein ya symptoms batayein",
+    "chat.emergencyDisclaimer": "Yeh ek automated helper hai, emergency care ka replacement nahi.",
+
+    "common.call108": "108 par Call karein",
+    "common.logout": "Log out",
   },
 };

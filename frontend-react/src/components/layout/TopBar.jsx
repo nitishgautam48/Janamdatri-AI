@@ -9,7 +9,7 @@ import Button from "../ui/Button";
 // so this header no longer carries a links row.
 export default function TopBar() {
   const { user, logout } = useAuth();
-  const { lang, toggleLang, t } = useLang();
+  const { toggleLang, nextLangLabel, t } = useLang();
   const headerRef = useRef(null);
 
   // The chat widget anchors itself below this header (see ChatWidget's
@@ -42,9 +42,10 @@ export default function TopBar() {
           <button
             type="button"
             onClick={toggleLang}
+            aria-label={`Switch language to ${nextLangLabel}`}
             className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink"
           >
-            {lang === "en" ? "हिंदी" : "English"}
+            {nextLangLabel}
           </button>
           {user && (
             <>
