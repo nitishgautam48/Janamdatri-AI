@@ -262,6 +262,33 @@ KEYWORD_HINTS = {
 }
 
 
+# Two related follow-up questions offered as tappable chips under each
+# FAQ answer - what makes this an interactive session rather than a
+# one-shot Q&A. Each one is worded to match a phrase already in
+# FAQ_INTENTS (or a keyword hint) above, so tapping it always resolves to
+# a real answer rather than accidentally hitting the fallback.
+RELATED_PROMPTS = {
+    "anc_schedule": ["What tests happen at each ANC visit?", "What vaccines do I need?"],
+    "nutrition": ["What foods should I avoid?", "How much water should I drink?"],
+    "food_safety": ["What foods are high in iron?", "Is coffee safe during pregnancy?"],
+    "hydration": ["What should I eat during pregnancy?"],
+    "missed_period": ["What are the early signs of pregnancy?", "How many ANC visits do I need?"],
+    "medication_safety": ["What foods should I avoid?"],
+    "anemia": ["What foods are high in iron?", "How often should I have ANC checkups?"],
+    "mental_health": ["Who can I call for support?", "Is this normal during pregnancy?"],
+    "helpline": ["What are the pregnancy warning signs?"],
+    "labor_signs": ["What warning signs need urgent care?", "Where should I deliver?"],
+    "fetal_movement": ["How often should baby move?"],
+    "vaccination": ["What is my ANC visit schedule?"],
+    "delivery_place": ["Is c-section safe?", "How much does delivery cost?"],
+    "blood_pressure": ["What is gestational diabetes?", "What is preeclampsia?"],
+    "gestational_diabetes": ["What is normal bp?"],
+    "leg_swelling_dvt": ["What are the warning signs I should watch for?"],
+    "itching_cholestasis": ["What are the warning signs I should watch for?"],
+    "warning_signs_list": ["Who do I call in an emergency?"],
+}
+
+
 def _match_keyword_hints(normalized_text: str):
     for intent_id, keywords in KEYWORD_HINTS.items():
         if any(contains_phrase(normalized_text, kw) for kw in keywords):
@@ -553,7 +580,10 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
 
     intent = _match_faq(normalized)
     if intent:
-        return {"reply": intent["reply"], "isEmergency": False, "intent": intent["id"]}
+        return {
+            "reply": intent["reply"], "isEmergency": False, "intent": intent["id"],
+            "relatedPrompts": RELATED_PROMPTS.get(intent["id"], []),
+        }
 
     if high_category_score >= 0.4:
         return {"reply": _mild_symptom_reply(text_scores), "isEmergency": False, "intent": "mild_symptom"}
@@ -578,6 +608,9 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     # question) that already run first.
     hint_intent = _match_keyword_hints(normalized)
     if hint_intent:
-        return {"reply": hint_intent["reply"], "isEmergency": False, "intent": hint_intent["id"]}
+        return {
+            "reply": hint_intent["reply"], "isEmergency": False, "intent": hint_intent["id"],
+            "relatedPrompts": RELATED_PROMPTS.get(hint_intent["id"], []),
+        }
 
     return {"reply": FALLBACK_REPLY, "isEmergency": False, "intent": "fallback"}

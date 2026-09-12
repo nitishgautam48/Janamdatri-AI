@@ -104,7 +104,7 @@ export default function ChatWidget() {
         contextMessage: contextRef.current || undefined,
         unresolvedRounds: roundsRef.current,
       });
-      const withReply = [...withUser, { sender: "bot", text: data.reply, isEmergency: data.isEmergency }];
+      const withReply = [...withUser, { sender: "bot", text: data.reply, isEmergency: data.isEmergency, relatedPrompts: data.relatedPrompts }];
       setMessages(withReply);
       scopedSet(KEYS.CHAT_HISTORY, withReply.slice(-40));
       if (UNRESOLVED_INTENTS.has(data.intent)) {
@@ -149,18 +149,38 @@ export default function ChatWidget() {
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
-                <p
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                    m.sender === "user"
-                      ? "bg-primary text-paper-ink"
-                      : m.isEmergency
-                      ? "border border-critical/40 bg-critical-soft text-ink"
-                      : "bg-surface-hover text-ink"
-                  }`}
-                >
-                  {m.text}
-                </p>
+              <div key={i}>
+                <div className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
+                  <p
+                    className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                      m.sender === "user"
+                        ? "bg-primary text-paper-ink"
+                        : m.isEmergency
+                        ? "border border-critical/40 bg-critical-soft text-ink"
+                        : "bg-surface-hover text-ink"
+                    }`}
+                  >
+                    {m.text}
+                  </p>
+                </div>
+                {/* Related follow-up chips only on the most recent bot reply -
+                    what makes this feel like an ongoing conversation rather
+                    than a one-shot Q&A, without cluttering the whole thread
+                    with stale suggestions from earlier turns. */}
+                {i === messages.length - 1 && m.sender === "bot" && !sending && m.relatedPrompts?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {m.relatedPrompts.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => send(p)}
+                        className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary"
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {sending && <p className="text-xs text-muted">…</p>}
