@@ -22,20 +22,24 @@ from .phrase_match import contains_phrase, normalize
 FAQ_INTENTS = [
     {
         "id": "greeting",
-        "phrases": ["hi", "hello", "hey", "namaste", "नमस्ते", "good morning", "good evening"],
+        "phrases": ["hi", "hello", "hey", "namaste", "namaskar", "नमस्ते", "good morning", "good evening",
+                    "good afternoon", "hii", "helo", "hola"],
         "reply": ("Hello! I can help with common pregnancy questions - nutrition, ANC visits, danger "
                   "signs, labor, vaccinations, or where to get help. What would you like to know? If "
                   "this is an emergency, just tell me your symptoms and I'll flag it right away."),
     },
     {
         "id": "thanks",
-        "phrases": ["thank you", "thanks", "thank u", "shukriya", "धन्यवाद"],
+        "phrases": ["thank you", "thanks", "thank u", "thnx", "shukriya", "धन्यवाद", "appreciate it",
+                    "that helps", "that helped", "makes sense", "got it thanks", "ok thank you"],
         "reply": "You're welcome! Take care of yourself, and reach out anytime you have a question or concern.",
     },
     {
         "id": "anc_schedule",
-        "phrases": ["anc visit", "checkup schedule", "when should i go for checkup", "antenatal care",
-                    "pmsma", "next checkup", "how many checkups", "एएनसी"],
+        "phrases": ["anc visit", "anc checkup", "checkup schedule", "when should i go for checkup", "antenatal care",
+                    "pmsma", "next checkup", "how many checkups", "how many anc visits", "prenatal visit",
+                    "prenatal checkup", "prenatal check up", "doctor visit schedule", "when is my next checkup",
+                    "anc card", "how often should i see doctor", "how often checkup", "एएनसी"],
         "reply": ("India's RCH programme recommends at least 4 ANC visits: within 12 weeks, 14-26 weeks, "
                   "28-34 weeks, and 36 weeks to term. PMSMA gives a free ANC checkup on the 9th of every "
                   "month at government facilities. See the Pregnancy Guide tab for your personalized schedule."),
@@ -44,7 +48,16 @@ FAQ_INTENTS = [
         "id": "nutrition",
         "phrases": ["what should i eat", "what to eat", "diet", "nutrition", "food during pregnancy",
                     "iron tablets", "folic acid", "eating habits", "hungry all the time", "vomiting",
-                    "morning sickness", "nausea", "nauseous", "पोषण", "खाना"],
+                    "morning sickness", "nausea", "nauseous", "iron rich food", "iron rich foods",
+                    "foods with iron", "food with iron", "high iron food", "high iron foods",
+                    "which foods have iron", "foods high in iron", "food high in iron",
+                    "foods are high in iron", "food is high in iron", "which food has iron",
+                    "what food has iron", "protein foods",
+                    "protein rich food", "calcium foods", "calcium rich food", "foods for pregnancy",
+                    "healthy food pregnancy", "healthy diet", "balanced diet", "foods for baby growth",
+                    "prenatal nutrition", "good food for pregnancy", "diet plan", "diet chart",
+                    "nutritious food", "no appetite", "not eating well", "loss of appetite",
+                    "best food for pregnant", "vitamins to take", "which vitamins", "पोषण", "खाना"],
         "reply": ("Take your iron-folic acid (IFA) tablets as prescribed, eat iron-rich foods (leafy "
                   "greens, jaggery, lentils), and add calcium from the second trimester. Small, frequent "
                   "meals help with nausea. See the Pregnancy Guide tab for trimester-specific tips."),
@@ -52,7 +65,11 @@ FAQ_INTENTS = [
     {
         "id": "food_safety",
         "phrases": ["eat papaya", "raw papaya", "eat pineapple", "safe to eat", "foods to avoid",
-                    "what not to eat", "street food", "raw food", "undercooked", "raw fish", "sushi"],
+                    "food to avoid", "what not to eat", "what should i avoid eating", "avoid eating",
+                    "street food", "raw food", "undercooked", "raw fish", "sushi", "papaya safe",
+                    "pineapple safe", "eating outside food", "junk food pregnancy", "coffee during pregnancy",
+                    "is coffee safe", "caffeine safe", "seafood safe", "fish safe to eat", "eggs safe",
+                    "cheese safe", "unpasteurized"],
         "reply": ("Ripe papaya and pineapple in normal amounts are fine - the traditional caution is "
                   "specifically about large amounts of RAW/unripe papaya. Avoid unpasteurized dairy, "
                   "undercooked meat/eggs/fish, and raw seafood (listeria/toxoplasmosis risk); limit "
@@ -61,7 +78,9 @@ FAQ_INTENTS = [
     },
     {
         "id": "hydration",
-        "phrases": ["how much water", "hydration", "drink water", "dehydration", "dehydrated"],
+        "phrases": ["how much water", "hydration", "drink water", "dehydration", "dehydrated",
+                    "not drinking enough water", "thirsty all the time", "how many litres of water",
+                    "how many glasses of water"],
         "reply": ("Aim for about 2.5-3 litres of water a day, more in hot weather or if you're vomiting - "
                   "dark urine, dizziness, or a dry mouth are signs you need more. Severe vomiting that "
                   "stops you from keeping fluids down needs same-day medical attention, not just more water."),
@@ -69,7 +88,9 @@ FAQ_INTENTS = [
     {
         "id": "missed_period",
         "phrases": ["missed my period", "missed period", "late period", "think im pregnant",
-                    "might be pregnant"],
+                    "might be pregnant", "period is late", "no periods", "pregnancy test",
+                    "am i pregnant", "confirm pregnancy", "early signs of pregnancy",
+                    "signs of pregnancy", "pregnancy symptoms"],
         "reply": ("A missed period is one of the earliest pregnancy signs - a home urine pregnancy test "
                   "(after your period is a few days late) or a visit to your ASHA/ANM or a clinic can "
                   "confirm it. If it's positive, register for ANC care as early as possible - the first "
@@ -78,7 +99,10 @@ FAQ_INTENTS = [
     {
         "id": "medication_safety",
         "phrases": ["take paracetamol", "is paracetamol safe", "safe medicine", "which medicines are safe",
-                    "can i take medicine", "otc medicine", "pain medicine", "ibuprofen", "safe painkiller"],
+                    "can i take medicine", "otc medicine", "pain medicine", "ibuprofen", "safe painkiller",
+                    "cold medicine", "fever medicine", "safe to take tablet", "antibiotics safe",
+                    "safe drugs", "safe during pregnancy medicine", "headache tablet", "flu medicine",
+                    "cough syrup safe", "ayurvedic medicine safe", "herbal medicine safe"],
         "reply": ("Paracetamol (acetaminophen) at the recommended dose is generally considered safe in "
                   "pregnancy, but ibuprofen, aspirin, and most other painkillers are NOT recommended, "
                   "especially later in pregnancy. Always check with your ANC provider or pharmacist before "
@@ -87,16 +111,21 @@ FAQ_INTENTS = [
     },
     {
         "id": "anemia",
-        "phrases": ["anemia", "hemoglobin", "hb level", "feeling weak", "always tired", "एनीमिया"],
+        "phrases": ["anemia", "anaemia", "hemoglobin", "haemoglobin", "hb level", "hb count", "feeling weak",
+                    "always tired", "low hemoglobin", "iron deficiency", "blood count low", "pale skin",
+                    "looking pale", "low iron", "एनीमिया"],
         "reply": ("Anemia is very common in pregnancy in India - about half of pregnant women are affected. "
                   "If you have a recent hemoglobin (Hb) test, enter it in the Assessment tab's Anemia Check "
                   "for India-specific grading. Below 7 g/dL is a severe-anemia emergency - go to a facility."),
     },
     {
         "id": "mental_health",
-        "phrases": ["feeling sad", "feel sad", "very sad", "so sad", "depressed", "anxious", "cant sleep",
-                    "mood", "stress", "im scared", "i am scared", "worried", "overwhelmed", "crying a lot",
-                    "not supportive", "no support", "no one to talk to", "alone in this", "उदास"],
+        "phrases": ["feeling sad", "feel sad", "very sad", "so sad", "depressed", "anxious", "anxiety",
+                    "cant sleep", "can't sleep", "mood", "stress", "stressed", "im scared", "i am scared",
+                    "worried", "overwhelmed", "crying a lot", "not supportive", "no support",
+                    "no one to talk to", "alone in this", "feeling low", "feeling down", "feel low",
+                    "feel down", "postpartum depression", "baby blues", "mood swings", "irritable",
+                    "panic attack", "feel like crying", "want to cry", "उदास"],
         "reply": ("Feeling low, anxious, or overwhelmed during or after pregnancy is common and treatable - "
                   "it's not a personal failing. Try the Mental Health Check (EPDS) tab, or talk to your ANC "
                   "provider. If you ever have thoughts of harming yourself, call KIRAN: 1800-599-0019 (24x7)."),
@@ -104,14 +133,19 @@ FAQ_INTENTS = [
     {
         "id": "helpline",
         "phrases": ["helpline", "phone number", "emergency number", "ambulance number", "contact",
-                    "call ambulance", "who do i call"],
+                    "call ambulance", "who do i call", "emergency contact", "who to call",
+                    "nearest hospital number", "108 number", "asha worker contact", "anm contact",
+                    "need help now", "helpline number"],
         "reply": ("Emergency ambulance: 108. Pregnancy emergency transport: 102. Women's helpline: 181. "
                   "Mental health (KIRAN): 1800-599-0019. See the Helplines tab for the full list."),
     },
     {
         "id": "labor_signs",
         "phrases": ["in labor", "in labour", "labour signs", "labor signs", "contractions",
-                    "how do i know labor", "water broke", "waters broke", "when will i deliver"],
+                    "how do i know labor", "how do i know if im in labor", "water broke", "waters broke",
+                    "when will i deliver", "am i in labor", "am i in labour", "false labor",
+                    "braxton hicks", "when to go to hospital", "signs of labour", "signs of labor",
+                    "period like cramps", "tightening of stomach", "belly tightening"],
         "reply": ("Signs labor may be starting: regular, increasingly strong contractions; your water "
                   "breaking; lower back pain with tightening. If contractions are regular and less than "
                   "5-10 minutes apart, or your water breaks, head to your planned facility now - don't wait "
@@ -121,14 +155,18 @@ FAQ_INTENTS = [
         "id": "fetal_movement",
         "phrases": ["baby movement", "kick count", "how many kicks", "baby kicking", "fetal movement",
                     "feel the baby move", "when will i feel movement", "when should i feel movement",
-                    "baby move"],
+                    "baby move", "how often should baby move", "how much should baby move",
+                    "normal baby movement", "how many movements per day"],
         "reply": ("From about the second trimester, you should feel regular movement every day. A noticeable "
                   "drop in movement, or none at all in a few hours where the baby is usually active, is a "
                   "reason to go get checked the same day - don't wait until the next scheduled visit."),
     },
     {
         "id": "vaccination",
-        "phrases": ["vaccine", "vaccination", "tt injection", "tetanus shot", "td injection", "immunization"],
+        "phrases": ["vaccine", "vaccination", "tt injection", "tetanus shot", "td injection", "immunization",
+                    "tdap", "flu shot", "flu vaccine", "covid vaccine pregnancy", "which vaccines needed",
+                    "which vaccines do i need", "what vaccines do i need", "which vaccine do i need",
+                    "vaccine schedule", "when to take tt injection", "how many tt doses"],
         "reply": ("The Td (tetanus-diphtheria) vaccine is usually given in two doses during pregnancy, "
                   "starting in the second trimester - your ANC provider will schedule these at your visits. "
                   "See the Pregnancy Guide tab for the full ANC schedule."),
@@ -137,7 +175,10 @@ FAQ_INTENTS = [
         "id": "delivery_place",
         "phrases": ["where should i deliver", "hospital delivery", "home birth", "which hospital",
                     "institutional delivery", "cost of delivery", "how much does delivery cost",
-                    "is c section safe", "is cesarean safe", "c-section safe", "c section safe"],
+                    "is c section safe", "is cesarean safe", "c-section safe", "c section safe",
+                    "normal delivery vs cesarean", "normal delivery vs c section", "vaginal delivery",
+                    "which hospital to choose", "government hospital delivery", "delivery expenses",
+                    "csection recovery", "c section recovery"],
         "reply": ("An institutional delivery (hospital or PHC/FRU with skilled staff and emergency care "
                   "available) is safer than a home birth, especially if any risk factors are present. "
                   "JSY provides cash assistance for institutional delivery - ask your ASHA worker."),
@@ -145,8 +186,9 @@ FAQ_INTENTS = [
     {
         "id": "blood_pressure",
         "phrases": ["blood pressure", "bp check", "whats normal bp", "what is normal bp", "is my bp high",
-                    "bp reading", "hypertension", "high bp", "what is preeclampsia", "what is pre-eclampsia",
-                    "what is eclampsia"],
+                    "bp reading", "hypertension", "high bp", "low bp", "hypotension", "bp normal range",
+                    "check blood pressure", "what is preeclampsia", "what is pre-eclampsia",
+                    "what is eclampsia", "signs of preeclampsia"],
         "reply": ("Normal BP in pregnancy is under 140/90 - readings at or above that (especially with "
                   "headache, blurred vision, or swelling) can mean pre-eclampsia and need same-day checking. "
                   "Get it checked at every ANC visit, and enter a reading in the Assessment tab if you have one."),
@@ -154,7 +196,8 @@ FAQ_INTENTS = [
     {
         "id": "gestational_diabetes",
         "phrases": ["gestational diabetes", "high blood sugar", "gdm", "sugar test", "glucose test",
-                    "diabetes in pregnancy"],
+                    "diabetes in pregnancy", "sugar level pregnancy", "blood sugar test", "gtt test",
+                    "diabetes test", "blood sugar level pregnancy"],
         "reply": ("Gestational diabetes is usually screened with a glucose tolerance test around 24-28 weeks - "
                   "it's common and manageable with diet, activity, and monitoring, and usually resolves after "
                   "delivery. Unmanaged, it raises risks for both you and the baby, so don't skip the test."),
@@ -170,7 +213,8 @@ FAQ_INTENTS = [
     {
         "id": "itching_cholestasis",
         "phrases": ["itching all over", "severe itching", "itchy skin no rash", "itching hands and feet",
-                    "itching at night", "very itchy"],
+                    "itching at night", "very itchy", "skin itching pregnancy", "itchy at night pregnancy",
+                    "itchy palms", "itchy soles"],
         "reply": ("Intense itching, especially on the palms/soles and worse at night, with no rash, can be "
                   "obstetric cholestasis - a liver condition that's treatable but needs a blood test (liver "
                   "function/bile acids) to confirm. Mention it to your ANC provider rather than just managing "
@@ -179,13 +223,50 @@ FAQ_INTENTS = [
     {
         "id": "warning_signs_list",
         "phrases": ["what are the warning signs", "list of danger signs", "what should i watch for",
-                    "danger signs list", "warning signs of pregnancy"],
+                    "danger signs list", "warning signs of pregnancy", "emergency signs", "when to worry",
+                    "red flags pregnancy", "when should i go to hospital", "when is it an emergency",
+                    "what counts as an emergency"],
         "reply": ("Go to a facility now for any of: heavy vaginal bleeding, severe headache with blurred "
                   "vision, convulsions/fits, severe abdominal pain, high fever, fast/difficult breathing, "
                   "reduced or no baby movement, or chest pain. See the Pregnancy Guide tab for the full list "
                   "with more detail."),
     },
 ]
+
+# A second, looser matching pass tried ONLY when no full phrase above
+# matched anything - enumerating every real-world way to ask a question
+# is a losing game (a rule-based matcher will always miss some phrasing),
+# so this catches the rest via single strong topic words instead of
+# giving up to the flat fallback. Deliberately short and topic-specific
+# (not generic words like "food" or "pain" that would over-match) - each
+# entry maps to the SAME FAQ_INTENTS id, so it reuses the existing reply
+# text rather than needing its own.
+KEYWORD_HINTS = {
+    "anc_schedule": ["anc", "prenatal"],
+    "nutrition": ["iron", "nutrition", "protein", "calcium", "supplement", "supplements", "appetite"],
+    "food_safety": ["papaya", "pineapple", "caffeine", "seafood", "unpasteurized"],
+    "hydration": ["hydration", "dehydration"],
+    "missed_period": ["period", "pregnant"],
+    "medication_safety": ["paracetamol", "ibuprofen", "painkiller", "antibiotics", "medicine", "tablet"],
+    "anemia": ["anemia", "anaemia", "hemoglobin", "haemoglobin"],
+    "mental_health": ["depressed", "depression", "anxiety", "anxious", "stressed", "overwhelmed"],
+    "helpline": ["helpline", "ambulance"],
+    "labor_signs": ["labor", "labour", "contractions", "braxton"],
+    "fetal_movement": ["kicks", "kicking"],
+    "vaccination": ["vaccine", "vaccination", "immunization", "tdap"],
+    "delivery_place": ["cesarean", "caesarean", "c-section", "csection"],
+    "blood_pressure": ["hypertension", "hypotension", "preeclampsia", "pre-eclampsia", "eclampsia"],
+    "gestational_diabetes": ["gdm", "glucose"],
+    "leg_swelling_dvt": ["dvt"],
+    "itching_cholestasis": ["cholestasis"],
+}
+
+
+def _match_keyword_hints(normalized_text: str):
+    for intent_id, keywords in KEYWORD_HINTS.items():
+        if any(contains_phrase(normalized_text, kw) for kw in keywords):
+            return next(i for i in FAQ_INTENTS if i["id"] == intent_id)
+    return None
 
 # Vague distress language that isn't specific enough to match a category on
 # its own ("I'm in pain", "I don't feel well") - rather than a flat "I
@@ -239,7 +320,10 @@ VAGUE_TOPICS = [
         "id": "generic_unwell",
         "keywords": ["not feeling well", "dont feel well", "don't feel well", "feel sick",
                      "feeling sick", "unwell", "not well", "something wrong", "not right",
-                     "worried about my body"],
+                     "worried about my body", "feeling weird", "feel weird", "feel off",
+                     "something is wrong", "not sure whats wrong", "not sure what's wrong",
+                     "not feeling good", "help me", "i need help", "need advice", "confused",
+                     "im worried", "i am worried", "is this normal", "is that normal"],
         "question": (
             "Can you say a bit more about what's going on? Is it more physical - pain, fever, "
             "bleeding, breathlessness, reduced baby movement - or more about your mood or energy? "
@@ -485,5 +569,15 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     topic = _match_topic(normalized)
     if topic:
         return {"reply": topic["question"], "isEmergency": False, "intent": "clarify_symptom", "topic": topic["id"]}
+
+    # Last resort before giving up: a single strong topic word (see
+    # KEYWORD_HINTS) that the exact-phrase pass above didn't happen to
+    # cover. Tried last, not earlier, so it can only turn a would-be
+    # fallback into a useful answer - it never pre-empts the more precise
+    # matches (exact phrase, symptom score, vague-topic clarifying
+    # question) that already run first.
+    hint_intent = _match_keyword_hints(normalized)
+    if hint_intent:
+        return {"reply": hint_intent["reply"], "isEmergency": False, "intent": hint_intent["id"]}
 
     return {"reply": FALLBACK_REPLY, "isEmergency": False, "intent": "fallback"}
