@@ -5,6 +5,19 @@ import Button from "../components/ui/Button";
 import { api } from "../lib/api";
 import { KEYS, scopedGet, scopedRemove, scopedSet } from "../lib/storage";
 
+// India's Universal Immunization Programme (UIP) - a public government
+// schedule, the same category of static informational content as the
+// PMSMA/JSY/PMMVY/Anemia Mukt Bharat scheme descriptions already shown
+// on the Helplines page. Not personalized, not computed from any input -
+// always paired with a note to confirm timing at the vaccination visit.
+const NEWBORN_VACCINATION_SCHEDULE = [
+  { visit: "At birth", vaccines: "BCG, OPV-0 (oral polio), Hepatitis B - birth dose" },
+  { visit: "6 weeks", vaccines: "Pentavalent-1, OPV-1, Rotavirus-1, fIPV-1, PCV-1" },
+  { visit: "10 weeks", vaccines: "Pentavalent-2, OPV-2, Rotavirus-2" },
+  { visit: "14 weeks", vaccines: "Pentavalent-3, OPV-3, Rotavirus-3, fIPV-2, PCV-2" },
+  { visit: "9-12 months", vaccines: "Measles-Rubella (MR-1), PCV booster, Vitamin A (1st dose); JE-1 in endemic districts" },
+];
+
 export default function PostpartumPage() {
   const [guide, setGuide] = useState(() => scopedGet(KEYS.POSTPARTUM_GUIDE));
   const [deliveryDate, setDeliveryDate] = useState(guide?.deliveryDate || "");
@@ -118,6 +131,22 @@ export default function PostpartumPage() {
                   <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-muted">
                     {visit.checks.map((c) => <li key={c}>{c}</li>)}
                   </ul>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="mb-1 text-sm font-bold text-ink">Newborn Vaccination Schedule (India UIP)</h3>
+            <p className="mb-3 text-xs text-muted">
+              India's Universal Immunization Programme - free at any government health facility. Confirm exact timing
+              and any additional/regional vaccines with your ASHA/ANM or provider.
+            </p>
+            <div className="space-y-2">
+              {NEWBORN_VACCINATION_SCHEDULE.map((v) => (
+                <div key={v.visit} className="rounded-md border border-border p-3">
+                  <p className="text-sm font-semibold text-ink">{v.visit}</p>
+                  <p className="mt-0.5 text-sm text-muted">{v.vaccines}</p>
                 </div>
               ))}
             </div>
