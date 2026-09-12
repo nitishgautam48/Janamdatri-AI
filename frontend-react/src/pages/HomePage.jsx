@@ -142,6 +142,10 @@ export default function HomePage() {
   const bsHigh = vitals && vitals.BS >= 7.8;
   const hbTone = hb ? (hb.grade === "Normal" ? "good" : hb.grade?.startsWith("Severe") ? "critical" : "warning") : null;
 
+  // Nothing set up anywhere yet - a completely fresh guest or new account,
+  // not just someone who hasn't run an assessment today.
+  const isFirstTimeUser = !guide && !isPostpartum && !latest && !scopedGet(KEYS.NUTRITION) && !savedEpds;
+
   return (
     <div className="space-y-6">
       <div>
@@ -166,6 +170,25 @@ export default function HomePage() {
           </div>
         ) : null}
       </div>
+
+      {isFirstTimeUser && (
+        <Card className="border-primary/30 bg-primary-soft">
+          <p className="eyebrow mb-1 text-primary">Get Started</p>
+          <p className="mb-3 text-sm text-ink">Three things to set up so this dashboard can actually work for you:</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Link to="/profile" className="rounded-md border border-primary/30 bg-surface px-3.5 py-3 text-sm font-semibold text-ink hover:border-primary">
+              1. Set up your Pregnancy Profile
+            </Link>
+            <Link to="/assess" className="rounded-md border border-primary/30 bg-surface px-3.5 py-3 text-sm font-semibold text-ink hover:border-primary">
+              2. Run your first Assessment
+            </Link>
+            <Link to="/nutrition" className="rounded-md border border-primary/30 bg-surface px-3.5 py-3 text-sm font-semibold text-ink hover:border-primary">
+              3. Check your Nutrition
+            </Link>
+          </div>
+          <p className="mt-3 text-xs text-muted">You can also tap the ✨ chat bubble anytime to ask Janamdatri a quick question.</p>
+        </Card>
+      )}
 
       {/* A. Health Status Hero Card - the one thing to look at first. */}
       <Card className={isDanger ? "border-critical/40 bg-critical-soft" : ""}>
