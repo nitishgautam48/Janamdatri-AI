@@ -19,15 +19,57 @@ const GREETING = { sender: "bot", text: "Hi! Ask me about ANC visits, nutrition,
 // on top of the nav bar; a corner widget (Intercom/Zendesk-style) is
 // structurally incapable of doing that.
 export default function ChatWidget() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { identityKey } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
   const contextRef = useRef("");
   const roundsRef = useRef(0);
   const scrollRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Voice input via the browser's own Speech Recognition (no backend/API
+  // change needed) - a first step toward the voice/Hinglish support the
+  // product spec calls for later. Recognition language follows the
+  // current UI language (hi-IN for Hindi) for better accuracy; the mic
+  // button only renders where the browser actually supports this API
+  // (notably absent in Firefox), so it degrades to text-only there.
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    setVoiceSupported(true);
+    return () => recognition.stop();
+  }, []);
+
+  useEffect(() => {
+    if (recognitionRef.current) recognitionRef.current.lang = lang === "hi" ? "hi-IN" : "en-IN";
+  }, [lang]);
+
+  function toggleListening() {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    if (listening) {
+      recognition.stop();
+      setListening(false);
+    } else {
+      setListening(true);
+      recognition.start();
+    }
+  }
 
   // Reload this identity's own chat history whenever the logged-in
   // account/guest identity changes (login, logout, switching accounts).
@@ -127,13 +169,25 @@ export default function ChatWidget() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t("chat.placeholder")}
+              placeholder={listening ? "Listening…" : t("chat.placeholder")}
               className="flex-1 rounded-full border border-border-strong bg-bg px-4 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
             />
+            {voiceSupported && (
+              <button
+                type="button"
+                onClick={toggleListening}
+                aria-label={listening ? "Stop voice input" : "Speak your message"}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm transition-colors ${
+                  listening ? "animate-pulse border-critical bg-critical-soft text-critical" : "border-border-strong text-muted hover:text-ink"
+                }`}
+              >
+                🎤
+              </button>
+            )}
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-paper-ink disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-paper-ink disabled:opacity-40"
               aria-label="Send"
             >
               ➤
