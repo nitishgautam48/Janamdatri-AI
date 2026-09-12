@@ -49,7 +49,7 @@ export default function Results({ data, onReset }) {
         <div className="flex items-center gap-4">
           <span className="text-4xl">{severity.emoji}</span>
           <div>
-            <p className="eyebrow mb-1">AI-Assisted Risk Estimate</p>
+            <p className="eyebrow mb-1">Overall Risk Assessment</p>
             <div className="text-2xl font-extrabold text-ink">{severity.level}</div>
             <div className="text-sm text-muted">
               Maternal Risk Index: {mri}
@@ -58,8 +58,12 @@ export default function Results({ data, onReset }) {
             {exp?.actionTierLabel && <Pill tone={tone} className="mt-2">{exp.actionTierLabel}</Pill>}
           </div>
         </div>
-        <p className="mt-3 text-xs text-faint">
-          This is an AI-assisted estimate to guide you toward the right next step - it is not a medical diagnosis. High-risk
+        <p className="mt-3 text-xs text-muted">
+          This combines a WHO danger-sign check, clinical risk-factor rules, and an AI model's prediction from your
+          vitals into one result - whichever of the three finds the most serious signal decides the level shown here.
+        </p>
+        <p className="mt-1.5 text-xs text-faint">
+          This is a screening aid to guide you toward the right next step - it is not a medical diagnosis. High-risk
           or emergency signs should always be checked by a healthcare professional.
         </p>
       </Card>
