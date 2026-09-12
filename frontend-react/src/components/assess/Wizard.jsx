@@ -3,7 +3,7 @@ import Card from "../ui/Card";
 import Button from "../ui/Button";
 import Pill from "../ui/Pill";
 
-const STEPS = ["Vitals", "Symptoms", "History", "Review"];
+const STEPS = ["Vitals", "Anemia & Stage", "Additional Checks", "Symptoms", "History", "Review"];
 
 const SYMPTOM_CHIPS = [
   "severe headache", "blurred vision", "heavy bleeding", "baby stopped moving",
@@ -96,47 +96,49 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {error && <p className="mb-4 rounded-md border border-critical/30 bg-critical-soft px-3 py-2 text-sm text-critical">{error}</p>}
 
       {step === 0 && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-ink">1 · Vitals</h2>
+            <label className="flex items-center gap-2 text-xs text-muted">
+              <input type="checkbox" checked={form.vitalsEnabled} onChange={(e) => set("vitalsEnabled", e.target.checked)} />
+              Include vitals
+            </label>
+          </div>
+          {form.vitalsEnabled && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Field
+                label="Age (years)" type="number" placeholder="e.g. 28" value={form.age} onChange={(e) => set("age", e.target.value)}
+                why="Age on its own shifts the baseline risk for several pregnancy complications, so the model factors it in alongside your other vitals."
+              />
+              <Field
+                label="Systolic BP" hint="normal <120" type="number" placeholder="e.g. 118" value={form.sbp} onChange={(e) => set("sbp", e.target.value)}
+                why="High blood pressure can be an early sign of pre-eclampsia, a serious pregnancy complication that's easier to manage the earlier it's caught."
+              />
+              <Field
+                label="Diastolic BP" hint="normal <80" type="number" placeholder="e.g. 76" value={form.dbp} onChange={(e) => set("dbp", e.target.value)}
+                why="Diastolic pressure is checked alongside systolic - together they give a fuller picture of blood pressure risk than either alone."
+              />
+              <Field
+                label="Blood Sugar (mmol/L)" hint="normal ~6-7" type="number" step="0.1" placeholder="e.g. 6.5" value={form.bs} onChange={(e) => set("bs", e.target.value)}
+                why="Elevated blood sugar can indicate gestational diabetes, which needs monitoring and sometimes treatment to protect you and your baby."
+              />
+              <Field
+                label="Body Temp (°F)" hint="normal ~98" type="number" step="0.1" placeholder="e.g. 98.2" value={form.temp} onChange={(e) => set("temp", e.target.value)}
+                why="A fever can signal an infection that needs prompt attention during pregnancy, so it's checked as part of every assessment."
+              />
+              <Field
+                label="Heart Rate (bpm)" type="number" placeholder="e.g. 78" value={form.hr} onChange={(e) => set("hr", e.target.value)}
+                why="An unusually fast heart rate can be a sign of infection, blood loss, or significant anxiety - all worth knowing about."
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 1 && (
         <div className="space-y-6">
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink">1 · Vitals</h2>
-              <label className="flex items-center gap-2 text-xs text-muted">
-                <input type="checkbox" checked={form.vitalsEnabled} onChange={(e) => set("vitalsEnabled", e.target.checked)} />
-                Include vitals
-              </label>
-            </div>
-            {form.vitalsEnabled && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Field
-                  label="Age (years)" type="number" placeholder="e.g. 28" value={form.age} onChange={(e) => set("age", e.target.value)}
-                  why="Age on its own shifts the baseline risk for several pregnancy complications, so the model factors it in alongside your other vitals."
-                />
-                <Field
-                  label="Systolic BP" hint="normal <120" type="number" placeholder="e.g. 118" value={form.sbp} onChange={(e) => set("sbp", e.target.value)}
-                  why="High blood pressure can be an early sign of pre-eclampsia, a serious pregnancy complication that's easier to manage the earlier it's caught."
-                />
-                <Field
-                  label="Diastolic BP" hint="normal <80" type="number" placeholder="e.g. 76" value={form.dbp} onChange={(e) => set("dbp", e.target.value)}
-                  why="Diastolic pressure is checked alongside systolic - together they give a fuller picture of blood pressure risk than either alone."
-                />
-                <Field
-                  label="Blood Sugar (mmol/L)" hint="normal ~6-7" type="number" step="0.1" placeholder="e.g. 6.5" value={form.bs} onChange={(e) => set("bs", e.target.value)}
-                  why="Elevated blood sugar can indicate gestational diabetes, which needs monitoring and sometimes treatment to protect you and your baby."
-                />
-                <Field
-                  label="Body Temp (°F)" hint="normal ~98" type="number" step="0.1" placeholder="e.g. 98.2" value={form.temp} onChange={(e) => set("temp", e.target.value)}
-                  why="A fever can signal an infection that needs prompt attention during pregnancy, so it's checked as part of every assessment."
-                />
-                <Field
-                  label="Heart Rate (bpm)" type="number" placeholder="e.g. 78" value={form.hr} onChange={(e) => set("hr", e.target.value)}
-                  why="An unusually fast heart rate can be a sign of infection, blood loss, or significant anxiety - all worth knowing about."
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h2 className="mb-1 text-sm font-bold text-ink">1b · Anemia Check <Pill className="ml-1">optional</Pill></h2>
+            <h2 className="mb-1 text-sm font-bold text-ink">2 · Anemia Check <Pill className="ml-1">optional</Pill></h2>
             <p className="mb-2 text-xs text-muted">If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
             <div className="max-w-[220px]">
               <Field
@@ -147,7 +149,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           </div>
 
           <div>
-            <h2 className="mb-1 text-sm font-bold text-ink">1c · Pregnancy Stage <Pill className="ml-1">optional</Pill></h2>
+            <h2 className="mb-1 text-sm font-bold text-ink">2b · Pregnancy Stage <Pill className="ml-1">optional</Pill></h2>
             <p className="mb-2 text-xs text-muted">Lets the assessment factor in trimester-specific risks and week-appropriate warning signs.</p>
             <div className="max-w-[220px]">
               <Field
@@ -156,31 +158,33 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
               />
             </div>
           </div>
+        </div>
+      )}
 
-          <div>
-            <h2 className="mb-1 text-sm font-bold text-ink">1d · Additional Checks <Pill className="ml-1">optional</Pill></h2>
-            <p className="mb-2 text-xs text-muted">Each is a well-established antenatal screening check, not a diagnosis.</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Field
-                label="Current weight (kg)" type="number" step="0.1" placeholder="e.g. 62" value={form.weight} onChange={(e) => set("weight", e.target.value)}
-                why="A sudden jump in weight can be an early sign of fluid retention linked to pre-eclampsia, while weight loss can point to other concerns."
-              />
-              <Field
-                label="Fetal movements (last hour)" type="number" placeholder="e.g. 6" value={form.fetalMovementCount} onChange={(e) => set("fetalMovementCount", e.target.value)}
-                why="A change in your baby's usual movement pattern is one of the clearest signs to get checked right away - this compares against the expected range."
-              />
-              <Field
-                label="Fundal height (cm)" type="number" step="0.1" placeholder="e.g. 27" value={form.fundalHeight} onChange={(e) => set("fundalHeight", e.target.value)}
-                why="Fundal height is a simple way to check whether the baby is growing as expected for this stage of pregnancy."
-              />
-            </div>
+      {step === 2 && (
+        <div>
+          <h2 className="mb-1 text-sm font-bold text-ink">3 · Additional Checks <Pill className="ml-1">optional</Pill></h2>
+          <p className="mb-2 text-xs text-muted">Each is a well-established antenatal screening check, not a diagnosis.</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Field
+              label="Current weight (kg)" type="number" step="0.1" placeholder="e.g. 62" value={form.weight} onChange={(e) => set("weight", e.target.value)}
+              why="A sudden jump in weight can be an early sign of fluid retention linked to pre-eclampsia, while weight loss can point to other concerns."
+            />
+            <Field
+              label="Fetal movements (last hour)" type="number" placeholder="e.g. 6" value={form.fetalMovementCount} onChange={(e) => set("fetalMovementCount", e.target.value)}
+              why="A change in your baby's usual movement pattern is one of the clearest signs to get checked right away - this compares against the expected range."
+            />
+            <Field
+              label="Fundal height (cm)" type="number" step="0.1" placeholder="e.g. 27" value={form.fundalHeight} onChange={(e) => set("fundalHeight", e.target.value)}
+              why="Fundal height is a simple way to check whether the baby is growing as expected for this stage of pregnancy."
+            />
           </div>
         </div>
       )}
 
-      {step === 1 && (
+      {step === 3 && (
         <div>
-          <h2 className="mb-1 text-sm font-bold text-ink">2 · Symptoms</h2>
+          <h2 className="mb-1 text-sm font-bold text-ink">4 · Symptoms</h2>
           <p className="mb-3 text-xs text-muted">Tap any that apply — they'll be added to the description below, or type your own.</p>
           <div className="mb-3 flex flex-wrap gap-2">
             {SYMPTOM_CHIPS.map((phrase) => (
@@ -204,9 +208,9 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
         </div>
       )}
 
-      {step === 2 && (
+      {step === 4 && (
         <div>
-          <h2 className="mb-1 text-sm font-bold text-ink">3 · History</h2>
+          <h2 className="mb-1 text-sm font-bold text-ink">5 · History</h2>
           <p className="mb-3 text-xs text-muted">Optional — helps weigh background risk factors.</p>
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
@@ -238,7 +242,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
         </div>
       )}
 
-      {step === 3 && (
+      {step === 5 && (
         <div>
           {hasSavedEpds && (
             <label className="mb-4 flex items-center gap-2 text-sm text-ink">
@@ -246,7 +250,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
               Include my saved Mental Health Check (EPDS) score in this assessment
             </label>
           )}
-          <h2 className="mb-1 text-sm font-bold text-ink">4 · Review</h2>
+          <h2 className="mb-1 text-sm font-bold text-ink">6 · Review</h2>
           <p className="mb-3 text-xs text-muted">Check what you're about to submit, then run the assessment.</p>
           <ReviewSummary form={form} />
         </div>
