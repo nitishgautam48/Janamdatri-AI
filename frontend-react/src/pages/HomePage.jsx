@@ -194,8 +194,13 @@ export default function HomePage() {
   const hbTone = hb ? (hb.grade === "Normal" ? "good" : hb.grade?.startsWith("Severe") ? "critical" : "warning") : null;
 
   // Nothing set up anywhere yet - a completely fresh guest or new account,
-  // not just someone who hasn't run an assessment today.
-  const isFirstTimeUser = !guide && !isPostpartum && !latest && !scopedGet(KEYS.NUTRITION) && !savedEpds;
+  // not just someone who hasn't run an assessment today. Gated on !loading
+  // too: for a returning logged-in user, history loads asynchronously from
+  // the server, so `latest` is briefly undefined on every visit - without
+  // this guard, a person with months of history would see a flash of the
+  // "Get Started" onboarding card (and "No assessment yet") before their
+  // real data arrives, which reads as if their data was lost.
+  const isFirstTimeUser = !loading && !guide && !isPostpartum && !latest && !scopedGet(KEYS.NUTRITION) && !savedEpds;
 
   return (
     <div className="space-y-6">
@@ -241,13 +246,20 @@ export default function HomePage() {
         </Card>
       )}
 
-      {/* A. Health Status Hero Card - the one thing to look at first. */}
+      {/* A. Health Status Hero Card - the one thing to look at first. Labeled
+          "Overall Risk Assessment" (not "AI-Assisted Risk Estimate") to
+          match the same fix already made on the Results page: this status
+          combines the danger-sign ladder, clinical risk rules, AND the ML
+          model (worst-signal-wins) - calling it just the "AI estimate"
+          here too would suggest it's only the model's own number. */}
       <Card className={isDanger ? "border-critical/40 bg-critical-soft" : ""}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="eyebrow mb-2">AI-Assisted Risk Estimate</p>
+            <p className="eyebrow mb-2">Overall Risk Assessment</p>
             <Pill tone={risk.tone} className="text-sm">{risk.label}</Pill>
-            {latest ? (
+            {loading ? (
+              <p className="mt-2 text-sm text-muted">Loading your status…</p>
+            ) : latest ? (
               <p className="mt-2 text-sm text-muted">
                 Last checked {new Date(latest.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 {latest.result?.severity?.escalatedBy ? ` · main reason: ${latest.result.severity.escalatedBy.replace(/_/g, " ")}` : ""}
@@ -255,7 +267,7 @@ export default function HomePage() {
             ) : (
               <p className="mt-2 text-sm text-muted">No assessment yet — run one to see your status here.</p>
             )}
-            <p className="mt-2 text-xs text-faint">An AI-assisted estimate to guide you, not a medical diagnosis.</p>
+            <p className="mt-2 text-xs text-faint">Combines danger signs, risk factors, and the AI model - not a medical diagnosis.</p>
           </div>
           <Link
             to="/assess"

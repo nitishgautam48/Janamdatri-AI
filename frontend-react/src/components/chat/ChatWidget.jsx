@@ -156,7 +156,7 @@ export default function ChatWidget() {
                       m.sender === "user"
                         ? "bg-primary text-paper-ink"
                         : m.isEmergency
-                        ? "border border-critical/40 bg-critical-soft text-ink"
+                        ? "border-2 border-critical bg-critical-soft font-medium text-ink"
                         : "bg-surface-hover text-ink"
                     }`}
                   >
@@ -183,7 +183,13 @@ export default function ChatWidget() {
                 )}
               </div>
             ))}
-            {sending && <p className="text-xs text-muted">…</p>}
+            {sending && (
+              <p className="flex items-center gap-1 text-xs text-muted" aria-live="polite">
+                <span className="animate-pulse">●</span>
+                <span className="animate-pulse [animation-delay:150ms]">●</span>
+                <span className="animate-pulse [animation-delay:300ms]">●</span>
+              </p>
+            )}
 
             {messages.length === 1 && !sending && (
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -213,14 +219,17 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={listening ? "Listening…" : t("chat.placeholder")}
-              className="flex-1 rounded-full border border-border-strong bg-bg px-4 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+              className="h-11 flex-1 rounded-full border border-border-strong bg-bg px-4 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
             />
             {voiceSupported && (
               <button
                 type="button"
                 onClick={toggleListening}
                 aria-label={listening ? "Stop voice input" : "Speak your message"}
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm transition-colors ${
+                // 44px (h-11 w-11), not 36px - the minimum comfortable touch
+                // target, and this is a corner widget people often tap
+                // one-handed.
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base transition-colors ${
                   listening ? "animate-pulse border-critical bg-critical-soft text-critical" : "border-border-strong text-muted hover:text-ink"
                 }`}
               >
@@ -230,7 +239,7 @@ export default function ChatWidget() {
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-paper-ink disabled:opacity-40"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-base text-paper-ink disabled:opacity-40"
               aria-label="Send"
             >
               ➤

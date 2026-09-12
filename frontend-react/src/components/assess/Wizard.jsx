@@ -64,13 +64,36 @@ function Field({ label, hint, why, ...props }) {
 
 export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitting, error }) {
   const [step, setStep] = useState(0);
+  // Purely for the chips' own visual "selected" state - the actual data
+  // stays the single symptomText string the textarea also edits, so
+  // typing by hand and tapping chips both work on the same field. Without
+  // this, tapping a chip a second time silently duplicated its phrase in
+  // the text (toggleChip always appended, never checked what was already
+  // there) with no visual sign it had been added at all.
+  const [selectedChips, setSelectedChips] = useState(() => new Set());
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   function toggleChip(phrase) {
-    set("symptomText", form.symptomText ? `${form.symptomText}, ${phrase}` : phrase);
+    const isSelected = selectedChips.has(phrase);
+    setSelectedChips((prev) => {
+      const next = new Set(prev);
+      isSelected ? next.delete(phrase) : next.add(phrase);
+      return next;
+    });
+    if (isSelected) {
+      // Remove just this phrase, tolerating it having been used as the
+      // whole text, the first phrase, or a later one in the ", "-joined list.
+      const withoutPhrase = form.symptomText
+        .split(", ")
+        .filter((part) => part.trim() !== phrase)
+        .join(", ");
+      set("symptomText", withoutPhrase);
+    } else if (!form.symptomText.split(", ").some((part) => part.trim() === phrase)) {
+      set("symptomText", form.symptomText ? `${form.symptomText}, ${phrase}` : phrase);
+    }
   }
 
   function toggleFlag(key) {
@@ -97,6 +120,14 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           </div>
         ))}
       </div>
+
+      {/* Every step after Vitals is explicitly marked optional already -
+          this just says so up front, so the 6-step layout reads as "fill
+          in what you know" rather than a form that must be completed in
+          full before it's useful. */}
+      <p className="mb-4 text-xs text-faint">
+        Most steps are optional - fill in what you know and skip the rest with "Skip to Review" below.
+      </p>
 
       {error && <p className="mb-4 rounded-md border border-critical/30 bg-critical-soft px-3 py-2 text-sm text-critical">{error}</p>}
 
@@ -192,16 +223,25 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           <h2 className="mb-1 text-sm font-bold text-ink">4 · Symptoms</h2>
           <p className="mb-3 text-xs text-muted">Tap any that apply — they'll be added to the description below, or type your own.</p>
           <div className="mb-3 flex flex-wrap gap-2">
-            {SYMPTOM_CHIPS.map((phrase) => (
-              <button
-                key={phrase}
-                type="button"
-                onClick={() => toggleChip(phrase)}
-                className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-medium text-muted hover:border-primary hover:text-ink"
-              >
-                {phrase}
-              </button>
-            ))}
+            {SYMPTOM_CHIPS.map((phrase) => {
+              const selected = selectedChips.has(phrase);
+              return (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => toggleChip(phrase)}
+                  aria-pressed={selected}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-primary bg-primary text-paper-ink"
+                      : "border-border-strong text-muted hover:border-primary hover:text-ink"
+                  }`}
+                >
+                  {selected ? "✓ " : ""}
+                  {phrase}
+                </button>
+              );
+            })}
           </div>
           <textarea
             rows={4}
@@ -262,7 +302,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
         </div>
       )}
 
-      <div className="mt-6 flex justify-between">
+      <div className="mt-6 flex items-center justify-between gap-3">
         {step > 0 ? (
           <Button variant="ghost" type="button" onClick={() => setStep((s) => s - 1)}>
             ← Back
@@ -270,15 +310,29 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
         ) : (
           <span />
         )}
-        {step < STEPS.length - 1 ? (
-          <Button type="button" onClick={() => setStep((s) => s + 1)}>
-            Next: {STEPS[step + 1]} →
-          </Button>
-        ) : (
-          <Button type="button" onClick={onSubmit} disabled={submitting}>
-            {submitting ? "Running…" : "Run Assessment"}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Every remaining step is optional - this lets someone who's
+              given enough (or is in a hurry) go straight to submitting
+              instead of clicking "Next" through steps they don't need. */}
+          {step > 0 && step < STEPS.length - 1 && (
+            <button
+              type="button"
+              onClick={() => setStep(STEPS.length - 1)}
+              className="text-xs font-medium text-muted underline decoration-dotted hover:text-primary"
+            >
+              Skip to Review
+            </button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button type="button" onClick={() => setStep((s) => s + 1)}>
+              Next: {STEPS[step + 1]} →
+            </Button>
+          ) : (
+            <Button type="button" onClick={onSubmit} disabled={submitting}>
+              {submitting ? "Running…" : "Run Assessment"}
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
