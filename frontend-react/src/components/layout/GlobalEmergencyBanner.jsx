@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useHistory } from "../../lib/useHistory";
 import { loadSavedEpds, scopedKey } from "../../lib/storage";
+import ReadAloudButton from "../ui/ReadAloudButton";
 
 // A danger sign shouldn't only be visible on the Home tab - ported from
 // the vanilla-JS app's checkGlobalEmergencyBanner(), this stays sticky
@@ -39,6 +40,10 @@ export default function GlobalEmergencyBanner() {
 
   if (!hasIdentity || (!isDanger && !selfHarm) || dismissedFor === dismissKey) return null;
 
+  const bannerText = selfHarm
+    ? "A Mental Health Check flagged thoughts of self-harm. Please reach out to someone you trust, or call KIRAN now."
+    : `Your last assessment, ${latest.severityLevel}, flagged something that needs prompt attention.`;
+
   function dismiss() {
     try {
       sessionStorage.setItem(storageKey, dismissKey);
@@ -60,6 +65,7 @@ export default function GlobalEmergencyBanner() {
             ? "🚨 A Mental Health Check flagged thoughts of self-harm — please reach out to someone you trust or KIRAN now."
             : `🚨 Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.`}
         </p>
+        <ReadAloudButton text={bannerText} className="!border-white/50 !text-white hover:!border-white hover:!text-white" />
         <a href="tel:108" className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-bold text-critical">
           🚨 Call 108
         </a>

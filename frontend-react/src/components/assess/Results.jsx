@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Card from "../ui/Card";
 import Pill from "../ui/Pill";
 import Button from "../ui/Button";
+import ReadAloudButton from "../ui/ReadAloudButton";
 
 const LEVEL_TONE = { Critical: "critical", Severe: "critical", Moderate: "warning", Mild: "good", Minimal: "good" };
 
@@ -33,6 +34,14 @@ export default function Results({ data, onReset }) {
 
   const tone = LEVEL_TONE[severity.level] || "neutral";
 
+  const whyText = [
+    `Your result: ${severity.level}.`,
+    exp?.recommendedNextAction,
+    ...(exp?.whyThisResult || []),
+  ].filter(Boolean).join(" ");
+
+  const nextStepsText = recommendations?.length ? recommendations.join(". ") : "";
+
   return (
     <div className="space-y-5">
       {/* A. Your Status */}
@@ -57,7 +66,10 @@ export default function Results({ data, onReset }) {
 
       {/* B. Why This Result */}
       <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">🧭 Why This Result</h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-ink">🧭 Why This Result</h3>
+          <ReadAloudButton text={whyText} />
+        </div>
         {exp?.recommendedNextAction && <p className="mb-3 text-sm font-medium text-ink">{exp.recommendedNextAction}</p>}
         {exp?.whyThisResult?.length > 0 && (
           <ul className="mb-3 list-inside list-disc space-y-1 text-sm text-ink">
@@ -86,7 +98,10 @@ export default function Results({ data, onReset }) {
       {/* D. What To Do Next */}
       {recommendations?.length > 0 && (
         <Card>
-          <h3 className="mb-2 text-sm font-bold text-ink">📋 What To Do Next</h3>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-ink">📋 What To Do Next</h3>
+            <ReadAloudButton text={nextStepsText} />
+          </div>
           <ul className="list-inside list-disc space-y-1.5 text-sm text-ink">
             {recommendations.map((r, i) => <li key={i}>{r}</li>)}
           </ul>
