@@ -148,11 +148,13 @@ export default function PrivacyPage() {
       </Card>
 
       <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">Share With a Doctor/Health Worker</h3>
+        <h3 className="mb-2 text-sm font-bold text-ink">Share With a Doctor, Health Worker, or Family Member</h3>
         <p className="mb-3 text-sm text-muted">
-          Generate a one-time code that lets a provider view a read-only summary of your latest result - your risk
-          level, vitals, hemoglobin, nutrition gaps, and warning signs. They cannot see any other patient, cannot
-          edit anything, and lose access the moment you revoke or regenerate the code.
+          Generate a one-time code that lets someone you share it with view a read-only summary of your latest
+          result. A doctor or ASHA/ANM can open it on the Provider page for clinical detail (vitals, hemoglobin,
+          nutrition gaps, warning signs); a family member can open the same code on the Caregiver page for a
+          simpler "is she okay" view. Either way, they cannot see any other patient, cannot edit anything, and lose
+          access the moment you revoke or regenerate the code.
         </p>
 
         {!user ? (

@@ -105,6 +105,13 @@ export default function WelcomeGate() {
         >
           👩‍⚕️ {t("welcome.providerLink")}
         </button>
+        <button
+          type="button"
+          onClick={() => navigate("/caregiver")}
+          className="mt-2 w-full text-center text-xs font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
+        >
+          👪 I'm a family member with a share code →
+        </button>
       </div>
     </div>
   );

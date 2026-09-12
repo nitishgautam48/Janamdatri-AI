@@ -7,10 +7,11 @@ import ChatWidget from "../chat/ChatWidget";
 import { useAuth } from "../../context/AuthContext";
 import WelcomeGate from "../auth/WelcomeGate";
 
-// /provider is deliberately login-free (a provider has no account of
-// their own - the patient's share code IS the credential), so it's the
-// one route that bypasses the welcome gate entirely.
-const PUBLIC_PATHS = new Set(["/provider"]);
+// /provider and /caregiver are deliberately login-free (neither a
+// provider nor a family caregiver has an account of their own - the
+// patient's share code IS the credential), so these bypass the welcome
+// gate entirely.
+const PUBLIC_PATHS = new Set(["/provider", "/caregiver"]);
 
 export default function AppShell() {
   const { hasIdentity } = useAuth();

@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import HomePage from "./pages/HomePage";
 import ProviderPage from "./pages/ProviderPage";
+import CaregiverPage from "./pages/CaregiverPage";
 import AssessPage from "./pages/AssessPage";
 import GuidePage from "./pages/GuidePage";
 import NutritionPage from "./pages/NutritionPage";
@@ -20,6 +21,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/provider" element={<ProviderPage />} />
+        <Route path="/caregiver" element={<CaregiverPage />} />
         <Route path="/assess" element={<AssessPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/nutrition" element={<NutritionPage />} />
