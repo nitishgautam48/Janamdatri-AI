@@ -37,7 +37,12 @@ PHRASES_BY_RUNG = {
     # text_analyzer.py's note on why one mixed list is enough.
     1: ["mild swelling", "feet are a little swollen", "occasional mild headache",
         "slight fatigue", "a bit tired", "mild nausea",
-        "हल्की सूजन", "थोड़ी थकान"],
+        # Same real-world phrasing gap as text_analyzer.py's hypertensive
+        # tier: "pain in my head"/"head hurts" describes the same thing as
+        # "headache" but matched no rung at all before this.
+        "pain in my head", "pain in the head", "head pain", "head hurts",
+        "my head hurts", "head is paining", "head is hurting",
+        "हल्की सूजन", "थोड़ी थकान", "सिर में दर्द"],
     2: ["persistent headache", "headache that wont go away", "less movement than usual",
         "fewer kicks today", "mild spotting", "mild fever", "feeling feverish", "slight fever",
         "लगातार सिरदर्द", "हल्का बुखार"],

@@ -31,7 +31,17 @@ CATEGORIES = {
         "moderate": ["mild headache", "feet are swollen", "swelling in my feet",
                      "hands feel swollen", "a bit dizzy", "occasional headache",
                      "headache", "dizzy", "swelling", "swollen",
-                     "हल्का सिरदर्द", "पैरों में सूजन"],
+                     # "headache" as one word doesn't catch how people
+                     # actually phrase this ("pain in my head", "my head
+                     # hurts") - without these, none of these real
+                     # phrasings scored anything at all, so the chat
+                     # assistant had nothing to go on but the generic
+                     # "tell me more about the pain" question, which then
+                     # repeats verbatim on the next turn since the answer
+                     # still doesn't match anything.
+                     "pain in my head", "pain in the head", "head pain", "head hurts",
+                     "my head hurts", "head is paining", "head is hurting",
+                     "हल्का सिरदर्द", "पैरों में सूजन", "सिर में दर्द"],
         "severe": ["severe headache", "blurred vision", "seeing spots",
                    "vision is blurry", "cant see properly", "face is swollen",
                    "swelling in my face", "sudden swelling", "convulsions", "had a fit",

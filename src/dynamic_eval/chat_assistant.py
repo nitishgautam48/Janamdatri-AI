@@ -453,8 +453,11 @@ def _danger_sign_followup(matched_phrase: str, rung: int) -> str:
     )
 
 # A friendly label for each text_analyzer.py category, and a fallback note
-# for the one category (malnutrition) with no matching expert_system.py
-# rule to borrow "why" text from.
+# for a category whose expert_system.py rule needs a higher (severe-tier)
+# score than a moderate-only phrase reaches, or (malnutrition) has no
+# matching rule at all - without this, _mild_symptom_reply had nothing to
+# say beyond a generic "this sounds related to X" for something as common
+# as a plain headache/head pain report.
 CATEGORY_LABELS = {
     "hemorrhage": "bleeding", "hypertensive_disorder": "blood pressure/pre-eclampsia symptoms",
     "infection": "possible infection", "anemia": "anemia/fatigue", "fetal_distress": "baby's movement",
@@ -462,6 +465,10 @@ CATEGORY_LABELS = {
 }
 CATEGORY_FALLBACK_NOTES = {
     "malnutrition": "Not eating well for more than a day or two can affect both you and the baby.",
+    "hypertensive_disorder": (
+        "Headache, dizziness, or swelling in the feet/hands can be early signs of high blood pressure "
+        "(pre-eclampsia) in pregnancy, which is why it's tracked even when mild."
+    ),
 }
 
 
