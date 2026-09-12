@@ -270,4 +270,20 @@ export const KEYS = {
   CHAT_HISTORY: "janamdatri_chat",
   REPORT_VITALS_LOG: "janamdatri_report_vitals_log",
   MEAL_LOG: "janamdatri_meal_log",
+  CRITICAL_FOLLOWUP: "janamdatri_critical_followup",
 };
+
+// Closes the loop after a Critical/Severe result: not just an alert at
+// the moment of assessment, but a tracked, self-reported check-in on
+// whether the person actually got care - keyed by that specific result's
+// timestamp so a NEW critical result always asks again, and an old
+// acknowledgment never silently carries over.
+export function loadCriticalFollowup() {
+  return scopedGet(KEYS.CRITICAL_FOLLOWUP);
+}
+
+export function acknowledgeCriticalFollowup(assessmentTimestamp, soughtCare) {
+  const record = { assessmentTimestamp, soughtCare, respondedAt: new Date().toISOString() };
+  scopedSet(KEYS.CRITICAL_FOLLOWUP, record);
+  return record;
+}

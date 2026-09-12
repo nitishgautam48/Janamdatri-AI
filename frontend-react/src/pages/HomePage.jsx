@@ -10,6 +10,7 @@ import {
   KEYS, scopedGet, loadSavedEpds,
   lastKnownVitals, lastKnownHemoglobinAssessment, lastKnownWeightAssessment,
   loadTodayCareState, saveTodayCareState,
+  loadCriticalFollowup, acknowledgeCriticalFollowup,
 } from "../lib/storage";
 import { buildTodayCareTasks } from "../lib/todayCare";
 
@@ -100,6 +101,56 @@ function TodayCare({ history }) {
         })}
       </div>
     </Card>
+  );
+}
+
+// Closes the assessment -> alert -> follow-up loop: an alert alone doesn't
+// confirm anyone actually acted on it. Keyed to the specific result's
+// timestamp so a brand-new critical result always asks again, even if an
+// earlier one was already acknowledged.
+function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
+  const [record, setRecord] = useState(() => loadCriticalFollowup());
+  const alreadyAnswered = record?.assessmentTimestamp === assessmentTimestamp;
+
+  function respond(soughtCare) {
+    setRecord(acknowledgeCriticalFollowup(assessmentTimestamp, soughtCare));
+  }
+
+  if (alreadyAnswered && record.soughtCare) {
+    return (
+      <p className="mt-3 text-sm text-good">
+        ✓ You confirmed you sought care for this on {new Date(record.respondedAt).toLocaleDateString()}. If anything
+        changes or gets worse, treat it as urgent again.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-md border border-critical/30 bg-white p-3">
+      {alreadyAnswered && !record.soughtCare ? (
+        <p className="mb-2 text-sm font-semibold text-critical">
+          Please don't wait - this ({severityLevel}) still needs medical attention today.
+        </p>
+      ) : (
+        <p className="mb-2 text-sm font-medium text-ink">Have you been able to get medical attention for this?</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => respond(true)}
+          className="rounded-full bg-good px-3.5 py-1.5 text-xs font-bold text-white"
+        >
+          ✓ Yes, I got checked
+        </button>
+        <button
+          type="button"
+          onClick={() => respond(false)}
+          className="rounded-full border border-critical/40 px-3.5 py-1.5 text-xs font-bold text-critical"
+        >
+          Not yet
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -280,6 +331,7 @@ export default function HomePage() {
                   View Helplines
                 </Link>
               </div>
+              {isDanger && <CriticalFollowUp assessmentTimestamp={latest.timestamp} severityLevel={latest.severityLevel} />}
             </>
           ) : (
             <>
