@@ -302,46 +302,42 @@ def _match_keyword_hints(normalized_text: str):
 # Grouped by topic (not one generic bucket) so the follow-up question
 # actually engages with what the person said, instead of reading like a
 # canned response no matter what they typed.
+# One warm, single question per turn - not a bracketed checklist of 3-4
+# questions stacked into one message. The old wording ("where is it (head,
+# abdomen, chest, back)? Is it mild, or severe...? Did it start
+# suddenly...? Is there any bleeding...?") read like a form's field labels,
+# not like a person asking; it also forced a one-shot answer to cover
+# every sub-question, which real short replies ("in my head", "since
+# yesterday") never do. Asking one thing at a time is closer to how a
+# health worker actually triages by phone, and - for "pain" specifically -
+# the location answer is now actually understood (see _match_pain_location
+# above) instead of only re-asking the same question if it doesn't land.
 VAGUE_TOPICS = [
     {
         "id": "pain",
         "keywords": ["pain", "hurt", "hurting", "ache", "aching", "cramp", "cramping", "discomfort"],
-        "question": (
-            "Tell me more about the pain so I can judge how urgent this is: where is it (head, "
-            "abdomen, chest, back)? Is it mild, or severe enough that it's hard to ignore? Did it "
-            "start suddenly, and is there any bleeding, fever, or reduced baby movement with it? "
-            "If it's sudden or severe, treat it as urgent - go to a facility or call 108 now."
-        ),
+        "question": "I'm sorry you're in pain - whereabouts is it? For example your head, tummy, chest, or back.",
     },
     {
         "id": "energy",
         "keywords": ["tired all the time", "always tired", "no energy", "exhausted",
                      "low energy", "feeling weak", "so weak"],
-        "question": (
-            "How long has this tiredness/weakness been going on, and does it happen even after "
-            "resting? Are you also breathless, dizzy, or looking unusually pale? Ongoing fatigue in "
-            "pregnancy is very often anemia (worth a hemoglobin check), but sudden or severe weakness "
-            "needs same-day evaluation - don't wait if it's severe."
-        ),
+        "question": "How long have you been feeling this tired or weak - just today, or has it been a few days now?",
     },
     {
         "id": "mood",
         "keywords": ["not myself", "off today", "emotionally", "cant cope", "can't cope"],
         "question": (
-            "Do you mean this is more about how you're feeling emotionally, or is something physical "
-            "going on too (pain, fever, bleeding)? If it's your mood, the Mental Health Check tab has "
-            "a proper screening tool - and if you ever have thoughts of harming yourself, please call "
-            "KIRAN right now: 1800-599-0019 (toll-free, 24x7)."
+            "Is this more about how you're feeling emotionally, or is something physical going on too? "
+            "If it's your mood, the Mental Health Check tab has a proper screening tool for it - and if "
+            "you're ever having thoughts of harming yourself, please call KIRAN right now: "
+            "1800-599-0019 (toll-free, 24x7)."
         ),
     },
     {
         "id": "palpitations",
         "keywords": ["heart racing", "heart is racing", "palpitations", "heart pounding", "heart beating fast"],
-        "question": (
-            "Does this happen at rest or only with activity, and how long does it last? Is it with any "
-            "chest pain, breathlessness, dizziness, or fainting? A racing heart alone is often harmless in "
-            "pregnancy, but with any of those together, or if it doesn't settle, get checked the same day."
-        ),
+        "question": "Does your heart racing happen even at rest, or mainly when you're active?",
     },
     {
         "id": "generic_unwell",
@@ -351,11 +347,7 @@ VAGUE_TOPICS = [
                      "something is wrong", "not sure whats wrong", "not sure what's wrong",
                      "not feeling good", "help me", "i need help", "need advice", "confused",
                      "im worried", "i am worried", "is this normal", "is that normal"],
-        "question": (
-            "Can you say a bit more about what's going on? Is it more physical - pain, fever, "
-            "bleeding, breathlessness, reduced baby movement - or more about your mood or energy? "
-            "And roughly how long has this been going on?"
-        ),
+        "question": "Can you tell me a bit more - is it something physical, or more about how you're feeling emotionally?",
     },
 ]
 
@@ -538,6 +530,92 @@ RULES_BY_CATEGORY = {
 }
 
 
+def _check_symptom_signal(text_for_analysis: str):
+    """Runs the same danger-sign-ladder + text-analyzer scoring the main
+    flow uses, on whatever text is passed in, and returns a response dict
+    if it found a danger sign or a scored symptom - or None if it found
+    nothing, so the caller can fall through to something else. Factored
+    out so the pain-location shortcut below (respond() reconstructing a
+    short "in my head" reply into "pain in my head") gets exactly the same
+    judgment a message actually typed that way would get, rather than a
+    second, separately-maintained copy of this logic."""
+    ladder_result = danger_ladder.classify(text_for_analysis)
+    text_scores = text_analyzer.analyze(text_for_analysis)["scores"]
+    high_category_score = max(text_scores.values()) if text_scores else 0.0
+
+    if ladder_result["rung"] >= 4 or high_category_score >= 0.85:
+        matched_phrase = ladder_result["matchedPhrase"] or "this symptom"
+        base_reply = (
+            f"⚠️ What you're describing ({matched_phrase}) sounds like it could be a danger sign. "
+            "Please go to the nearest health facility now, or call for emergency transport: 108 "
+            "(ambulance) or 102 (pregnancy transport). Don't wait to see if it gets better."
+        )
+        followup = _danger_sign_followup(matched_phrase, ladder_result["rung"])
+        return {
+            "reply": f"{base_reply} {followup}" if followup else base_reply,
+            "isEmergency": True,
+            "dangerLadder": ladder_result,
+            # Carried back as contextMessage on the next turn (see the
+            # frontend's UNRESOLVED_CHAT_INTENTS/UNRESOLVED_INTENTS) only
+            # when there IS a follow-up question actually asking for more -
+            # rung 5 (seizure, unconscious, stuck baby...) asks nothing, so
+            # there's nothing for a reply to attach context to.
+            "intent": "danger_sign_followup" if followup else "danger_sign",
+        }
+
+    if high_category_score >= 0.4:
+        return {"reply": _mild_symptom_reply(text_scores), "isEmergency": False, "intent": "mild_symptom"}
+
+    return None
+
+
+# A short reply to the pain topic's "where is it" question - "in my
+# head", "my back" - has almost no signal analyzed on its own, and
+# combined with the ORIGINAL vague message ("I have pain") it still
+# doesn't form one of the exact "pain in my <place>" phrases
+# text_analyzer.py/danger_ladder.py match, because the two turns are
+# joined with a period, not written as one sentence. Recognizing the bare
+# location word and reconstructing the natural phrase lets a one-word
+# answer get exactly the same judgment as if it had been typed that way
+# to begin with, instead of silently scoring 0 and repeating the same
+# opening question a second time.
+_PAIN_LOCATION_KEYWORDS = [
+    ("head", ["head"]),
+    ("chest", ["chest"]),
+    ("abdomen", ["tummy", "stomach", "belly", "abdomen", "abdominal"]),
+    ("back", ["back"]),
+    ("leg", ["leg", "legs", "thigh", "calf"]),
+]
+
+# For locations with no existing danger-sign/category phrase to
+# reconstruct into (abdomen/back/leg pain isn't tied to one specific
+# category the way head->hypertensive or chest->cardiopulmonary is) -
+# one single, targeted next question instead of falling back to the
+# original multi-part opening question again.
+_PAIN_LOCATION_FOLLOWUP = {
+    "abdomen": (
+        "Is the tummy pain constant, or does it come and go - and is there any bleeding or fever "
+        "with it? If it's severe or doesn't ease up, get checked today rather than waiting."
+    ),
+    "back": (
+        "How long has the back pain been going on, and is it with any fever, bleeding, or unusual "
+        "discharge? If it's sudden or severe, get checked today rather than waiting."
+    ),
+    "leg": (
+        "Is that leg swollen, red, or warm compared to the other one, or is there any chest pain or "
+        "breathlessness with it? If so, please get checked today - that combination needs prompt "
+        "attention."
+    ),
+}
+
+
+def _match_pain_location(normalized_text: str):
+    for location, keywords in _PAIN_LOCATION_KEYWORDS:
+        if any(contains_phrase(normalized_text, kw) for kw in keywords):
+            return location
+    return None
+
+
 def respond(message: str, context_message: str = None, unresolved_rounds: int = 0) -> dict:
     text = (message or "").strip()
 
@@ -561,29 +639,9 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
 
     # Safety first: reuse the same danger-sign detection the assessment
     # flow uses. A matched danger sign always overrides FAQ matching.
-    ladder_result = danger_ladder.classify(analysis_text)
-    text_scores = text_analyzer.analyze(analysis_text)["scores"]
-    high_category_score = max(text_scores.values()) if text_scores else 0.0
-
-    if ladder_result["rung"] >= 4 or high_category_score >= 0.85:
-        matched_phrase = ladder_result["matchedPhrase"] or "this symptom"
-        base_reply = (
-            f"⚠️ What you're describing ({matched_phrase}) sounds like it could be a danger sign. "
-            "Please go to the nearest health facility now, or call for emergency transport: 108 "
-            "(ambulance) or 102 (pregnancy transport). Don't wait to see if it gets better."
-        )
-        followup = _danger_sign_followup(matched_phrase, ladder_result["rung"])
-        return {
-            "reply": f"{base_reply} {followup}" if followup else base_reply,
-            "isEmergency": True,
-            "dangerLadder": ladder_result,
-            # Carried back as contextMessage on the next turn (see the
-            # frontend's UNRESOLVED_CHAT_INTENTS/UNRESOLVED_INTENTS) only
-            # when there IS a follow-up question actually asking for more -
-            # rung 5 (seizure, unconscious, stuck baby...) asks nothing, so
-            # there's nothing for a reply to attach context to.
-            "intent": "danger_sign_followup" if followup else "danger_sign",
-        }
+    signal = _check_symptom_signal(analysis_text)
+    if signal:
+        return signal
 
     intent = _match_faq(normalized)
     if intent:
@@ -592,9 +650,6 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
             "relatedPrompts": RELATED_PROMPTS.get(intent["id"], []),
         }
 
-    if high_category_score >= 0.4:
-        return {"reply": _mild_symptom_reply(text_scores), "isEmergency": False, "intent": "mild_symptom"}
-
     # Neither a danger sign, an FAQ topic, nor a scored symptom matched -
     # this is genuinely vague or unrecognized. Ask a targeted follow-up (at
     # most MAX_CLARIFYING_ROUNDS times) rather than either a flat "I don't
@@ -602,6 +657,23 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     # actually gets the person help.
     if unresolved_rounds >= MAX_CLARIFYING_ROUNDS:
         return {"reply": NUDGE_REPLY, "isEmergency": False, "intent": "nudge_to_assessment"}
+
+    # Was the PREVIOUS turn the pain topic's "where is it" question? A
+    # bare location answer ("in my head") doesn't contain the word "pain"
+    # itself, so re-running the generic vague-topic matcher on it would
+    # just match the SAME "pain"/"hurt" keywords again and repeat the
+    # identical opening question - see the module comment above.
+    if context_message:
+        prior_topic = _match_topic(normalize(context_message))
+        if prior_topic and prior_topic["id"] == "pain":
+            location = _match_pain_location(normalize(text))
+            if location:
+                reconstructed = _check_symptom_signal(f"pain in my {location}")
+                if reconstructed:
+                    return reconstructed
+                followup = _PAIN_LOCATION_FOLLOWUP.get(location)
+                if followup:
+                    return {"reply": followup, "isEmergency": False, "intent": "clarify_symptom", "topic": "pain"}
 
     topic = _match_topic(normalized)
     if topic:
