@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import Pill from "../components/ui/Pill";
 import { api } from "../lib/api";
-import { KEYS, scopedSet } from "../lib/storage";
+import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue } from "../lib/storage";
 
 const SUPPORTIVE_INFO = {
   "Low probability": "Your responses don't suggest significant depression or anxiety symptoms right now. Mood can shift during pregnancy and after birth, so it's worth checking in again in a couple of weeks, especially if anything changes.",
@@ -14,9 +15,12 @@ const SUPPORTIVE_INFO = {
 export default function MentalWellnessPage() {
   const [items, setItems] = useState(null);
   const [responses, setResponses] = useState({});
-  const [result, setResult] = useState(null);
+  const [savedEpds, setSavedEpds] = useState(() => scopedGet(KEYS.EPDS));
+  const [result, setResult] = useState(() => scopedGet(KEYS.EPDS)?.result || null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const followUpDue = epdsFollowUpDue(savedEpds);
+  const daysSince = epdsDaysSince(savedEpds);
 
   useEffect(() => {
     api.psychAssessItems().then(setItems);
@@ -36,7 +40,9 @@ export default function MentalWellnessPage() {
     try {
       const data = await api.psychAssess(orderedResponses);
       setResult(data);
-      scopedSet(KEYS.EPDS, { responses: orderedResponses, result: data, savedAt: new Date().toISOString() });
+      const saved = { responses: orderedResponses, result: data, savedAt: new Date().toISOString() };
+      scopedSet(KEYS.EPDS, saved);
+      setSavedEpds(saved);
     } catch (err) {
       setError(err.message || "Could not score EPDS.");
     } finally {
@@ -46,6 +52,23 @@ export default function MentalWellnessPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
+      {savedEpds && (
+        <Card className={followUpDue ? "border-warning/40 bg-warning-soft" : ""}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-ink">
+              Last check: <strong>{savedEpds.result.classification}</strong> ({daysSince} day{daysSince === 1 ? "" : "s"} ago)
+            </p>
+            {followUpDue && <Pill tone="warning">Follow-up due</Pill>}
+          </div>
+          {followUpDue && (
+            <p className="mt-1.5 text-sm text-warning">
+              It's been {daysSince} days since your last check, which suggested {savedEpds.result.classification.toLowerCase()} —
+              worth checking in again below.
+            </p>
+          )}
+        </Card>
+      )}
+
       <Card>
         <h1 className="text-xl font-bold text-ink">Mental Health Check</h1>
         <p className="mt-1 text-sm text-muted">
