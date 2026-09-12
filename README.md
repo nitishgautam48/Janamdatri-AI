@@ -20,8 +20,8 @@ approach, and stated limitations.
 ```
                  ┌─────────────────────────┐
   vitals ──────▶ │  ML classifier (trained)│──┐
- (Age, BP, BS,   │  RandomForest + MAP,     │  │
-  Temp, HR)      │  84.7% acc, 5-fold CV    │  │
+ (Age, BP, BS,   │  Gradient Boosting + MAP,│  │
+  Temp, HR)      │  69.2% acc, repeated CV  │  │
                  └─────────────────────────┘  │
                                               ▼
   symptom  ───▶ text analyzer (bilingual) ──┐  ┌──────────────┐
@@ -43,12 +43,16 @@ an IoT monitoring system across rural Bangladeshi clinics; DOI:
 10.24432/C5DP5D), enriched with engineered **Mean Arterial Pressure**,
 **pulse pressure**, and hypertension/hyperglycemia/fever/tachycardia
 threshold-flag features. Each candidate model (logistic regression, random
-forest, gradient boosting, SVM, and a soft-voting ensemble of all four,
-each class-weight- or sample-weight-balanced) is tuned with `GridSearchCV`
-over its own hyperparameter grid using leakage-free 5-fold cross-validation
-(scaler + classifier in one `sklearn.Pipeline`, refit per fold) — model
-selection and hyperparameter selection both use the same procedure, not a
-guessed default configuration.
+forest, extra trees, gradient boosting, SVM, k-nearest-neighbours, and a
+soft-voting ensemble of all six, each class-weight- or sample-weight-
+balanced) is tuned with `GridSearchCV` over its own hyperparameter grid
+using leakage-free REPEATED stratified cross-validation - 5 folds x 3
+independent repeats (scaler + classifier in one `sklearn.Pipeline`, refit
+per fold) — model selection and hyperparameter selection both use the same
+procedure, not a guessed default configuration. Repeating the split three
+times, rather than running 5-fold once, gives a more reliable estimate on
+a dataset this small: a single fold assignment's boundaries can otherwise
+swing a candidate's score by a few points on their own.
 
 **A note on the numbers below**: this dataset has 562 exact-duplicate rows
 out of 1014. An earlier version of this pipeline split into train/test
@@ -56,21 +60,30 @@ out of 1014. An earlier version of this pipeline split into train/test
 whenever its copy landed in test — the model could score well on "held
 out" rows by memorizing a row it had already seen verbatim. That leakage
 inflated the previously-reported test accuracy to ~84%. The numbers below
-are post-fix (dedupe before splitting) and reflect genuine generalization:
+are post-fix (dedupe before splitting, repeated CV for selection) and
+reflect genuine generalization, plus balanced accuracy and macro ROC-AUC
+alongside accuracy/F1 (see [METHODOLOGY.md](METHODOLOGY.md) for what each
+adds and the full per-model confusion matrices):
 
-| Model | Best 5-fold CV macro F1 | Held-out test accuracy | Held-out test macro F1 |
+| Model | Best CV macro F1 (5-fold x 3) | Held-out test accuracy | Held-out test macro F1 |
 |---|---|---|---|
-| Logistic Regression | 0.564 | 0.637 | 0.597 |
-| Random Forest | 0.655 | 0.725 | 0.645 |
-| Gradient Boosting | 0.648 | 0.692 | 0.618 |
-| SVM (RBF) | 0.646 | 0.714 | 0.638 |
-| **Voting ensemble (selected)** | **0.661** | **0.714** | **0.625** |
+| Logistic Regression | 0.549 | 0.637 | 0.597 |
+| Random Forest | 0.647 | 0.725 | 0.647 |
+| Extra Trees | 0.626 | 0.725 | 0.656 |
+| **Gradient Boosting (selected)** | **0.656** | **0.692** | **0.618** |
+| SVM (RBF) | 0.640 | 0.714 | 0.638 |
+| K-Nearest Neighbours | 0.548 | 0.637 | 0.561 |
+| Voting ensemble | 0.634 | 0.703 | 0.618 |
 
 "Mid risk" is the weakest class across every candidate — it sits between
 low and high risk in a continuous feature space with real overlap, which
 is a property of this specific dataset, not something more grid search or
 model variety fixes. Meaningfully closing that gap needs more or better
-labeled data.
+labeled data. Cross-validated score, not the held-out test score, decides
+the winner: on ~450 rows a single test split carries real sampling noise
+(random forest and extra trees both scored higher on raw test accuracy
+here), which is exactly why the more stable repeated-CV score is what
+model selection is based on.
 
 Retrain with `python -m src.ml.train` (writes `models/risk_classifier.joblib`).
 Feature importances and the winning hyperparameters are exposed via

@@ -30,6 +30,9 @@ class RiskClassifier:
         self.test_macro_f1 = bundle["test_macro_f1"]
         self.cv_macro_f1_mean = bundle.get("cv_macro_f1_mean")
         self.cv_macro_f1_std = bundle.get("cv_macro_f1_std")
+        self.test_balanced_accuracy = bundle.get("test_balanced_accuracy")
+        self.test_roc_auc_macro_ovr = bundle.get("test_roc_auc_macro_ovr")
+        self.test_confusion_matrix = bundle.get("test_confusion_matrix")
         self.feature_importances = bundle.get("feature_importances")
         self.best_params = bundle.get("best_params")
 
@@ -63,6 +66,10 @@ class RiskClassifier:
             "bestParams": self.best_params,
             "testAccuracy": self.test_accuracy,
             "testMacroF1": self.test_macro_f1,
+            "testBalancedAccuracy": self.test_balanced_accuracy,
+            "testRocAucMacroOvr": self.test_roc_auc_macro_ovr,
+            "testConfusionMatrix": self.test_confusion_matrix,
+            "riskOrder": self.risk_order,
             "cvMacroF1Mean": self.cv_macro_f1_mean,
             "cvMacroF1Std": self.cv_macro_f1_std,
             "featureImportances": self.feature_importances,

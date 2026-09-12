@@ -22,15 +22,34 @@ Methodology notes:
    Fitting the scaler on the full dataset before splitting - a common
    mistake - leaks each held-out fold's mean/variance into training and
    quietly inflates reported scores.
- - Each candidate model (logistic regression, random forest, gradient
-   boosting, SVM, and a soft-voting ensemble of all four) is tuned with
-   GridSearchCV over its own hyperparameter grid, using 5-fold stratified
-   CV on the TRAINING split only. The grid search's own best
-   cross-validated score is what decides which model to keep, so model
-   selection and hyperparameter selection use the same leakage-free
-   procedure - the ensemble is evaluated by that same CV score, not
-   compared on a different yardstick, so it only wins if it genuinely
-   generalizes better.
+ - Each candidate model (logistic regression, random forest, extra
+   trees, gradient boosting, SVM, k-nearest-neighbours, and a soft-voting
+   ensemble of all six) is tuned with GridSearchCV over its own
+   hyperparameter grid, using REPEATED stratified CV (5 folds x 3
+   independent repeats = 15 fits per grid point) on the TRAINING split
+   only. Repeating the k-fold split three times rather than running it
+   once is itself an evaluation-methodology improvement: on a dataset
+   this small (452 unique rows), a single 5-fold split's particular fold
+   boundaries can swing a candidate's score by a few points just from
+   which rows happened to land together, which can flip which model looks
+   best. Averaging over three independent splits is a more reliable
+   estimate of genuine generalization, so the model it selects is more
+   trustworthy - not merely tuned harder on the same split. The grid
+   search's own best cross-validated score is what decides which model to
+   keep, so model selection and hyperparameter selection use the same
+   leakage-free procedure - the ensemble is evaluated by that same CV
+   score, not compared on a different yardstick, so it only wins if it
+   genuinely generalizes better.
+ - Beyond accuracy and macro F1, the held-out test evaluation also reports
+   balanced accuracy (average per-class recall - can't be inflated by
+   just predicting the majority class), macro one-vs-rest ROC-AUC (how
+   well-separated the predicted class probabilities are, independent of
+   the decision threshold), and the full confusion matrix (which shows
+   WHICH way "mid risk" gets confused, not just that it's the weak class -
+   clinically relevant since a mid-risk case mistaken for low risk is a
+   worse miss than one mistaken for high risk). All of these are saved
+   into the model bundle and exposed via `/model/info` alongside the
+   existing metrics, not just printed at training time.
  - Every non-ensemble candidate is class-weight-balanced (or, for
    GradientBoostingClassifier, which has no class_weight param,
    sample-weight-balanced at fit time) - "mid risk" is the minority AND
@@ -56,12 +75,21 @@ Run: python -m src.ml.train
 """
 
 import joblib
+import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, f1_score
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score, train_test_split
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold, cross_val_score, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -99,6 +127,23 @@ CANDIDATES = {
         "pipeline": Pipeline([("scaler", StandardScaler()), ("clf", SVC(probability=True, random_state=42, class_weight="balanced"))]),
         "grid": {"clf__C": [1.0, 10.0, 50.0], "clf__gamma": ["scale", 0.01, 0.1]},
     },
+    "extra_trees": {
+        "pipeline": Pipeline([("scaler", StandardScaler()),
+                               ("clf", ExtraTreesClassifier(random_state=42, class_weight="balanced"))]),
+        "grid": {
+            "clf__n_estimators": [200, 300, 500],
+            "clf__max_depth": [None, 8, 12],
+            "clf__min_samples_leaf": [1, 2, 4],
+        },
+    },
+    "k_nearest_neighbors": {
+        # Distance-weighted so a query point's few nearest neighbours (which
+        # tend to be from the majority classes near a decision boundary)
+        # don't drown out a genuinely close minority-class ("mid risk")
+        # match the way uniform weighting would.
+        "pipeline": Pipeline([("scaler", StandardScaler()), ("clf", KNeighborsClassifier(weights="distance"))]),
+        "grid": {"clf__n_neighbors": [3, 5, 7, 11, 15]},
+    },
 }
 
 
@@ -135,6 +180,35 @@ def load_dataset() -> pd.DataFrame:
     return df
 
 
+def evaluate_on_test(estimator, X_test, y_test) -> dict:
+    """One shared evaluation routine so every candidate (and the final
+    ensemble) is scored the same way. Beyond accuracy/macro-F1, this adds:
+      - balanced accuracy: the average per-class recall - unlike plain
+        accuracy, a model can't inflate this by just calling everything
+        "low risk" (the majority class).
+      - macro one-vs-rest ROC-AUC: how well-separated the model's
+        predicted probabilities are per class, independent of whatever
+        decision threshold turns them into a single label - catches a
+        model whose ranking is good even when its argmax pick is wrong,
+        or vice versa.
+      - the confusion matrix itself: classification_report's per-class
+        precision/recall already says THAT mid-risk is the weak class;
+        the matrix says WHICH way it gets confused (with low or with high
+        risk), which matters clinically since one of those errors is far
+        more dangerous to make than the other.
+    """
+    preds = estimator.predict(X_test)
+    proba = estimator.predict_proba(X_test)
+    return {
+        "test_accuracy": float(accuracy_score(y_test, preds)),
+        "test_macro_f1": float(f1_score(y_test, preds, average="macro")),
+        "test_balanced_accuracy": float(balanced_accuracy_score(y_test, preds)),
+        "test_roc_auc_macro_ovr": float(roc_auc_score(y_test, proba, multi_class="ovr", average="macro")),
+        "test_confusion_matrix": confusion_matrix(y_test, preds, labels=list(range(len(RISK_ORDER)))).tolist(),
+        "classification_report": classification_report(y_test, preds, target_names=RISK_ORDER),
+    }
+
+
 def train():
     df = load_dataset()
     X = df[ALL_FEATURES]
@@ -144,11 +218,19 @@ def train():
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    # Repeated (not single) stratified k-fold: averaging the macro-F1
+    # estimate over 3 independent 5-way splits instead of just one means
+    # the score deciding which model "wins" isn't at the mercy of one
+    # particular lucky/unlucky fold assignment - a genuinely more reliable
+    # evaluation method for a dataset this small (452 unique rows), where
+    # a single 5-fold split's fold boundaries can swing a candidate's
+    # score by a few points on their own.
+    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
 
     best_name = best_estimator = None
     best_cv_mean = -1.0
-    best_cv_std = best_test_acc = best_test_f1 = 0.0
+    best_cv_std = 0.0
+    best_test_metrics = None
     best_params = None
 
     # GradientBoostingClassifier has no class_weight param (unlike
@@ -165,22 +247,25 @@ def train():
         search.fit(X_train, y_train, **fit_params_by_candidate.get(name, {}))
         tuned_estimators[name] = search.best_estimator_
 
-        preds = search.predict(X_test)
-        test_acc = accuracy_score(y_test, preds)
-        test_f1 = f1_score(y_test, preds, average="macro")
+        test_metrics = evaluate_on_test(search.best_estimator_, X_test, y_test)
 
         print(f"\n=== {name} ===")
         print(f"Best params: {search.best_params_}")
-        print(f"Best 5-fold CV macro F1 (train split only): {search.best_score_:.3f}")
+        print(f"Best CV macro F1 (5-fold x 3 repeats, train split only): {search.best_score_:.3f}")
         cv_std = search.cv_results_["std_test_score"][search.best_index_]
         print(f"CV std at best params: {cv_std:.3f}")
-        print(f"Held-out test accuracy: {test_acc:.3f}  Held-out test macro F1: {test_f1:.3f}")
-        print(classification_report(y_test, preds, target_names=RISK_ORDER))
+        print(f"Held-out test accuracy: {test_metrics['test_accuracy']:.3f}  "
+              f"macro F1: {test_metrics['test_macro_f1']:.3f}  "
+              f"balanced accuracy: {test_metrics['test_balanced_accuracy']:.3f}  "
+              f"macro ROC-AUC (OvR): {test_metrics['test_roc_auc_macro_ovr']:.3f}")
+        print(f"Confusion matrix (rows=actual, cols=predicted, order={RISK_ORDER}):")
+        print(np.array(test_metrics["test_confusion_matrix"]))
+        print(test_metrics["classification_report"])
 
         if search.best_score_ > best_cv_mean:
             best_name, best_estimator = name, search.best_estimator_
             best_cv_mean, best_cv_std = search.best_score_, cv_std
-            best_test_acc, best_test_f1 = test_acc, test_f1
+            best_test_metrics = test_metrics
             best_params = search.best_params_
 
     # A soft-voting ensemble of the already-tuned candidates, evaluated
@@ -196,23 +281,26 @@ def train():
     ensemble_cv_scores = cross_val_score(ensemble, X_train, y_train, cv=cv, scoring="f1_macro", n_jobs=-1)
     ensemble_cv_mean, ensemble_cv_std = ensemble_cv_scores.mean(), ensemble_cv_scores.std()
     ensemble.fit(X_train, y_train)
-    ensemble_preds = ensemble.predict(X_test)
-    ensemble_test_acc = accuracy_score(y_test, ensemble_preds)
-    ensemble_test_f1 = f1_score(y_test, ensemble_preds, average="macro")
+    ensemble_test_metrics = evaluate_on_test(ensemble, X_test, y_test)
 
-    print("\n=== voting_ensemble (all 4 tuned models, soft voting) ===")
-    print(f"5-fold CV macro F1 (train split only): {ensemble_cv_mean:.3f}")
+    print("\n=== voting_ensemble (all tuned candidates, soft voting) ===")
+    print(f"CV macro F1 (5-fold x 3 repeats, train split only): {ensemble_cv_mean:.3f}")
     print(f"CV std: {ensemble_cv_std:.3f}")
-    print(f"Held-out test accuracy: {ensemble_test_acc:.3f}  Held-out test macro F1: {ensemble_test_f1:.3f}")
-    print(classification_report(y_test, ensemble_preds, target_names=RISK_ORDER))
+    print(f"Held-out test accuracy: {ensemble_test_metrics['test_accuracy']:.3f}  "
+          f"macro F1: {ensemble_test_metrics['test_macro_f1']:.3f}  "
+          f"balanced accuracy: {ensemble_test_metrics['test_balanced_accuracy']:.3f}  "
+          f"macro ROC-AUC (OvR): {ensemble_test_metrics['test_roc_auc_macro_ovr']:.3f}")
+    print(f"Confusion matrix (rows=actual, cols=predicted, order={RISK_ORDER}):")
+    print(np.array(ensemble_test_metrics["test_confusion_matrix"]))
+    print(ensemble_test_metrics["classification_report"])
 
     if ensemble_cv_mean > best_cv_mean:
         best_name, best_estimator = "voting_ensemble", ensemble
         best_cv_mean, best_cv_std = ensemble_cv_mean, ensemble_cv_std
-        best_test_acc, best_test_f1 = ensemble_test_acc, ensemble_test_f1
+        best_test_metrics = ensemble_test_metrics
         best_params = {"voters": list(tuned_estimators.keys())}
 
-    print(f"\nSelected model: {best_name} (5-fold CV macro F1 = {best_cv_mean:.3f} +/- {best_cv_std:.3f})")
+    print(f"\nSelected model: {best_name} (CV macro F1 = {best_cv_mean:.3f} +/- {best_cv_std:.3f})")
     print(f"Best hyperparameters: {best_params}")
 
     # The voting ensemble is a VotingClassifier of whole pipelines, not a
@@ -233,8 +321,11 @@ def train():
             "risk_order": RISK_ORDER,
             "model_name": best_name,
             "best_params": best_params,
-            "test_accuracy": float(best_test_acc),
-            "test_macro_f1": float(best_test_f1),
+            "test_accuracy": best_test_metrics["test_accuracy"],
+            "test_macro_f1": best_test_metrics["test_macro_f1"],
+            "test_balanced_accuracy": best_test_metrics["test_balanced_accuracy"],
+            "test_roc_auc_macro_ovr": best_test_metrics["test_roc_auc_macro_ovr"],
+            "test_confusion_matrix": best_test_metrics["test_confusion_matrix"],
             "cv_macro_f1_mean": float(best_cv_mean),
             "cv_macro_f1_std": float(best_cv_std),
             "feature_importances": feature_importances,

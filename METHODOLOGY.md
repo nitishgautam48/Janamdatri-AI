@@ -39,28 +39,46 @@ implied — the number itself, not the model behind it, was the bug.
   Fitting the scaler on the full dataset before splitting — a common mistake —
   leaks each held-out fold's statistics into training and quietly inflates
   reported scores.
-- Each candidate (logistic regression, random forest, gradient boosting,
-  SVM, and a soft-voting ensemble of all four) is tuned with `GridSearchCV`
-  over its own hyperparameter grid, using 5-fold stratified cross-validation
-  on the training split only. This is not a single guessed hyperparameter
-  set - model selection and hyperparameter selection both use the grid
-  search's own cross-validated score, so neither decision rests on a lucky
-  default, and the ensemble is compared against the individual candidates
-  by that same score rather than a different yardstick.
+- Each candidate (logistic regression, random forest, extra trees, gradient
+  boosting, SVM, k-nearest-neighbours, and a soft-voting ensemble of all
+  six) is tuned with `GridSearchCV` over its own hyperparameter grid,
+  using REPEATED stratified cross-validation (5 folds x 3 independent
+  repeats, 15 fits per grid point) on the training split only. This is not
+  a single guessed hyperparameter set - model selection and hyperparameter
+  selection both use the grid search's own cross-validated score, so
+  neither decision rests on a lucky default, and the ensemble is compared
+  against the individual candidates by that same score rather than a
+  different yardstick. Repeating the split three times (rather than
+  running 5-fold once) is itself an evaluation-methodology improvement: on
+  ~450 rows, a single fold assignment's boundaries can swing a candidate's
+  score by a few points on their own, which can flip which model looks
+  best; averaging over three independent splits is a more reliable
+  estimate of genuine generalization.
 - Every candidate is class-weight-balanced (or, for GradientBoostingClassifier,
   which has no `class_weight` param, sample-weight-balanced at fit time) -
   "mid risk" is both the minority class and the hardest to separate here,
   and an unweighted fit tends to sacrifice it for the easier classes.
 - A held-out test split, untouched during grid search or model selection,
-  gives the final reported accuracy/F1.
-- The soft-voting ensemble was selected: best 5-fold CV macro F1 = 0.661
-  (std 0.022, the tightest/most stable of any candidate), held-out test
-  accuracy 71.4%, test macro F1 0.625 - narrowly ahead of a tuned random
-  forest (CV macro F1 0.655) on cross-validated score, though random
-  forest's single held-out test split happened to score slightly higher on
-  raw accuracy (72.5%) - a reminder that on ~450 rows, test-set numbers
-  carry real sampling noise and the cross-validated score is the more
-  reliable selection signal, which is why that's what decides.
+  gives the final reported metrics - now not just accuracy/macro-F1 but
+  also balanced accuracy (average per-class recall, so a model can't
+  inflate its score by defaulting to the majority class), macro one-vs-rest
+  ROC-AUC (how well-separated the predicted probabilities are, independent
+  of the decision threshold), and the full confusion matrix (which shows
+  *which way* mid-risk gets confused, not just that it's the weak class -
+  clinically relevant, since a mid-risk case mistaken for low risk is a
+  worse miss than one mistaken for high risk). All of these are persisted
+  in the model bundle and exposed via `GET /model/info`, not just printed
+  at training time.
+- A tuned gradient boosting model was selected: best CV macro F1 = 0.656
+  (std 0.038, over 5-fold x 3-repeat CV), held-out test accuracy 69.2%,
+  test macro F1 0.618, balanced accuracy 0.624, macro ROC-AUC (OvR) 0.793 -
+  narrowly ahead of a tuned random forest (CV macro F1 0.647) and extra
+  trees (CV macro F1 0.626) on cross-validated score, though both of those
+  candidates' single held-out test split happened to score higher on raw
+  accuracy (72.5% each) - the same reminder as before: on ~450 rows,
+  test-set numbers carry real sampling noise, which is exactly why the
+  more stable repeated cross-validated score - not the test score - is
+  what decides the winner.
 - Feature importances and the winning hyperparameters are persisted and
   exposed via `GET /model/info` for transparency, rather than leaving the
   model a black box (omitted for the ensemble, which has no single
