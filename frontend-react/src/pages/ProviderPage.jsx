@@ -120,6 +120,12 @@ function RosterCard({ entry, summary, onRefresh, onRemove }) {
   );
 }
 
+// How often the dashboard re-fetches every roster patient's summary
+// without the provider having to manually refresh - close enough to
+// "real-time" for a triage/monitoring dashboard without needing any
+// push/websocket infrastructure or backend change.
+const AUTO_REFRESH_MS = 45000;
+
 export default function ProviderPage() {
   const [roster, setRoster] = useState(() => loadRoster());
   const [summaries, setSummaries] = useState({});
@@ -127,6 +133,7 @@ export default function ProviderPage() {
   const [nickname, setNickname] = useState("");
   const [addError, setAddError] = useState("");
   const [addBusy, setAddBusy] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
 
   async function fetchSummary(patientCode) {
     try {
@@ -137,10 +144,17 @@ export default function ProviderPage() {
     }
   }
 
+  function refreshAll(currentRoster) {
+    currentRoster.forEach((entry) => fetchSummary(entry.code));
+    setLastRefreshed(new Date());
+  }
+
   useEffect(() => {
-    roster.forEach((entry) => fetchSummary(entry.code));
-    // Only on mount - each roster change that adds/removes a patient
-    // manages its own summaries entry directly instead of re-running this.
+    refreshAll(roster);
+    const interval = setInterval(() => refreshAll(loadRoster()), AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
+    // Only set up once - refreshAll always re-reads the roster fresh from
+    // storage/state at call time, so it never goes stale across adds/removes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -177,6 +191,24 @@ export default function ProviderPage() {
     });
   }
 
+  // Analytics scoped to THIS provider's own roster only - patients who
+  // gave this provider their share code, not a system-wide view across
+  // every patient in the app. A true cross-facility "authority" dashboard
+  // would need its own account/authorization model (who counts as an
+  // authority, what they're allowed to see) that doesn't exist yet, so
+  // this deliberately stays inside the same consent boundary the roster
+  // itself already has.
+  const severityOf = (code) => summaries[code]?.data?.latestAssessment?.severityLevel;
+  const urgentCodes = roster.filter((r) => ["Critical", "Severe"].includes(severityOf(r.code)));
+  const moderateCount = roster.filter((r) => severityOf(r.code) === "Moderate").length;
+  const stableCount = roster.filter((r) => ["Mild", "Minimal"].includes(severityOf(r.code))).length;
+  const noDataCount = roster.length - urgentCodes.length - moderateCount - stableCount;
+
+  const sortedRoster = [...roster].sort((a, b) => {
+    const rank = (code) => (["Critical", "Severe"].includes(severityOf(code)) ? 0 : severityOf(code) === "Moderate" ? 1 : 2);
+    return rank(a.code) - rank(b.code);
+  });
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Card>
@@ -185,7 +217,7 @@ export default function ProviderPage() {
           Add a patient's share code once to keep them on this dashboard - saved only in this browser, not sent
           anywhere else. Read-only: no edit access, and each code only ever unlocks the one patient it belongs to.
         </p>
-        <form onSubmit={handleAdd} className="mt-4 flex flex-wrap gap-2">
+        <form onSubmit={handleAdd} className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <input
             aria-label="Share code"
             value={code}
@@ -208,13 +240,72 @@ export default function ProviderPage() {
         {addError && <p className="mt-3 text-sm text-critical">{addError}</p>}
       </Card>
 
+      {roster.length > 0 && (
+        <>
+          {urgentCodes.length > 0 && (
+            <Card className="border-critical/40 bg-critical-soft">
+              <p className="text-sm font-bold text-critical">
+                🚨 {urgentCodes.length} patient{urgentCodes.length > 1 ? "s" : ""} need{urgentCodes.length > 1 ? "" : "s"} urgent attention
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {urgentCodes.map((r) => (
+                  <span key={r.code} className="rounded-full border border-critical/40 bg-white px-2.5 py-1 text-xs font-semibold text-critical">
+                    {r.nickname || r.patientName}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="eyebrow">Dashboard Summary</p>
+              <div className="flex items-center gap-2">
+                {lastRefreshed && (
+                  <span className="text-xs text-faint">Updated {lastRefreshed.toLocaleTimeString()}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => refreshAll(roster)}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  ↻ Refresh all
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-md border border-border p-3 text-center">
+                <p className="text-2xl font-extrabold text-ink">{roster.length}</p>
+                <p className="text-xs text-muted">Total patients</p>
+              </div>
+              <div className="rounded-md border border-critical/30 bg-critical-soft p-3 text-center">
+                <p className="text-2xl font-extrabold text-critical">{urgentCodes.length}</p>
+                <p className="text-xs text-critical">Urgent</p>
+              </div>
+              <div className="rounded-md border border-warning/30 bg-warning-soft p-3 text-center">
+                <p className="text-2xl font-extrabold text-warning">{moderateCount}</p>
+                <p className="text-xs text-warning">Moderate</p>
+              </div>
+              <div className="rounded-md border border-good/30 bg-good-soft p-3 text-center">
+                <p className="text-2xl font-extrabold text-good">{stableCount}</p>
+                <p className="text-xs text-good">Stable{noDataCount > 0 ? ` (+${noDataCount} no data)` : ""}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-faint">
+              Auto-refreshes every {AUTO_REFRESH_MS / 1000}s while this page is open. Scoped to the patients on this
+              dashboard only - not a facility-wide view.
+            </p>
+          </Card>
+        </>
+      )}
+
       {roster.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">No patients added yet. Add a share code above to start your dashboard.</p>
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {roster.map((entry) => (
+          {sortedRoster.map((entry) => (
             <RosterCard
               key={entry.code}
               entry={entry}
