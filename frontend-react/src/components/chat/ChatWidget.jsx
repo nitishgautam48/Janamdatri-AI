@@ -189,6 +189,7 @@ export default function ChatWidget() {
             }}
           >
             <input
+              aria-label={t("chat.placeholder")}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={listening ? "Listening…" : t("chat.placeholder")}

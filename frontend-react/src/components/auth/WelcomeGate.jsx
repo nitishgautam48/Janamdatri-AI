@@ -58,6 +58,7 @@ export default function WelcomeGate() {
         <form onSubmit={onSubmit} className="space-y-3">
           {tab === "signup" && (
             <input
+              aria-label="Name (optional)"
               placeholder="Name (optional)"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -67,6 +68,7 @@ export default function WelcomeGate() {
           <input
             type="email"
             required
+            aria-label="Email"
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -75,6 +77,7 @@ export default function WelcomeGate() {
           <input
             type="password"
             required
+            aria-label="Password"
             minLength={tab === "signup" ? 6 : undefined}
             placeholder={tab === "signup" ? "Password (min 6 characters)" : "Password"}
             value={form.password}

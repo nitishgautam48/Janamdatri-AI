@@ -2,6 +2,7 @@ import { useState } from "react";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import Pill from "../ui/Pill";
+import { slugify } from "../../lib/a11y";
 
 const STEPS = ["Vitals", "Anemia & Stage", "Additional Checks", "Symptoms", "History", "Review"];
 
@@ -32,24 +33,28 @@ const HISTORY_FLAGS = {
 
 function Field({ label, hint, why, ...props }) {
   const [showWhy, setShowWhy] = useState(false);
+  const id = `field-${slugify(label)}`;
   return (
     <div>
-      <label className="mb-1 flex items-center gap-1 text-sm font-medium text-muted">
-        {label} {hint && <span className="text-xs text-faint">{hint}</span>}
+      <div className="mb-1 flex items-center gap-1">
+        <label htmlFor={id} className="text-sm font-medium text-muted">
+          {label} {hint && <span className="text-xs text-faint">{hint}</span>}
+        </label>
         {why && (
           <button
             type="button"
             onClick={() => setShowWhy((s) => !s)}
             aria-expanded={showWhy}
             aria-label="Why this matters"
-            className="ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong text-[10px] font-bold leading-none text-faint hover:border-primary hover:text-primary"
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong text-[10px] font-bold leading-none text-faint hover:border-primary hover:text-primary"
           >
             i
           </button>
         )}
-      </label>
+      </div>
       {why && showWhy && <p className="mb-1.5 -mt-0.5 text-xs leading-snug text-primary">{why}</p>}
       <input
+        id={id}
         {...props}
         className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
       />
@@ -200,6 +205,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           </div>
           <textarea
             rows={4}
+            aria-label="Describe your symptoms"
             placeholder="Describe how you're feeling in your own words…"
             value={form.symptomText}
             onChange={(e) => set("symptomText", e.target.value)}

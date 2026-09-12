@@ -55,8 +55,9 @@ export default function ReportsPage() {
         </p>
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-muted">Upload file (.pdf or .txt)</label>
+          <label htmlFor="reports-file" className="mb-1 block text-sm font-medium text-muted">Upload file (.pdf or .txt)</label>
           <input
+            id="reports-file"
             type="file"
             accept=".pdf,.txt"
             onChange={(e) => setFile(e.target.files[0] || null)}
@@ -69,8 +70,9 @@ export default function ReportsPage() {
           <span className="h-px flex-1 bg-border" />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-muted">Paste the report's text</label>
+          <label htmlFor="reports-text" className="mb-1 block text-sm font-medium text-muted">Paste the report's text</label>
           <textarea
+            id="reports-text"
             rows={6}
             placeholder="e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…"
             value={text}

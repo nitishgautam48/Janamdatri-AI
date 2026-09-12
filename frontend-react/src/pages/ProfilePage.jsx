@@ -93,8 +93,9 @@ export default function ProfilePage() {
         <div className="mt-3">
           {form.mode === "lmp" ? (
             <div>
-              <label className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
+              <label htmlFor="profile-lmp" className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
               <input
+                id="profile-lmp"
                 type="date"
                 value={form.lmp}
                 onChange={(e) => set("lmp", e.target.value)}
@@ -103,8 +104,9 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div>
-              <label className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
+              <label htmlFor="profile-week" className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
               <input
+                id="profile-week"
                 type="number"
                 min={0}
                 max={42}
@@ -131,8 +133,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-5">
-          <label className="mb-1 block text-sm font-medium text-muted">Existing medical conditions (optional)</label>
+          <label htmlFor="profile-conditions" className="mb-1 block text-sm font-medium text-muted">Existing medical conditions (optional)</label>
           <textarea
+            id="profile-conditions"
             rows={2}
             placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none"
             value={form.conditions}
@@ -142,8 +145,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-5">
-          <label className="mb-1 block text-sm font-medium text-muted">Current medications / supplements (optional)</label>
+          <label htmlFor="profile-medications" className="mb-1 block text-sm font-medium text-muted">Current medications / supplements (optional)</label>
           <textarea
+            id="profile-medications"
             rows={2}
             placeholder="e.g. iron-folic acid, calcium, thyroid medication - leave blank if none"
             value={form.medications}
@@ -153,8 +157,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-5">
-          <label className="mb-1 block text-sm font-medium text-muted">ANC visits completed so far</label>
+          <label htmlFor="profile-anc-visits" className="mb-1 block text-sm font-medium text-muted">ANC visits completed so far</label>
           <input
+            id="profile-anc-visits"
             type="number"
             min={0}
             max={12}
@@ -179,8 +184,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-5">
-          <label className="mb-1 block text-sm font-medium text-muted">Delivery date (only if you've already delivered)</label>
+          <label htmlFor="profile-delivery-date" className="mb-1 block text-sm font-medium text-muted">Delivery date (only if you've already delivered)</label>
           <input
+            id="profile-delivery-date"
             type="date"
             value={form.deliveryDate}
             onChange={(e) => set("deliveryDate", e.target.value)}

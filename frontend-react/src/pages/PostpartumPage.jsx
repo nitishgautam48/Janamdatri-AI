@@ -56,8 +56,9 @@ export default function PostpartumPage() {
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-muted">Delivery date</label>
+            <label htmlFor="postpartum-delivery-date" className="mb-1 block text-sm font-medium text-muted">Delivery date</label>
             <input
+              id="postpartum-delivery-date"
               type="date"
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}

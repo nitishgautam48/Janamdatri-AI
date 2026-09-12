@@ -76,8 +76,9 @@ export default function GuidePage() {
         <div className="mt-3 flex flex-wrap items-end gap-3">
           {mode === "lmp" ? (
             <div>
-              <label className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
+              <label htmlFor="guide-lmp" className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
               <input
+                id="guide-lmp"
                 type="date"
                 value={lmp}
                 onChange={(e) => setLmp(e.target.value)}
@@ -86,8 +87,9 @@ export default function GuidePage() {
             </div>
           ) : (
             <div>
-              <label className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
+              <label htmlFor="guide-week" className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
               <input
+                id="guide-week"
                 type="number"
                 min={0}
                 max={42}

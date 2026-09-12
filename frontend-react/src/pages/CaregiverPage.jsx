@@ -49,6 +49,7 @@ export default function CaregiverPage() {
         </p>
         <form onSubmit={lookup} className="mt-4 flex gap-2">
           <input
+            aria-label="Share code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             maxLength={8}

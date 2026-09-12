@@ -187,6 +187,7 @@ export default function ProviderPage() {
         </p>
         <form onSubmit={handleAdd} className="mt-4 flex flex-wrap gap-2">
           <input
+            aria-label="Share code"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             maxLength={8}
@@ -194,6 +195,7 @@ export default function ProviderPage() {
             className="min-w-0 flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 font-mono text-sm uppercase text-ink placeholder:text-faint focus:border-primary focus:outline-none"
           />
           <input
+            aria-label="Nickname (optional)"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Nickname (optional, e.g. Ward 3 - bed 4)"
