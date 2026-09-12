@@ -45,7 +45,7 @@ export const translations = {
     "home.noAlerts": "No current emergency signs",
     "home.viewWarningSigns": "View Warning Signs →",
 
-    "chat.title": "Instant Help",
+    "chat.title": "Ask Janamdatri",
     "chat.placeholder": "Ask a question or describe symptoms",
     "chat.emergencyDisclaimer": "This is an automated helper, not a substitute for emergency care.",
 
@@ -88,7 +88,7 @@ export const translations = {
     "home.noAlerts": "कोई आपातकालीन संकेत नहीं",
     "home.viewWarningSigns": "चेतावनी संकेत देखें →",
 
-    "chat.title": "तुरंत सहायता",
+    "chat.title": "जनमदात्री से पूछें",
     "chat.placeholder": "सवाल पूछें या लक्षण बताएं",
     "chat.emergencyDisclaimer": "यह एक स्वचालित सहायक है, आपातकालीन देखभाल का विकल्प नहीं।",
 
@@ -135,7 +135,7 @@ export const translations = {
     "home.noAlerts": "Koi emergency sign nahi hai abhi",
     "home.viewWarningSigns": "Warning signs dekhein →",
 
-    "chat.title": "Turant Madad",
+    "chat.title": "Janamdatri Se Poochein",
     "chat.placeholder": "Sawaal poochein ya symptoms batayein",
     "chat.emergencyDisclaimer": "Yeh ek automated helper hai, emergency care ka replacement nahi.",
 

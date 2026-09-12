@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import PregnancyTimeline from "../components/ui/PregnancyTimeline";
 import { api } from "../lib/api";
 import { KEYS, scopedSet } from "../lib/storage";
 
@@ -113,8 +114,8 @@ export default function GuidePage() {
                 </div>
               </div>
             </div>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-hover">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min((guide.week / 40) * 100, 100)}%` }} />
+            <div className="mt-5">
+              <PregnancyTimeline week={guide.week} />
             </div>
           </Card>
 

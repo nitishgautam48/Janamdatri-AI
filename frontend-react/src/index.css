@@ -80,3 +80,34 @@ body {
     background: #fff;
   }
 }
+
+/* Accessibility toggles (AccessibilityContext) - both apply as attributes
+   on <html> so a single rule each reaches every already-built component,
+   the same mechanism a light/dark theme swap would use: components
+   reference these as CSS variables via Tailwind's generated utilities
+   (e.g. .text-ink -> color: var(--color-ink)), so redefining the
+   variable here cascades everywhere without per-component changes. */
+html[data-text-scale="large"] {
+  font-size: 118%;
+}
+
+html[data-contrast="high"] {
+  --color-bg: #ffffff;
+  --color-bg-soft: #f0f0f0;
+  --color-surface: #ffffff;
+  --color-surface-hover: #e5e5e5;
+  --color-border: #333333;
+  --color-border-strong: #000000;
+  --color-ink: #000000;
+  --color-muted: #1a1a1a;
+  --color-faint: #333333;
+  --color-primary: #006b60;
+  --color-primary-dark: #004d44;
+  --color-primary-soft: rgba(0, 107, 96, 0.18);
+  --color-critical: #b30000;
+  --color-critical-soft: rgba(179, 0, 0, 0.16);
+  --color-warning: #8a5600;
+  --color-warning-soft: rgba(138, 86, 0, 0.16);
+  --color-good: #0a6b1f;
+  --color-good-soft: rgba(10, 107, 31, 0.16);
+}

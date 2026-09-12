@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useLang } from "../../context/LangContext";
+import { useAccessibility } from "../../context/AccessibilityContext";
 import Button from "../ui/Button";
 
 // Utility-only top bar: brand, language toggle, user/logout, Call 108.
@@ -10,6 +11,7 @@ import Button from "../ui/Button";
 export default function TopBar() {
   const { user, logout } = useAuth();
   const { toggleLang, nextLangLabel, t } = useLang();
+  const { largeText, toggleLargeText, highContrast, toggleHighContrast } = useAccessibility();
   const headerRef = useRef(null);
 
   // The chat widget anchors itself below this header (see ChatWidget's
@@ -39,6 +41,30 @@ export default function TopBar() {
         </NavLink>
 
         <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLargeText}
+            aria-pressed={largeText}
+            aria-label={largeText ? "Turn off large text" : "Turn on large text"}
+            title="Large text"
+            className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${
+              largeText ? "border-primary bg-primary-soft text-primary" : "border-border-strong text-muted hover:text-ink"
+            }`}
+          >
+            Aa
+          </button>
+          <button
+            type="button"
+            onClick={toggleHighContrast}
+            aria-pressed={highContrast}
+            aria-label={highContrast ? "Turn off high contrast" : "Turn on high contrast"}
+            title="High contrast"
+            className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm ${
+              highContrast ? "border-primary bg-primary-soft text-primary" : "border-border-strong text-muted hover:text-ink"
+            }`}
+          >
+            ◐
+          </button>
           <button
             type="button"
             onClick={toggleLang}

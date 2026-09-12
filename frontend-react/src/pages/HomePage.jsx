@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
+import PregnancyTimeline from "../components/ui/PregnancyTimeline";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import { useHistory } from "../lib/useHistory";
@@ -149,17 +150,21 @@ export default function HomePage() {
           {t(greetingKey)}
           {name ? `, ${name}` : ""} 👋
         </h1>
-        {(guide || isPostpartum) && (
+        {isPostpartum ? (
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs font-medium text-muted">
-              <span>{isPostpartum ? `Day ${postpartumGuide.daysPostpartum} postpartum` : `Week 1`}</span>
-              <span>{isPostpartum ? "6 weeks" : "Week 40"}</span>
+              <span>Day {postpartumGuide.daysPostpartum} postpartum</span>
+              <span>6 weeks</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-hover">
               <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
-        )}
+        ) : guide ? (
+          <div className="mt-4">
+            <PregnancyTimeline week={guide.week} />
+          </div>
+        ) : null}
       </div>
 
       {/* A. Health Status Hero Card - the one thing to look at first. */}

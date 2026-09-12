@@ -13,6 +13,13 @@ const UNRESOLVED_INTENTS = new Set(["clarify_symptom", "fallback", "danger_sign_
 
 const GREETING = { sender: "bot", text: "Hi! Ask me about ANC visits, nutrition, anemia, mental health, or describe a symptom and I'll check for danger signs." };
 
+const SUGGESTED_PROMPTS = [
+  "What foods help with anemia?",
+  "What danger signs should I watch for?",
+  "How often should I have ANC checkups?",
+  "I've been feeling low lately",
+];
+
 // Anchored bottom-right with a top offset and z-30 (TopBar is z-40), so
 // the header can never end up hidden behind it. The bug in the old
 // vanilla-JS widget was a full-viewport panel starting at top:0 that sat
@@ -84,8 +91,8 @@ export default function ChatWidget() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open]);
 
-  async function send() {
-    const message = input.trim();
+  async function send(overrideText) {
+    const message = (overrideText ?? input).trim();
     if (!message || sending) return;
     const withUser = [...messages, { sender: "user", text: message }];
     setMessages(withUser);
@@ -134,7 +141,7 @@ export default function ChatWidget() {
           data-print-hide
           className="fixed bottom-24 right-5 z-30 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl shadow-black/50 lg:bottom-5">
           <div className="flex items-center justify-between border-b border-border bg-bg-soft px-4 py-3">
-            <span className="text-sm font-semibold text-ink">💬 {t("chat.title")}</span>
+            <span className="text-sm font-semibold text-ink">✨ {t("chat.title")}</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-muted hover:text-ink">
               ✕
             </button>
@@ -157,6 +164,21 @@ export default function ChatWidget() {
               </div>
             ))}
             {sending && <p className="text-xs text-muted">…</p>}
+
+            {messages.length === 1 && !sending && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {SUGGESTED_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => send(p)}
+                    className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <form
