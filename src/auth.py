@@ -16,7 +16,14 @@ import sqlite3
 import time
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "app.db"
+# Overridable via JANAMDATRI_DATA_DIR so a host with an ephemeral
+# filesystem (e.g. Render without a mounted persistent disk) can point
+# this at a persistent-disk mount instead - otherwise every redeploy
+# wipes accounts, sessions, and share codes, silently invalidating any
+# token a browser still has saved even though nothing in the auth code
+# itself is wrong.
+_data_dir = os.environ.get("JANAMDATRI_DATA_DIR")
+DB_PATH = Path(_data_dir) / "app.db" if _data_dir else Path(__file__).resolve().parent.parent / "data" / "app.db"
 
 PBKDF2_ITERATIONS = 200_000
 

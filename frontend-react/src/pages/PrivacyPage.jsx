@@ -10,6 +10,7 @@ export default function PrivacyPage() {
   const [controlsNote, setControlsNote] = useState("");
   const [shareCode, setShareCode] = useState(null);
   const [shareCodeNote, setShareCodeNote] = useState("");
+  const [shareCodeError, setShareCodeError] = useState(false);
   const [shareCodeLoaded, setShareCodeLoaded] = useState(false);
 
   useEffect(() => {
@@ -69,23 +70,27 @@ export default function PrivacyPage() {
 
   async function handleGenerateCode() {
     setShareCodeNote("");
+    setShareCodeError(false);
     try {
       const data = await api.createShareCode();
       setShareCode(data.code);
       setShareCodeNote("New code generated - any earlier code you had no longer works.");
     } catch (err) {
       setShareCodeNote(err.message);
+      setShareCodeError(true);
     }
   }
 
   async function handleRevokeCode() {
     setShareCodeNote("");
+    setShareCodeError(false);
     try {
       await api.revokeShareCode();
       setShareCode(null);
       setShareCodeNote("Access revoked.");
     } catch (err) {
       setShareCodeNote(err.message);
+      setShareCodeError(true);
     }
   }
 
@@ -177,7 +182,9 @@ export default function PrivacyPage() {
               <Button variant="ghost" onClick={handleGenerateCode}>🔑 Generate Share Code</Button>
               {shareCode && <Button variant="danger" onClick={handleRevokeCode}>✕ Revoke Access</Button>}
             </div>
-            {shareCodeNote && <p className="mt-2 text-sm text-muted">{shareCodeNote}</p>}
+            {shareCodeNote && (
+              <p className={`mt-2 text-sm ${shareCodeError ? "font-semibold text-critical" : "text-muted"}`}>{shareCodeNote}</p>
+            )}
           </div>
         )}
       </Card>

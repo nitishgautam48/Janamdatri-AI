@@ -1,4 +1,4 @@
-import { authHeaders } from "./storage";
+import { authHeaders, clearSession, getToken } from "./storage";
 
 async function request(path, { method = "GET", body, auth = false } = {}) {
   const headers = { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) };
@@ -9,6 +9,18 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
   });
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // A 401 on an authenticated call means the token this browser is
+    // holding no longer resolves to a session server-side (expired, or -
+    // on a host with an ephemeral filesystem - the account database itself
+    // reset since the token was issued). Left alone, the UI stays stuck
+    // "logged in" with a token that will never work again, so every
+    // authenticated action from here on fails the same silent way. Clear
+    // it and tell the rest of the app to drop back to a clean logged-out
+    // state instead of leaving that stale, unrecoverable state in place.
+    if (res.status === 401 && auth && getToken()) {
+      clearSession();
+      window.dispatchEvent(new Event("auth:expired"));
+    }
     throw new Error(payload.detail || `Request to ${path} failed (${res.status}).`);
   }
   return payload.data;

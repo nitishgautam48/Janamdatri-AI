@@ -125,6 +125,16 @@ and chat to the account instead of the browser's localStorage. Entirely
 optional: "Continue as Guest" skips all of this and keeps everything
 device-local.
 
+The SQLite file lives under `src/data/app.db` by default. **On a host
+with an ephemeral filesystem (e.g. a Render web service with no disk
+attached), that file - and every account, session token, and share code
+in it - is wiped on each redeploy or restart**, while browsers that were
+already logged in keep their now-invalid token in localStorage. That
+shows up as accounts and provider share codes silently "not working"
+after a redeploy, even though nothing in the auth code is broken. Fix:
+attach a persistent disk (e.g. mounted at `/data`) and set
+`JANAMDATRI_DATA_DIR=/data` so the database survives redeploys.
+
 ## API — `src/api/main.py`
 
 ```

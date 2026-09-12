@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import {
   clearSession,
@@ -48,6 +48,21 @@ export function AuthProvider({ children }) {
     setUser(null);
     setGuestState(false);
     setIdentityKey((k) => k + 1);
+  }, []);
+
+  // api.js dispatches this the moment any authenticated call comes back
+  // 401 with a token still set - it has already cleared localStorage, so
+  // this just brings React state in line so the whole app re-renders as
+  // logged-out instead of staying stuck showing a "logged in" UI that no
+  // longer has a working session behind it.
+  useEffect(() => {
+    function onExpired() {
+      setUser(null);
+      setGuestState(false);
+      setIdentityKey((k) => k + 1);
+    }
+    window.addEventListener("auth:expired", onExpired);
+    return () => window.removeEventListener("auth:expired", onExpired);
   }, []);
 
   const value = {
