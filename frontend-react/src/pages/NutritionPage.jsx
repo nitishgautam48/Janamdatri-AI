@@ -2,9 +2,22 @@ import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { api } from "../lib/api";
-import { KEYS, lastKnownHemoglobin, scopedGet, scopedSet } from "../lib/storage";
+import {
+  KEYS, lastKnownHemoglobin, scopedGet, scopedSet,
+  loadMealLog, toggleMealLogGroup, mealLogFrequencyCounts, todayDateStr,
+} from "../lib/storage";
 
 const STATUS_TONE = { Adequate: "good", Borderline: "warning", Low: "critical" };
+
+// Turns a "logged N of the last 7 days" count into the same 0-3 scale the
+// frequency questionnaire already uses (see nutrition_eval.py's
+// FREQUENCY_OPTIONS) - a suggested starting answer, not a forced one.
+function countToFrequencyIndex(count) {
+  if (!count) return 0;
+  if (count <= 2) return 1;
+  if (count <= 4) return 2;
+  return 3;
+}
 
 // A simple average of the per-nutrient percentages already shown below -
 // not a new medical claim, just one number to anchor the page on. Computed
@@ -22,10 +35,31 @@ export default function NutritionPage() {
   const [result, setResult] = useState(() => withNutritionScore(scopedGet(KEYS.NUTRITION)?.result || null));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mealLog, setMealLog] = useState(() => loadMealLog());
+  const todayGroups = new Set(mealLog[todayDateStr()] || []);
 
   useEffect(() => {
-    api.nutritionItems().then(setItems);
+    api.nutritionItems().then((data) => {
+      setItems(data);
+      // Suggest answers from the meal log so far, rather than leaving the
+      // questionnaire blank - still fully editable before submitting.
+      const counts = mealLogFrequencyCounts();
+      if (Object.keys(counts).length) {
+        setResponses((r) => {
+          if (Object.keys(r).length) return r;
+          const suggested = {};
+          data.questions.forEach((q) => {
+            if (counts[q.id] != null) suggested[q.id] = countToFrequencyIndex(counts[q.id]);
+          });
+          return suggested;
+        });
+      }
+    });
   }, []);
+
+  function toggleMeal(groupId) {
+    setMealLog(toggleMealLogGroup(groupId));
+  }
 
   async function handleSubmit() {
     setError("");
@@ -55,6 +89,35 @@ export default function NutritionPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
+      {items && (
+        <Card>
+          <h1 className="text-xl font-bold text-ink">Today's Meals</h1>
+          <p className="mt-1 text-sm text-muted">
+            Tap what you've eaten today. This builds a real week-by-week picture and pre-fills the frequency
+            questionnaire below - you can still adjust every answer before submitting.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {items.questions.map((q) => {
+              const logged = todayGroups.has(q.id);
+              const count = mealLogFrequencyCounts()[q.id] || 0;
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => toggleMeal(q.id)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    logged ? "border-primary bg-primary-soft text-primary" : "border-border-strong text-muted hover:border-primary hover:text-ink"
+                  }`}
+                >
+                  {logged ? "✓ " : ""}{q.text.split("(")[0].trim()}
+                  {count > 0 && <span className="ml-1 text-faint">· {count}/7d</span>}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <Card>
         <h1 className="text-xl font-bold text-ink">Nutrition Analysis</h1>
         <p className="mt-1 text-sm text-muted">

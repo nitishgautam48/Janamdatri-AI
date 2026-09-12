@@ -162,8 +162,46 @@ export function epdsFollowUpDue(savedEpds) {
   return days != null && days >= EPDS_FOLLOWUP_DAYS;
 }
 
-function todayDateStr() {
+export function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// A day-by-day log of which food groups (the same ids nutrition_eval.py's
+// QUESTIONS already score against - no new categories invented) were
+// eaten - the "meal-based input" the product spec asks for, layered on
+// TOP OF rather than replacing the existing frequency questionnaire: see
+// mealLogFrequencyCounts(), which turns this log into a suggested answer
+// for that questionnaire instead of a second, disconnected feature.
+export function loadMealLog() {
+  return scopedGet(KEYS.MEAL_LOG) || {};
+}
+
+export function toggleMealLogGroup(groupId) {
+  const log = loadMealLog();
+  const today = todayDateStr();
+  const todayGroups = new Set(log[today] || []);
+  if (todayGroups.has(groupId)) todayGroups.delete(groupId);
+  else todayGroups.add(groupId);
+  const next = { ...log, [today]: Array.from(todayGroups) };
+  scopedSet(KEYS.MEAL_LOG, next);
+  return next;
+}
+
+// How many of the last N days (today inclusive) each food group was
+// logged - the raw material for suggesting a frequency-questionnaire
+// answer ("Regularly" if logged 5-7 of the last 7 days, etc).
+export function mealLogFrequencyCounts(days = 7) {
+  const log = loadMealLog();
+  const counts = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const groups = log[d.toISOString().slice(0, 10)] || [];
+    groups.forEach((g) => {
+      counts[g] = (counts[g] || 0) + 1;
+    });
+  }
+  return counts;
 }
 
 // "supplement"/"hydration" are the only two Today's Care tasks that mean
@@ -202,6 +240,7 @@ const EXPORTABLE_KEYS = [
   { key: "EPDS", label: "mentalHealthCheck" },
   { key: "GUIDE", label: "pregnancyGuide" },
   { key: "NUTRITION", label: "nutritionCheck" },
+  { key: "MEAL_LOG", label: "mealLog" },
   { key: "REPORT_VITALS_LOG", label: "reportVitalsLog" },
   { key: "TODAY_CARE", label: "todayCareChecklist" },
   { key: "CHAT_HISTORY", label: "chatHistory" },
@@ -230,4 +269,5 @@ export const KEYS = {
   PROFILE_EXTRA: "janamdatri_pregnancy_profile_extra",
   CHAT_HISTORY: "janamdatri_chat",
   REPORT_VITALS_LOG: "janamdatri_report_vitals_log",
+  MEAL_LOG: "janamdatri_meal_log",
 };
