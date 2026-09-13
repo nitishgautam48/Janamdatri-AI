@@ -41,11 +41,15 @@ CATEGORIES = {
                      # still doesn't match anything.
                      "pain in my head", "pain in the head", "head pain", "head hurts",
                      "my head hurts", "head is paining", "head is hurting",
+                     # Romanized Hindi (Hinglish) - a representative, non-
+                     # exhaustive set for the terms people actually type,
+                     # same rationale as the Devanagari phrases below.
+                     "sar dard", "sar mein dard", "sar me dard", "chakkar", "chakkar aana",
                      "हल्का सिरदर्द", "पैरों में सूजन", "सिर में दर्द"],
         "severe": ["severe headache", "blurred vision", "seeing spots",
                    "vision is blurry", "cant see properly", "face is swollen",
-                   "swelling in my face", "sudden swelling", "convulsions", "had a fit",
-                   "seizure", "lost consciousness", "blacked out",
+                   "swelling in my face", "sudden swelling", "convulsions", "convulsion", "had a fit",
+                   "seizure", "had a seizure", "lost consciousness", "blacked out",
                    "yellow skin", "yellow eyes", "jaundice", "skin turned yellow",
                    # Chest pain in pregnancy is a recognized red flag for
                    # severe pre-eclampsia (epigastric/chest pain) as well as
@@ -56,30 +60,35 @@ CATEGORIES = {
                    # existing pre-eclampsia workup rule/intervention rather
                    # than needing its own expert_system.py wiring.
                    "chest pain", "pain in my chest", "chest tightness", "tightness in my chest",
+                   "tez sar dard", "bahut tez sar dard",
                    "सीने में दर्द", "छाती में दर्द",
                    "तेज़ सिरदर्द", "धुंधला दिखना", "चेहरे पर सूजन", "दौरा पड़ा", "बेहोश हो गई"],
     },
     "hemorrhage": {
         "moderate": ["light bleeding", "spotting", "slight bleeding", "little bit of blood",
                      "bleeding", "started bleeding",
+                     "halka khoon", "khoon aa raha", "khoon aana",
                      "हल्का रक्तस्राव"],
         "severe": ["heavy bleeding", "bleeding a lot", "soaked through a pad",
                    "soaking a pad every hour", "blood clots", "bleeding heavily",
                    "feel dizzy and bleeding", "bleeding and weak", "passed out from bleeding",
+                   "bahut khoon", "bahut khoon beh raha", "zyada khoon",
                    "भारी रक्तस्राव", "बहुत खून बह रहा है"],
     },
     "infection": {
         "moderate": ["mild fever", "feeling feverish", "slight fever", "chills", "fever",
                      "loose motions", "diarrhea", "diarrhoea",
+                     "halka bukhar", "bukhar",
                      "हल्का बुखार"],
         "severe": ["high fever", "foul smelling discharge", "bad smelling discharge",
                    "discharge smells bad", "too weak to get out of bed", "burning while urinating",
                    "wound is not healing", "pus from the wound", "severe abdominal pain with fever",
+                   "tez bukhar",
                    "तेज़ बुखार", "बदबूदार स्राव"],
     },
     "anemia": {
         "moderate": ["feel tired all the time", "always tired", "weak and tired", "pale skin",
-                     "weak", "tired",
+                     "weak", "tired", "kamzori", "kamzoori", "bahut kamzori",
                      "हमेशा थकान रहती है"],
         "severe": ["extremely weak", "breathless even resting", "short of breath easily",
                    "short of breath", "not able to breath", "not able to breathe",
@@ -91,10 +100,11 @@ CATEGORIES = {
     "fetal_distress": {
         "moderate": ["baby is moving less", "less movement than usual", "fewer kicks today",
                      "not moving much", "not kicking much", "baby not kicking", "kicking less",
-                     "reduced kicks",
+                     "reduced kicks", "bache ki movement kam", "bacha kam hil raha",
                      "बच्चे की हलचल कम हो गई"],
         "severe": ["baby stopped moving", "no movement since yesterday", "cant feel the baby move",
                    "no kicks at all", "baby not moving at all", "stopped kicking", "not kicking at all",
+                   "bacha hil nahi raha", "bacha bilkul hil nahi raha",
                    "बच्चा हिलना बंद हो गया", "बच्चे की हलचल महसूस नहीं हो रही"],
     },
     "obstructed_labor": {

@@ -42,9 +42,13 @@ PHRASES_BY_RUNG = {
         # "headache" but matched no rung at all before this.
         "pain in my head", "pain in the head", "head pain", "head hurts",
         "my head hurts", "head is paining", "head is hurting",
+        # Romanized Hindi (Hinglish) - representative, non-exhaustive, same
+        # rationale as text_analyzer.py's equivalent set.
+        "sar dard", "sar mein dard", "sar me dard", "halka bukhar", "kamzori", "kamzoori",
         "हल्की सूजन", "थोड़ी थकान", "सिर में दर्द"],
     2: ["persistent headache", "headache that wont go away", "less movement than usual",
         "fewer kicks today", "mild spotting", "mild fever", "feeling feverish", "slight fever",
+        "bache ki movement kam", "bacha kam hil raha", "bukhar",
         "लगातार सिरदर्द", "हल्का बुखार"],
     3: ["blurred vision", "vision is blurry", "seeing spots", "face is swollen",
         "hands are swollen", "moderate bleeding", "high fever with chills", "high fever",
@@ -56,6 +60,7 @@ PHRASES_BY_RUNG = {
         # "concerning, needs a facility visit today" rather than silently
         # falling through the ladder as if nothing was said.
         "started bleeding", "im bleeding", "i am bleeding", "bleeding today",
+        "khoon aa raha", "khoon aana", "tez bukhar",
         "धुंधला दिखना", "चेहरे पर सूजन", "तेज़ बुखार"],
     4: ["severe headache", "cant see properly", "severe abdominal pain", "heavy bleeding",
         "bleeding heavily", "soaked through a pad", "soaking a pad every hour",
@@ -71,10 +76,12 @@ PHRASES_BY_RUNG = {
         # it was previously invisible here (and to text_analyzer.py) even
         # though "difficulty breathing" right next to it was already rung 4.
         "chest pain", "pain in my chest", "chest tightness", "tightness in my chest",
+        "tez sar dard", "bahut tez sar dard", "bahut khoon", "bahut khoon beh raha", "zyada khoon",
+        "bacha hil nahi raha", "bacha bilkul hil nahi raha",
         "तेज़ सिरदर्द", "तेज़ पेट दर्द", "भारी रक्तस्राव", "बच्चा हिलना बंद हो गया",
         "सांस लेने में तकलीफ़", "सांस नहीं आ रही", "बदबूदार स्राव",
         "सीने में दर्द", "छाती में दर्द"],
-    5: ["convulsions", "had a fit", "seizure", "lost consciousness", "blacked out",
+    5: ["convulsions", "convulsion", "had a fit", "seizure", "had a seizure", "lost consciousness", "blacked out",
         "fainted", "cold and clammy", "labor for more than a day", "stuck baby",
         "baby not coming out", "bleeding and passed out",
         "दौरा पड़ा", "बेहोश हो गई", "एक दिन से ज़्यादा प्रसव पीड़ा", "बच्चा अटक गया"],

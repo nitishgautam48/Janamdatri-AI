@@ -49,8 +49,8 @@ DYNAMIC_RISK_FACTORS = {
     "teen_or_unsupported_pregnancy": ["no one knows i am pregnant", "hiding my pregnancy",
                                       "family does not know", "alone in this pregnancy"],
     "high_risk_symptoms_reported": ["severe headache", "blurred vision", "heavy bleeding",
-                                    "baby stopped moving", "convulsions", "high fever",
-                                    "severe abdominal pain"],
+                                    "baby stopped moving", "convulsions", "convulsion", "had a seizure",
+                                    "high fever", "severe abdominal pain"],
 }
 
 PROTECTIVE_FACTORS = {
