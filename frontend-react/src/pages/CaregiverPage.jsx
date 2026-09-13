@@ -54,7 +54,7 @@ export default function CaregiverPage() {
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             maxLength={8}
             placeholder="e.g. 8UDPF7AG"
-            className="flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 font-mono text-sm uppercase text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 font-mono text-sm uppercase text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <Button type="submit" disabled={busy}>
             {busy ? "…" : "Check In"}

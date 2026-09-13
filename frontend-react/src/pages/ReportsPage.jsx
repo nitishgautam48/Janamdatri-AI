@@ -77,7 +77,7 @@ export default function ReportsPage() {
             placeholder="e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
         </div>
 

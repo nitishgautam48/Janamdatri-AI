@@ -219,7 +219,7 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={listening ? "Listening…" : t("chat.placeholder")}
-              className="h-11 flex-1 rounded-full border border-border-strong bg-bg px-4 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+              className="h-11 flex-1 rounded-full border border-border-strong bg-bg px-4 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
             {voiceSupported && (
               <button

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
+import Spinner from "../components/ui/Spinner";
 import { api } from "../lib/api";
 import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue } from "../lib/storage";
 
@@ -78,7 +79,7 @@ export default function MentalWellnessPage() {
         </p>
 
         {!items ? (
-          <p className="mt-4 text-sm text-muted">Loading…</p>
+          <Spinner className="mt-4" />
         ) : (
           <div className="mt-4 divide-y divide-border">
             {items.items.map((text, i) => (

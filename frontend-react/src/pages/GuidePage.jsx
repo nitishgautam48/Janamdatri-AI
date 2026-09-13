@@ -82,7 +82,7 @@ export default function GuidePage() {
                 type="date"
                 value={lmp}
                 onChange={(e) => setLmp(e.target.value)}
-                className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+                className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               />
             </div>
           ) : (
@@ -95,7 +95,7 @@ export default function GuidePage() {
                 max={42}
                 value={week}
                 onChange={(e) => setWeek(e.target.value)}
-                className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+                className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               />
             </div>
           )}

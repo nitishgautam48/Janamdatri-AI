@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import Spinner from "../components/ui/Spinner";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { clearScopedLocalData, collectLocalExportData, getToken } from "../lib/storage";
@@ -168,7 +169,7 @@ export default function PrivacyPage() {
             nothing on our server for a provider's code to point to.
           </p>
         ) : !shareCodeLoaded ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <Spinner />
         ) : (
           <div>
             {shareCode ? (

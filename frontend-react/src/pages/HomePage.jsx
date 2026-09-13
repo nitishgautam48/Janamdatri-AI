@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
 import PregnancyTimeline from "../components/ui/PregnancyTimeline";
+import Spinner from "../components/ui/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import { useHistory } from "../lib/useHistory";
@@ -258,7 +259,7 @@ export default function HomePage() {
             <p className="eyebrow mb-2">Overall Risk Assessment</p>
             <Pill tone={risk.tone} className="text-sm">{risk.label}</Pill>
             {loading ? (
-              <p className="mt-2 text-sm text-muted">Loading your status…</p>
+              <Spinner label="Loading your status…" className="mt-2" />
             ) : latest ? (
               <p className="mt-2 text-sm text-muted">
                 Last checked {new Date(latest.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
@@ -361,7 +362,7 @@ export default function HomePage() {
         <p className="text-sm leading-relaxed text-ink">{tip}</p>
       </Card>
 
-      {loading && <p className="text-xs text-faint">Loading your history…</p>}
+      {loading && <Spinner label="Loading your history…" />}
     </div>
   );
 }

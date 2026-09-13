@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
+import Spinner from "../components/ui/Spinner";
 import { api } from "../lib/api";
 import { loadRoster, addToRoster, removeFromRoster } from "../lib/providerRoster";
 
@@ -97,7 +98,7 @@ function RosterCard({ entry, summary, onRefresh, onRemove }) {
       {summary?.error ? (
         <p className="mt-2 text-sm text-critical">{summary.error}</p>
       ) : !summary ? (
-        <p className="mt-2 text-sm text-muted">Loading…</p>
+        <Spinner className="mt-2" />
       ) : sev ? (
         <>
           <div className="mt-2">
@@ -224,14 +225,14 @@ export default function ProviderPage() {
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             maxLength={8}
             placeholder="Share code, e.g. 8UDPF7AG"
-            className="min-w-0 flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 font-mono text-sm uppercase text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 font-mono text-sm uppercase text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <input
             aria-label="Nickname (optional)"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Nickname (optional, e.g. Ward 3 - bed 4)"
-            className="min-w-0 flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <Button type="submit" disabled={addBusy}>
             {addBusy ? "…" : "+ Add Patient"}

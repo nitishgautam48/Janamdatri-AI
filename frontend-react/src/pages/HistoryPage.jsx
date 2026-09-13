@@ -4,6 +4,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
 import Sparkline from "../components/ui/Sparkline";
+import Spinner from "../components/ui/Spinner";
 import { useHistory } from "../lib/useHistory";
 import { KEYS, scopedGet, scopedRemove } from "../lib/storage";
 
@@ -193,7 +194,7 @@ export default function HistoryPage() {
       <Card>
         <h1 className="text-xl font-bold text-ink">Health Trends</h1>
         <p className="mb-3 text-sm text-muted">How your key numbers and risk level have changed across your assessments.</p>
-        {loading ? <p className="text-sm text-muted">Loading…</p> : <HealthTrends history={history} />}
+        {loading ? <Spinner /> : <HealthTrends history={history} />}
       </Card>
 
       <Card>

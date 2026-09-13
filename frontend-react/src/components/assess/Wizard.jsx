@@ -56,7 +56,7 @@ function Field({ label, hint, why, ...props }) {
       <input
         id={id}
         {...props}
-        className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+        className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
       />
     </div>
   );
@@ -249,7 +249,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
             placeholder="Describe how you're feeling in your own words…"
             value={form.symptomText}
             onChange={(e) => set("symptomText", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import Spinner from "../components/ui/Spinner";
 import { api } from "../lib/api";
 import {
   KEYS, lastKnownHemoglobin, scopedGet, scopedSet,
@@ -128,7 +129,7 @@ export default function NutritionPage() {
         </p>
 
         {!items ? (
-          <p className="mt-4 text-sm text-muted">Loading…</p>
+          <Spinner className="mt-4" />
         ) : (
           <div className="mt-4 divide-y divide-border">
             {items.questions.map((q, i) => (

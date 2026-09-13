@@ -99,7 +99,7 @@ export default function ProfilePage() {
                 type="date"
                 value={form.lmp}
                 onChange={(e) => set("lmp", e.target.value)}
-                className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+                className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               />
             </div>
           ) : (
@@ -112,7 +112,7 @@ export default function ProfilePage() {
                 max={42}
                 value={form.week}
                 onChange={(e) => set("week", e.target.value)}
-                className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+                className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               />
             </div>
           )}
@@ -140,7 +140,7 @@ export default function ProfilePage() {
             placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none"
             value={form.conditions}
             onChange={(e) => set("conditions", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
         </div>
 
@@ -152,7 +152,7 @@ export default function ProfilePage() {
             placeholder="e.g. iron-folic acid, calcium, thyroid medication - leave blank if none"
             value={form.medications}
             onChange={(e) => set("medications", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
         </div>
 
@@ -166,7 +166,7 @@ export default function ProfilePage() {
             placeholder="e.g. 3"
             value={form.ancVisitsCompleted}
             onChange={(e) => set("ancVisitsCompleted", e.target.value)}
-            className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+            className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <p className="mt-1 text-xs text-faint">Helps Today's Care know whether an ANC visit reminder is still relevant.</p>
         </div>
@@ -190,7 +190,7 @@ export default function ProfilePage() {
             type="date"
             value={form.deliveryDate}
             onChange={(e) => set("deliveryDate", e.target.value)}
-            className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+            className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <p className="mt-1 text-xs text-faint">Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.</p>
         </div>

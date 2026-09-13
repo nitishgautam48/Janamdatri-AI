@@ -62,7 +62,7 @@ export default function PostpartumPage() {
               type="date"
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
-              className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+              className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           <Button onClick={handleSave} disabled={busy || !deliveryDate}>{busy ? "…" : "Save"}</Button>
