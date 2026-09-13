@@ -91,6 +91,15 @@ def score(responses: list) -> dict:
     total = sum(responses)
     self_harm_score = responses[SELF_HARM_ITEM_INDEX]
     self_harm_flagged = self_harm_score > 0
+    # The item's own 4-point response scale (Never -> Hardly ever ->
+    # Sometimes -> Yes, quite often) is already an ordinal severity signal
+    # in the validated instrument itself - reported alongside the flag so
+    # a raised item isn't just yes/no, without ever changing the flag/
+    # severity logic below: ANY non-zero response still escalates to
+    # Critical (severity_for), exactly as before. Purely additional
+    # transparency, the same role danger_ladder.py's rung plays for
+    # physical danger signs.
+    self_harm_severity_label = OPTIONS[SELF_HARM_ITEM_INDEX][self_harm_score]
 
     if self_harm_flagged:
         classification = "Self-harm risk flagged"
@@ -117,6 +126,7 @@ def score(responses: list) -> dict:
         "classification": classification,
         "selfHarmItemScore": self_harm_score,
         "selfHarmFlagged": self_harm_flagged,
+        "selfHarmSeverityLabel": self_harm_severity_label,
         "anxietySubscale": {
             "total": anxiety_total,
             "maxScore": 9,

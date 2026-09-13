@@ -120,7 +120,8 @@ export default function MentalWellnessPage() {
 
           {result.selfHarmFlagged && (
             <div className="mb-3 rounded-md border border-critical/40 bg-critical-soft p-3 text-sm text-critical">
-              🚨 You indicated thoughts of self-harm have occurred to you. Please talk to someone you trust right now.
+              🚨 You indicated thoughts of self-harm have occurred to you ("{result.selfHarmSeverityLabel}"). Please talk to
+              someone you trust right now.
               <br />
               <a href="tel:1800-599-0019" className="mt-2 inline-block rounded-full bg-critical px-4 py-2 text-sm font-bold text-white">
                 📞 Call KIRAN: 1800-599-0019 (toll-free, 24x7)

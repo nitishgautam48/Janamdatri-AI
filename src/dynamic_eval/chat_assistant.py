@@ -16,7 +16,7 @@ specific enough to match a category on its own - asking a follow-up
 question is far more useful than a flat "I didn't understand that."
 """
 
-from . import danger_ladder, expert_system, text_analyzer
+from . import danger_ladder, expert_system, self_harm_ladder, text_analyzer
 from .phrase_match import contains_phrase, normalize
 
 FAQ_INTENTS = [
@@ -664,13 +664,15 @@ FALLBACK_REPLY = (
 # with someone -> give a way to act right now), not just a phone number,
 # following the same "ANY self-harm signal overrides everything else"
 # principle this project already applies to EPDS item 10.
-CRISIS_PHRASES = [
-    "kill myself", "kill me", "end my life", "end it all", "want to die", "wanna die",
-    "dont want to live", "don't want to live", "no reason to live", "better off dead",
-    "harm myself", "hurt myself", "hurting myself", "suicide", "suicidal",
-    "खुद को नुकसान", "आत्महत्या", "मरना चाहती हूं", "जीना नहीं चाहती",
-]
-
+#
+# The trigger check itself now reuses self_harm_ladder.py's full,
+# ordinal-rung phrase set (a strict superset of what used to be this flat
+# list - see that module's own comment) rather than maintaining two
+# separate, overlapping self-harm phrase lists that could quietly drift
+# out of sync. The rung is attached to the response purely as transparency
+# detail (same role a Danger-Sign Ladder rung plays in Detailed Results) -
+# every rung still gets this exact same maximum-urgency reply, never a
+# softer one; see self_harm_ladder.py's header for why.
 CRISIS_REPLY = (
     "I'm really glad you told me this - these feelings are taken seriously, and this is not your "
     "fault. Are you safe right now, in this moment? If there's anything nearby you could use to harm "
@@ -771,8 +773,13 @@ def _match_topic(normalized_text: str):
     return None
 
 
-def _match_crisis(normalized_text: str) -> bool:
-    return any(contains_phrase(normalized_text, phrase) for phrase in CRISIS_PHRASES)
+def _match_crisis(normalized_text: str) -> dict:
+    """Returns self_harm_ladder.classify()'s result dict, or None if
+    nothing on the ladder matched (rung 0) - None instead of the rung-0
+    dict itself so `if _match_crisis(...)` at the call site works
+    correctly; a dict is truthy even when its "rung" key is 0."""
+    result = self_harm_ladder.classify(normalized_text)
+    return result if result["rung"] > 0 else None
 
 
 # "jaundice"/"yellow skin"/"yellow eyes" are severe-tier hypertensive_
@@ -962,8 +969,12 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
     # Psychological safety comes first, before ANY physical-symptom check
     # or FAQ matching - the same never-let-a-critical-signal-hide-behind-
     # something-else rule this project applies to EPDS item 10.
-    if _match_crisis(normalized):
-        return {"reply": CRISIS_REPLY, "isEmergency": True, "intent": "crisis_self_harm"}
+    crisis_ladder = _match_crisis(normalized)
+    if crisis_ladder:
+        # selfHarmLadder is carried as detail only (mirrors dangerLadder on
+        # the physical danger-sign path) - the reply/isEmergency are always
+        # this exact same maximum response, regardless of which rung matched.
+        return {"reply": CRISIS_REPLY, "isEmergency": True, "intent": "crisis_self_harm", "selfHarmLadder": crisis_ladder}
 
     # Checked before the maternal danger-sign scan below, which would
     # otherwise treat "baby has jaundice" as the MOTHER's own jaundice (a

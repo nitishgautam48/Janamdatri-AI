@@ -191,7 +191,7 @@ export default function Results({ data, onReset }) {
               <p className="text-sm text-ink"><strong>{psych.classification}</strong> ({psych.total}/{psych.maxScore})</p>
               {psych.selfHarmFlagged && (
                 <div className="mt-2 rounded-md border border-critical/40 bg-critical-soft p-2.5 text-sm text-critical">
-                  🚨 Self-harm item flagged — please reach out now.{" "}
+                  🚨 Self-harm item flagged ({psych.selfHarmSeverityLabel}) — please reach out now.{" "}
                   <a href="tel:1800-599-0019" className="font-semibold underline">Call KIRAN: 1800-599-0019</a>
                 </div>
               )}
