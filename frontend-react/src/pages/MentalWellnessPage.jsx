@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
 import Spinner from "../components/ui/Spinner";
+import QuestionFlow from "../components/ui/QuestionFlow";
 import { api } from "../lib/api";
 import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue } from "../lib/storage";
 
@@ -81,32 +81,16 @@ export default function MentalWellnessPage() {
         {!items ? (
           <Spinner className="mt-4" />
         ) : (
-          <div className="mt-4 divide-y divide-border">
-            {items.items.map((text, i) => (
-              <div key={i} className="py-4">
-                <p className="mb-2 text-sm font-medium text-ink">{i + 1}. {text}</p>
-                <div className="flex flex-col gap-1.5">
-                  {items.options[i].map((opt, val) => (
-                    <label key={val} className="flex items-center gap-2 text-sm text-muted">
-                      <input
-                        type="radio"
-                        name={`epds-q${i}`}
-                        checked={responses[i] === val}
-                        onChange={() => setResponses((r) => ({ ...r, [i]: val }))}
-                      />
-                      {opt}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <QuestionFlow
+            questions={items.items.map((text, i) => ({ id: i, text, options: items.options[i] }))}
+            responses={responses}
+            onAnswer={(id, value) => setResponses((r) => ({ ...r, [id]: value }))}
+            onComplete={handleSubmit}
+            submitLabel="Score My Mood"
+            busy={busy}
+            error={error}
+          />
         )}
-
-        {error && <p className="mt-3 text-sm text-critical">{error}</p>}
-        <Button className="mt-4" onClick={handleSubmit} disabled={busy || !items}>
-          {busy ? "…" : "Score My Mood"}
-        </Button>
       </Card>
 
       {result && (

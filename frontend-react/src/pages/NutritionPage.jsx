@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
+import QuestionFlow from "../components/ui/QuestionFlow";
 import { api } from "../lib/api";
 import {
   KEYS, lastKnownHemoglobin, scopedGet, scopedSet,
@@ -131,32 +131,16 @@ export default function NutritionPage() {
         {!items ? (
           <Spinner className="mt-4" />
         ) : (
-          <div className="mt-4 divide-y divide-border">
-            {items.questions.map((q, i) => (
-              <div key={q.id} className="py-4">
-                <p className="mb-2 text-sm font-medium text-ink">{i + 1}. {q.text}</p>
-                <div className="flex flex-col gap-1.5">
-                  {items.frequencyOptions.map((opt, val) => (
-                    <label key={val} className="flex items-center gap-2 text-sm text-muted">
-                      <input
-                        type="radio"
-                        name={`nutrition-${q.id}`}
-                        checked={responses[q.id] === val}
-                        onChange={() => setResponses((r) => ({ ...r, [q.id]: val }))}
-                      />
-                      {opt}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <QuestionFlow
+            questions={items.questions.map((q) => ({ id: q.id, text: q.text, options: items.frequencyOptions }))}
+            responses={responses}
+            onAnswer={(id, value) => setResponses((r) => ({ ...r, [id]: value }))}
+            onComplete={handleSubmit}
+            submitLabel="Analyze My Diet"
+            busy={busy}
+            error={error}
+          />
         )}
-
-        {error && <p className="mt-3 text-sm text-critical">{error}</p>}
-        <Button className="mt-4" onClick={handleSubmit} disabled={busy || !items}>
-          {busy ? "…" : "Analyze My Diet"}
-        </Button>
       </Card>
 
       {result && (
