@@ -5,15 +5,18 @@ import { useLang } from "../../context/LangContext";
 import { useHistory } from "../../lib/useHistory";
 import { loadSavedEpds, scopedKey } from "../../lib/storage";
 import ReadAloudButton from "../ui/ReadAloudButton";
+import CriticalFollowUp from "../shared/CriticalFollowUp";
 
 // A danger sign shouldn't only be visible on the Home tab - ported from
 // the vanilla-JS app's checkGlobalEmergencyBanner(), this stays sticky
 // under the header on every OTHER view for as long as the most recent
 // result is unresolved (Critical/Severe, or a self-harm flag). Home is
-// excluded because it already shows this same alert inline, with the
-// richer "did you seek care" follow-up (CriticalFollowUp in
-// HomePage.jsx) - showing both stacked one after another read as a
-// visual glitch rather than two different pieces of information.
+// excluded because it already shows this same alert inline, with its own
+// copy of the "did you seek care" follow-up - showing both stacked one
+// after another read as a visual glitch rather than two different pieces
+// of information. That same follow-up (compact form) is included here
+// too, so it's an actual cross-page reminder rather than something only
+// visible to someone who happens to land back on Home.
 // Dismissing hides it for THIS specific result only (tracked by its
 // timestamp) - a session-only choice, not a persistent one, so a fresh
 // page load still shows it if nothing has actually changed.
@@ -81,6 +84,7 @@ export default function GlobalEmergencyBanner() {
         <button type="button" onClick={dismiss} aria-label="Dismiss" className="text-white/80 hover:text-white">
           ✕
         </button>
+        {isDanger && !selfHarm && <CriticalFollowUp assessmentTimestamp={latest.timestamp} severityLevel={latest.severityLevel} compact />}
       </div>
     </div>
   );

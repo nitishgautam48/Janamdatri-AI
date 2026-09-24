@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Spinner from "../components/ui/Spinner";
+import CriticalFollowUp from "../components/shared/CriticalFollowUp";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import { useHistory } from "../lib/useHistory";
@@ -8,7 +9,6 @@ import {
   KEYS, scopedGet, loadSavedEpds,
   lastKnownVitals, lastKnownHemoglobinAssessment, lastKnownWeightAssessment,
   loadTodayCareState, saveTodayCareState,
-  loadCriticalFollowup, acknowledgeCriticalFollowup,
 } from "../lib/storage";
 import { buildTodayCareTasks } from "../lib/todayCare";
 import { computeHealthTrends } from "../lib/trends";
@@ -123,44 +123,6 @@ function TodayCare({ history }) {
           </label>
         );
       })}
-    </div>
-  );
-}
-
-function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
-  const { t } = useLang();
-  const [record, setRecord] = useState(() => loadCriticalFollowup());
-  const alreadyAnswered = record?.assessmentTimestamp === assessmentTimestamp;
-
-  function respond(soughtCare) {
-    setRecord(acknowledgeCriticalFollowup(assessmentTimestamp, soughtCare));
-  }
-
-  if (alreadyAnswered && record.soughtCare) {
-    return (
-      <p style={{ marginTop: 10, fontSize: "0.8125rem", color: "var(--color-good)" }}>
-        ✓ {t("home.followupConfirmedPrefix")}{new Date(record.respondedAt).toLocaleDateString()}{t("home.followupConfirmedSuffix")}
-      </p>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 12, borderRadius: 10, border: "1px solid var(--color-critical)", padding: 12, display: "grid", gap: 8 }}>
-      {alreadyAnswered && !record.soughtCare ? (
-        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-critical)" }}>
-          {t("home.followupUrgentPrefix")}{severityLevel}{t("home.followupUrgentSuffix")}
-        </p>
-      ) : (
-        <p style={{ fontSize: "0.8125rem", color: "var(--color-text)" }}>{t("home.followupQuestion")}</p>
-      )}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button type="button" onClick={() => respond(true)} className="btn btn-primary" style={{ fontSize: "0.75rem" }}>
-          ✓ {t("home.followupYes")}
-        </button>
-        <button type="button" onClick={() => respond(false)} className="btn btn-secondary" style={{ fontSize: "0.75rem" }}>
-          {t("home.followupNotYet")}
-        </button>
-      </div>
     </div>
   );
 }
