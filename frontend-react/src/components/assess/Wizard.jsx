@@ -1,7 +1,5 @@
 import { useState } from "react";
 import Card from "../ui/Card";
-import Button from "../ui/Button";
-import Pill from "../ui/Pill";
 import { slugify } from "../../lib/a11y";
 
 const STEPS = ["Vitals", "Anemia & Stage", "Additional Checks", "Symptoms", "History", "Review"];
@@ -35,10 +33,10 @@ function Field({ label, hint, why, ...props }) {
   const [showWhy, setShowWhy] = useState(false);
   const id = `field-${slugify(label)}`;
   return (
-    <div>
+    <div className="field">
       <div className="mb-1 flex items-center gap-1">
-        <label htmlFor={id} className="text-sm font-medium text-muted">
-          {label} {hint && <span className="text-xs text-faint">{hint}</span>}
+        <label htmlFor={id}>
+          {label} {hint && <span style={{ color: "var(--color-neutral-500)" }}>{hint}</span>}
         </label>
         {why && (
           <button
@@ -46,18 +44,29 @@ function Field({ label, hint, why, ...props }) {
             onClick={() => setShowWhy((s) => !s)}
             aria-expanded={showWhy}
             aria-label="Why this matters"
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong text-[10px] font-bold leading-none text-faint hover:border-primary hover:text-primary"
+            style={{
+              display: "flex",
+              height: 16,
+              width: 16,
+              flexShrink: 0,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              border: "1px solid var(--color-neutral-700)",
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: 1,
+              color: "var(--color-neutral-500)",
+              background: "none",
+              cursor: "pointer",
+            }}
           >
             i
           </button>
         )}
       </div>
-      {why && showWhy && <p className="mb-1.5 -mt-0.5 text-xs leading-snug text-primary">{why}</p>}
-      <input
-        id={id}
-        {...props}
-        className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-      />
+      {why && showWhy && <p className="mb-1.5 -mt-0.5" style={{ fontSize: 12, lineHeight: 1.4, color: "var(--color-accent-400)" }}>{why}</p>}
+      <input id={id} {...props} className="input" />
     </div>
   );
 }
@@ -102,41 +111,56 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
   return (
     <Card>
-      <div className="mb-6 flex items-center gap-1 sm:gap-2">
-        {STEPS.map((label, i) => (
-          <div key={label} className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+      {/* Segmented progress bars, matching the mockup's ckStepper (each
+          bar glows purple when filled) rather than numbered circles. */}
+      <div className="mb-2 flex items-center gap-3">
+        {step > 0 ? (
+          <button type="button" onClick={() => setStep((s) => s - 1)} aria-label="Back" className="btn btn-ghost btn-icon" style={{ color: "var(--color-neutral-400)" }}>
+            <i className="ph ph-arrow-left" />
+          </button>
+        ) : (
+          <span style={{ width: 36 }} />
+        )}
+        <div className="flex flex-1 gap-1">
+          {STEPS.map((label, i) => (
             <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                i === step ? "bg-primary text-paper-ink" : i < step ? "bg-good text-paper-ink" : "bg-surface-hover text-muted"
-              }`}
-            >
-              {i < step ? "✓" : i + 1}
-            </div>
-            {/* Labels hide below sm - 4 steps with text + connecting lines
-                don't fit a phone width, and the circles/color alone are
-                already enough to show progress. */}
-            <span className={`hidden truncate text-xs font-medium sm:inline ${i === step ? "text-ink" : "text-faint"}`}>{label}</span>
-            {i < STEPS.length - 1 && <span className="h-px min-w-2 flex-1 bg-border" />}
-          </div>
-        ))}
+              key={label}
+              style={{
+                flex: 1,
+                height: 3,
+                borderRadius: 2,
+                background: i <= step ? "var(--color-accent)" : "var(--color-neutral-800)",
+                boxShadow: i <= step ? "0 0 6px var(--color-accent)" : "none",
+              }}
+            />
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--color-neutral-500)", minWidth: 44, textAlign: "right" }}>
+          {step + 1} / {STEPS.length}
+        </div>
       </div>
+      <p className="mb-2" style={{ fontSize: 12, color: "var(--color-accent-400)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{STEPS[step]}</p>
 
       {/* Every step after Vitals is explicitly marked optional already -
           this just says so up front, so the 6-step layout reads as "fill
           in what you know" rather than a form that must be completed in
           full before it's useful. */}
-      <p className="mb-4 text-xs text-faint">
+      <p className="mb-4" style={{ fontSize: 12, color: "var(--color-neutral-600)" }}>
         Most steps are optional - fill in what you know and skip the rest with "Skip to Review" below.
       </p>
 
-      {error && <p className="mb-4 rounded-md border border-critical/30 bg-critical-soft px-3 py-2 text-sm text-critical">{error}</p>}
+      {error && (
+        <p className="mb-4" style={{ borderRadius: 10, border: "1px solid var(--color-critical)", background: "var(--color-critical-soft)", padding: "8px 12px", fontSize: 14, color: "var(--color-text)" }}>
+          {error}
+        </p>
+      )}
 
       {step === 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-ink">1 · Vitals</h2>
-            <label className="flex items-center gap-2 text-xs text-muted">
-              <input type="checkbox" checked={form.vitalsEnabled} onChange={(e) => set("vitalsEnabled", e.target.checked)} />
+            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Vitals</h2>
+            <label className="flex items-center gap-2" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>
+              <input type="checkbox" checked={form.vitalsEnabled} onChange={(e) => set("vitalsEnabled", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
               Include vitals
             </label>
           </div>
@@ -174,8 +198,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h2 className="mb-1 text-sm font-bold text-ink">2 · Anemia Check <Pill className="ml-1">optional</Pill></h2>
-            <p className="mb-2 text-xs text-muted">If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
+            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Anemia Check <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+            <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
             <div className="max-w-[220px]">
               <Field
                 label="Hemoglobin (g/dL)" type="number" step="0.1" placeholder="e.g. 10.5" value={form.hemoglobin} onChange={(e) => set("hemoglobin", e.target.value)}
@@ -185,8 +209,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           </div>
 
           <div>
-            <h2 className="mb-1 text-sm font-bold text-ink">2b · Pregnancy Stage <Pill className="ml-1">optional</Pill></h2>
-            <p className="mb-2 text-xs text-muted">Lets the assessment factor in trimester-specific risks and week-appropriate warning signs.</p>
+            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Pregnancy Stage <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+            <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Lets the assessment factor in trimester-specific risks and week-appropriate warning signs.</p>
             <div className="max-w-[220px]">
               <Field
                 label="Current gestational week" type="number" placeholder="e.g. 24" value={form.week} onChange={(e) => set("week", e.target.value)}
@@ -199,8 +223,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
       {step === 2 && (
         <div>
-          <h2 className="mb-1 text-sm font-bold text-ink">3 · Additional Checks <Pill className="ml-1">optional</Pill></h2>
-          <p className="mb-2 text-xs text-muted">Each is a well-established antenatal screening check, not a diagnosis.</p>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Additional Checks <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+          <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Each is a well-established antenatal screening check, not a diagnosis.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field
               label="Current weight (kg)" type="number" step="0.1" placeholder="e.g. 62" value={form.weight} onChange={(e) => set("weight", e.target.value)}
@@ -220,8 +244,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
       {step === 3 && (
         <div>
-          <h2 className="mb-1 text-sm font-bold text-ink">4 · Symptoms</h2>
-          <p className="mb-3 text-xs text-muted">Tap any that apply — they'll be added to the description below, or type your own.</p>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Symptoms</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Tap any that apply — they'll be added to the description below, or type your own.</p>
           <div className="mb-3 flex flex-wrap gap-2">
             {SYMPTOM_CHIPS.map((phrase) => {
               const selected = selectedChips.has(phrase);
@@ -231,11 +255,16 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
                   type="button"
                   onClick={() => toggleChip(phrase)}
                   aria-pressed={selected}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    selected
-                      ? "border-primary bg-primary text-paper-ink"
-                      : "border-border-strong text-muted hover:border-primary hover:text-ink"
-                  }`}
+                  style={{
+                    borderRadius: 99,
+                    border: `1px solid ${selected ? "var(--color-accent)" : "var(--color-neutral-700)"}`,
+                    background: selected ? "var(--color-accent-900)" : "transparent",
+                    color: selected ? "var(--color-accent-200)" : "var(--color-neutral-400)",
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
                 >
                   {selected ? "✓ " : ""}
                   {phrase}
@@ -249,36 +278,38 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
             placeholder="Describe how you're feeling in your own words…"
             value={form.symptomText}
             onChange={(e) => set("symptomText", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            className="input"
+            style={{ width: "100%" }}
           />
         </div>
       )}
 
       {step === 4 && (
         <div>
-          <h2 className="mb-1 text-sm font-bold text-ink">5 · History</h2>
-          <p className="mb-3 text-xs text-muted">Optional — helps weigh background risk factors.</p>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>History</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Optional — helps weigh background risk factors.</p>
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-faint">Past pregnancy history</h3>
+              <h3 className="mb-2" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Past pregnancy history</h3>
               <div className="space-y-2">
                 {HISTORY_FLAGS.past.map((f) => (
-                  <label key={f.key} className="flex items-center gap-2 text-sm text-ink">
-                    <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} />
+                  <label key={f.key} className="flex items-center gap-2" style={{ fontSize: 14, color: "var(--color-text)" }}>
+                    <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} style={{ accentColor: "var(--color-accent)" }} />
                     {f.label}
                   </label>
                 ))}
               </div>
             </div>
             <div>
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-faint">Current pregnancy care</h3>
+              <h3 className="mb-2" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Current pregnancy care</h3>
               <div className="space-y-2">
                 {HISTORY_FLAGS.current.map((f) => (
                   <label
                     key={f.key}
-                    className={`flex items-center gap-2 text-sm ${f.protective ? "text-good" : f.risk ? "text-critical" : "text-ink"}`}
+                    className="flex items-center gap-2"
+                    style={{ fontSize: 14, color: f.protective ? "var(--color-good)" : f.risk ? "var(--color-critical)" : "var(--color-text)" }}
                   >
-                    <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} />
+                    <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} style={{ accentColor: "var(--color-accent)" }} />
                     {f.label}
                   </label>
                 ))}
@@ -291,48 +322,35 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {step === 5 && (
         <div>
           {hasSavedEpds && (
-            <label className="mb-4 flex items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={form.includeEpds} onChange={(e) => set("includeEpds", e.target.checked)} />
+            <label className="mb-4 flex items-center gap-2" style={{ fontSize: 14, color: "var(--color-text)" }}>
+              <input type="checkbox" checked={form.includeEpds} onChange={(e) => set("includeEpds", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
               Include my saved Mental Health Check (EPDS) score in this assessment
             </label>
           )}
-          <h2 className="mb-1 text-sm font-bold text-ink">6 · Review</h2>
-          <p className="mb-3 text-xs text-muted">Check what you're about to submit, then run the assessment.</p>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Review</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Check what you're about to submit, then run the assessment.</p>
           <ReviewSummary form={form} />
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        {step > 0 ? (
-          <Button variant="ghost" type="button" onClick={() => setStep((s) => s - 1)}>
-            ← Back
-          </Button>
-        ) : (
-          <span />
+      <div className="mt-6 flex items-center justify-end gap-3">
+        {/* Every remaining step is optional - this lets someone who's
+            given enough (or is in a hurry) go straight to submitting
+            instead of clicking "Next" through steps they don't need. */}
+        {step > 0 && step < STEPS.length - 1 && (
+          <button type="button" onClick={() => setStep(STEPS.length - 1)} className="btn btn-ghost" style={{ fontSize: 12 }}>
+            Skip to Review
+          </button>
         )}
-        <div className="flex items-center gap-3">
-          {/* Every remaining step is optional - this lets someone who's
-              given enough (or is in a hurry) go straight to submitting
-              instead of clicking "Next" through steps they don't need. */}
-          {step > 0 && step < STEPS.length - 1 && (
-            <button
-              type="button"
-              onClick={() => setStep(STEPS.length - 1)}
-              className="text-xs font-medium text-muted underline decoration-dotted hover:text-primary"
-            >
-              Skip to Review
-            </button>
-          )}
-          {step < STEPS.length - 1 ? (
-            <Button type="button" onClick={() => setStep((s) => s + 1)}>
-              Next: {STEPS[step + 1]} →
-            </Button>
-          ) : (
-            <Button type="button" onClick={onSubmit} disabled={submitting}>
-              {submitting ? "Running…" : "Run Assessment"}
-            </Button>
-          )}
-        </div>
+        {step < STEPS.length - 1 ? (
+          <button type="button" onClick={() => setStep((s) => s + 1)} className="btn btn-primary" style={{ height: 44, paddingInline: 20 }}>
+            Next: {STEPS[step + 1]} <i className="ph ph-arrow-right" />
+          </button>
+        ) : (
+          <button type="button" onClick={onSubmit} disabled={submitting} className="btn btn-primary" style={{ height: 44, paddingInline: 20 }}>
+            {submitting ? "Running…" : "Run Assessment"}
+          </button>
+        )}
       </div>
     </Card>
   );
@@ -352,14 +370,14 @@ function ReviewSummary({ form }) {
   const flags = Object.entries(form.historyFlags).filter(([, v]) => v).map(([k]) => k.replace(/_/g, " "));
   if (flags.length) rows.push(["History", flags.join(", ")]);
 
-  if (!rows.length) return <p className="text-sm text-muted">Nothing entered yet — go back and add at least one input.</p>;
+  if (!rows.length) return <p style={{ fontSize: 14, color: "var(--color-neutral-400)" }}>Nothing entered yet — go back and add at least one input.</p>;
 
   return (
-    <div className="divide-y divide-border rounded-md border border-border">
+    <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
       {rows.map(([label, value]) => (
-        <div key={label} className="flex justify-between gap-4 px-3.5 py-2.5 text-sm">
-          <span className="shrink-0 font-medium text-muted">{label}</span>
-          <span className="text-right text-ink">{value}</span>
+        <div key={label} style={{ background: "#1b1d2a", display: "flex", justifyContent: "space-between", gap: 16, padding: "10px 14px", fontSize: 14 }}>
+          <span style={{ flexShrink: 0, fontWeight: 500, color: "var(--color-neutral-400)" }}>{label}</span>
+          <span style={{ textAlign: "right", color: "var(--color-text)" }}>{value}</span>
         </div>
       ))}
     </div>
