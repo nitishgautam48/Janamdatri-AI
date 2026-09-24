@@ -8,11 +8,17 @@ import {
   loadMealLog, toggleMealLogGroup, mealLogFrequencyCounts, todayDateStr,
   loadWaterState, saveWaterState,
 } from "../lib/storage";
+import { useLang } from "../context/LangContext";
 
 const STATUS_TONE = { Adequate: "good", Borderline: "warning", Low: "critical" };
+// Backend-fixed enum (nutrition_eval.py has no i18n layer) - only its
+// DISPLAY is translated here, the underlying "Adequate"/"Borderline"/"Low"
+// string used for STATUS_TONE lookups and color logic is untouched.
+const STATUS_LABEL_KEY = { Adequate: "nutrition.statusAdequate", Borderline: "nutrition.statusBorderline", Low: "nutrition.statusLow" };
 const WATER_TARGET = 10;
 
 function WaterTracker() {
+  const { t } = useLang();
   const [state, setState] = useState(() => loadWaterState());
 
   function change(delta) {
@@ -27,7 +33,7 @@ function WaterTracker() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Water <span style={{ color: "var(--color-neutral-500)" }}>(today)</span></span>
+        <span style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("nutrition.waterLabel")} <span style={{ color: "var(--color-neutral-500)" }}>{t("nutrition.waterToday")}</span></span>
         <span style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{state.glasses} / {WATER_TARGET}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${WATER_TARGET},1fr)`, gap: 4 }}>
@@ -44,11 +50,11 @@ function WaterTracker() {
         ))}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={() => change(-1)} className="btn btn-secondary btn-icon" aria-label="Remove glass">
+        <button type="button" onClick={() => change(-1)} className="btn btn-secondary btn-icon" aria-label={t("nutrition.removeGlass")}>
           <i className="ph ph-minus" />
         </button>
         <button type="button" onClick={() => change(1)} className="btn btn-primary" style={{ flex: 1 }}>
-          <i className="ph ph-plus" /> Add a glass
+          <i className="ph ph-plus" /> {t("nutrition.addGlass")}
         </button>
       </div>
     </div>
@@ -76,6 +82,7 @@ function withNutritionScore(data) {
 }
 
 export default function NutritionPage() {
+  const { t } = useLang();
   const [items, setItems] = useState(null);
   const [responses, setResponses] = useState({});
   const [result, setResult] = useState(() => withNutritionScore(scopedGet(KEYS.NUTRITION)?.result || null));
@@ -112,7 +119,7 @@ export default function NutritionPage() {
     if (!items) return;
     const missing = items.questions.some((q) => responses[q.id] === undefined);
     if (missing) {
-      setError("Please answer all the questions.");
+      setError(t("nutrition.answerAllError"));
       return;
     }
 
@@ -127,7 +134,7 @@ export default function NutritionPage() {
       setResult(data);
       scopedSet(KEYS.NUTRITION, { result: data, savedAt: new Date().toISOString() });
     } catch (err) {
-      setError(err.message || "Could not analyze diet.");
+      setError(err.message || t("nutrition.analyzeError"));
     } finally {
       setBusy(false);
     }
@@ -137,11 +144,8 @@ export default function NutritionPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       {items && (
         <Card>
-          <h1 className="text-xl font-bold text-ink">Today's Meals</h1>
-          <p className="mt-1 text-sm text-muted">
-            Tap what you've eaten today. This builds a real week-by-week picture and pre-fills the frequency
-            questionnaire below - you can still adjust every answer before submitting.
-          </p>
+          <h1 className="text-xl font-bold text-ink">{t("nutrition.todaysMeals")}</h1>
+          <p className="mt-1 text-sm text-muted">{t("nutrition.todaysMealsDesc")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {items.questions.map((q) => {
               const logged = todayGroups.has(q.id);
@@ -156,7 +160,7 @@ export default function NutritionPage() {
                   }`}
                 >
                   {logged ? "✓ " : ""}{q.text.split("(")[0].trim()}
-                  {count > 0 && <span className="ml-1 text-faint">· {count}/7d</span>}
+                  {count > 0 && <span className="ml-1 text-faint">· {count}{t("nutrition.perWeek")}</span>}
                 </button>
               );
             })}
@@ -167,13 +171,8 @@ export default function NutritionPage() {
       <WaterTracker />
 
       <Card>
-        <h1 className="text-xl font-bold text-ink">Nutrition Analysis</h1>
-        <p className="mt-1 text-sm text-muted">
-          Tell me how often you eat these food groups, and I'll check your intake against pregnancy nutrient needs
-          (iron, protein, folate, calcium, B12, vitamin D, iodine) and suggest specific, affordable Indian foods to
-          close any gaps. Not a lab test - a starting point for the conversation with your ANC provider or a
-          nutritionist.
-        </p>
+        <h1 className="text-xl font-bold text-ink">{t("nutrition.analysisTitle")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("nutrition.analysisDesc")}</p>
 
         {!items ? (
           <Spinner className="mt-4" />
@@ -183,7 +182,7 @@ export default function NutritionPage() {
             responses={responses}
             onAnswer={(id, value) => setResponses((r) => ({ ...r, [id]: value }))}
             onComplete={handleSubmit}
-            submitLabel="Analyze My Diet"
+            submitLabel={t("nutrition.analyzeMyDiet")}
             busy={busy}
             error={error}
           />
@@ -192,7 +191,7 @@ export default function NutritionPage() {
 
       {result && (
         <Card className={result.nutritionScore >= 70 ? "border-good/30" : result.nutritionScore >= 40 ? "border-warning/30 bg-warning-soft" : "border-critical/30 bg-critical-soft"}>
-          <p className="eyebrow mb-2">Nutrition Score</p>
+          <p className="eyebrow mb-2">{t("nutrition.nutritionScore")}</p>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-ink">{result.nutritionScore}</span>
             <span className="text-sm text-muted">/ 100</span>
@@ -203,18 +202,15 @@ export default function NutritionPage() {
               style={{ width: `${result.nutritionScore}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-faint">
-            An overall read across the nutrients below - a starting point for the conversation with your ANC provider,
-            not a lab result.
-          </p>
+          <p className="mt-2 text-xs text-faint">{t("nutrition.scoreDesc")}</p>
         </Card>
       )}
 
       {result && (
         <Card>
-          <h3 className="mb-3 text-sm font-bold text-ink">Your Nutrient Adequacy</h3>
+          <h3 className="mb-3 text-sm font-bold text-ink">{t("nutrition.adequacyTitle")}</h3>
           {result.priorityNutrients?.length > 0 && (
-            <p className="mb-2 text-xs text-muted">Priority for this trimester: {result.priorityNutrients.join(", ")}</p>
+            <p className="mb-2 text-xs text-muted">{t("nutrition.priorityFor")} {result.priorityNutrients.join(", ")}</p>
           )}
           {result.connectedInsights?.length > 0 && (
             <div className="mb-3 space-y-1.5">
@@ -233,7 +229,7 @@ export default function NutritionPage() {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                     v.status === "Adequate" ? "bg-good-soft text-good" : v.status === "Borderline" ? "bg-warning-soft text-warning" : "bg-critical-soft text-critical"
                   }`}>
-                    {v.status}
+                    {t(STATUS_LABEL_KEY[v.status]) || v.status}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">

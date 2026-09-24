@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Button from "./Button";
+import { useLang } from "../../context/LangContext";
 
 // One question per screen, large tappable answer buttons, a progress bar,
 // and auto-advance on selection - replaces the "list of radio buttons"
@@ -11,6 +12,7 @@ import Button from "./Button";
 // once a question already has an answer, Next) are still available for
 // revisiting earlier questions without re-tapping an unchanged answer.
 export default function QuestionFlow({ questions, responses, onAnswer, onComplete, submitLabel, busy, error }) {
+  const { t } = useLang();
   const [step, setStep] = useState(0);
   const total = questions.length;
   const q = questions[step];
@@ -30,7 +32,7 @@ export default function QuestionFlow({ questions, responses, onAnswer, onComplet
     <div>
       <div className="mb-5">
         <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted">
-          <span>Question {step + 1} of {total}</span>
+          <span>{t("questionFlow.questionOf").replace("{a}", step + 1).replace("{b}", total)}</span>
           <span>{Math.round((step / total) * 100)}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
@@ -68,7 +70,7 @@ export default function QuestionFlow({ questions, responses, onAnswer, onComplet
       <div className="mt-5 flex items-center justify-between gap-3">
         {step > 0 ? (
           <Button variant="ghost" type="button" onClick={() => setStep((s) => s - 1)}>
-            ← Back
+            {t("questionFlow.back")}
           </Button>
         ) : (
           <span />
@@ -76,7 +78,7 @@ export default function QuestionFlow({ questions, responses, onAnswer, onComplet
         <div className="flex gap-2">
           {!isLast && answered && (
             <Button variant="ghost" type="button" onClick={() => setStep((s) => s + 1)}>
-              Next →
+              {t("questionFlow.next")}
             </Button>
           )}
           {isLast && answered && (
