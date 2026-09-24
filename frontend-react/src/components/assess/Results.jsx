@@ -1,20 +1,49 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Card from "../ui/Card";
-import Pill from "../ui/Pill";
-import Button from "../ui/Button";
 import ReadAloudButton from "../ui/ReadAloudButton";
 
-const LEVEL_TONE = { Critical: "critical", Severe: "critical", Moderate: "warning", Mild: "good", Minimal: "good" };
+const LEVEL_COLOR = {
+  Critical: "var(--color-critical)", Severe: "var(--color-critical)",
+  Moderate: "var(--color-warning)", Mild: "var(--color-good)", Minimal: "var(--color-good)",
+};
+const LEVEL_TINT = {
+  Critical: "var(--color-critical-soft)", Severe: "var(--color-critical-soft)",
+  Moderate: "var(--color-warning-soft)", Mild: "var(--color-good-soft)", Minimal: "var(--color-good-soft)",
+};
+const LEVEL_ICON = {
+  Critical: "ph-warning", Severe: "ph-warning",
+  Moderate: "ph-warning-circle", Mild: "ph-check-circle", Minimal: "ph-check-circle",
+};
 
-function TagGroup({ label, items, className = "" }) {
+function Section({ title, icon, action, children }) {
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <h3 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>
+          {icon && <i className={`ph ${icon}`} style={{ color: "var(--color-accent-400)" }} />}
+          {title}
+        </h3>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TagGroup({ label, items, color }) {
   if (!items || !items.length) return null;
   return (
-    <div className="mb-3">
-      <p className="eyebrow mb-1.5">{label}</p>
-      <div className="flex flex-wrap gap-1.5">
+    <div style={{ display: "grid", gap: 6 }}>
+      <p className="eyebrow">{label}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {items.map((item) => (
-          <span key={item} className={`rounded-full border px-2.5 py-1 text-xs ${className || "border-border-strong text-muted"}`}>
+          <span
+            key={item}
+            style={{
+              borderRadius: 99, border: `1px solid ${color || "var(--color-neutral-700)"}`,
+              color: color || "var(--color-neutral-400)", padding: "4px 10px", fontSize: "0.75rem",
+            }}
+          >
             {item.replace(/_/g, " ")}
           </span>
         ))}
@@ -32,7 +61,10 @@ export default function Results({ data, onReset }) {
     recommendations,
   } = data;
 
-  const tone = LEVEL_TONE[severity.level] || "neutral";
+  const color = LEVEL_COLOR[severity.level] || "var(--color-neutral-400)";
+  const tint = LEVEL_TINT[severity.level] || "var(--color-neutral-800)";
+  const icon = LEVEL_ICON[severity.level] || "ph-info";
+  const isHigh = severity.level === "Critical" || severity.level === "Severe";
 
   const whyText = [
     `Your result: ${severity.level}.`,
@@ -43,196 +75,189 @@ export default function Results({ data, onReset }) {
   const nextStepsText = recommendations?.length ? recommendations.join(". ") : "";
 
   return (
-    <div className="space-y-5">
+    <div style={{ display: "grid", gap: 20 }}>
       {/* A. Your Status */}
-      <Card className={tone === "critical" ? "border-critical/40 bg-critical-soft" : tone === "warning" ? "border-warning/40 bg-warning-soft" : "border-good/30"}>
-        <div className="flex items-center gap-4">
-          <span className="text-4xl">{severity.emoji}</span>
+      <div style={{ background: tint, borderRadius: 14, padding: 20, display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ width: 48, height: 48, borderRadius: "50%", border: `1px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+            <i className={`ph ${icon}`} style={{ fontSize: "1.75rem", color }} />
+          </span>
           <div>
-            <p className="eyebrow mb-1">Overall Risk Assessment</p>
-            <div className="text-2xl font-extrabold text-ink">{severity.level}</div>
-            <div className="text-sm text-muted">
+            <p className="eyebrow" style={{ marginBottom: 4 }}>Overall Risk Assessment</p>
+            <div style={{ fontSize: "1.875rem", fontWeight: 500, color: "var(--color-text)", lineHeight: 1.1 }}>{severity.level}</div>
+            <div style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
               Maternal Risk Index: {mri}
               {severity.escalatedBy ? ` · escalated by: ${severity.escalatedBy.replace(/_/g, " ")}` : ""}
             </div>
-            {exp?.actionTierLabel && <Pill tone={tone} className="mt-2">{exp.actionTierLabel}</Pill>}
+            {exp?.actionTierLabel && (
+              <span style={{ display: "inline-flex", marginTop: 8, borderRadius: 99, border: `1px solid ${color}`, color, padding: "3px 10px", fontSize: "0.75rem" }}>
+                {exp.actionTierLabel}
+              </span>
+            )}
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted">
+        <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>
           This combines a WHO danger-sign check, clinical risk-factor rules, and an AI model's prediction from your
           vitals into one result - whichever of the three finds the most serious signal decides the level shown here.
         </p>
-        <p className="mt-1.5 text-xs text-faint">
+        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>
           This is a screening aid to guide you toward the right next step - it is not a medical diagnosis. High-risk
           or emergency signs should always be checked by a healthcare professional.
         </p>
-      </Card>
+        {isHigh && (
+          <a href="tel:108" className="jd-call108-fill" style={{ textDecoration: "none" }}>
+            <i className="ph ph-phone-call" /> Call 108 ambulance
+          </a>
+        )}
+      </div>
 
       {/* B. Why This Result */}
-      <Card>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-ink">🧭 Why This Result</h3>
-          <ReadAloudButton text={whyText} />
-        </div>
-        {exp?.recommendedNextAction && <p className="mb-3 text-sm font-medium text-ink">{exp.recommendedNextAction}</p>}
+      <Section title="Why This Result" icon="ph-compass" action={<ReadAloudButton text={whyText} />}>
+        {exp?.recommendedNextAction && <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text)" }}>{exp.recommendedNextAction}</p>}
         {exp?.whyThisResult?.length > 0 && (
-          <ul className="mb-3 list-inside list-disc space-y-1 text-sm text-ink">
-            {exp.whyThisResult.map((w, i) => <li key={i}>{w}</li>)}
-          </ul>
-        )}
-        <TagGroup label="Warning Signs" items={exp?.warningSigns} className="border-critical/30 text-critical" />
-        {exp?.disclaimer && <p className="mt-2 text-xs text-faint">{exp.disclaimer}</p>}
-      </Card>
-
-      {/* C. Protective Factors - what's already working in your favour,
-          not buried inside the detailed risk-factors breakdown. */}
-      {rf?.protectiveFactors?.length > 0 && (
-        <Card className="border-good/30 bg-good-soft">
-          <h3 className="mb-2 text-sm font-bold text-ink">✓ What's Working In Your Favour</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {rf.protectiveFactors.map((item) => (
-              <span key={item} className="rounded-full border border-good/40 px-2.5 py-1 text-xs text-good">
-                {item.replace(/_/g, " ")}
-              </span>
+          <div style={{ display: "grid", gap: 8 }}>
+            {exp.whyThisResult.map((w, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, fontSize: "0.875rem", lineHeight: 1.45, color: "var(--color-text)" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, marginTop: 7, flex: "none" }} />
+                <span>{w}</span>
+              </div>
             ))}
           </div>
-        </Card>
+        )}
+        <TagGroup label="Warning Signs" items={exp?.warningSigns} color="var(--color-critical)" />
+        {exp?.disclaimer && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{exp.disclaimer}</p>}
+      </Section>
+
+      {/* C. Protective Factors */}
+      {rf?.protectiveFactors?.length > 0 && (
+        <Section title="What's Working In Your Favour" icon="ph-check-circle">
+          <TagGroup items={rf.protectiveFactors} color="var(--color-good)" />
+        </Section>
       )}
 
       {/* D. What To Do Next */}
       {recommendations?.length > 0 && (
-        <Card>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-ink">📋 What To Do Next</h3>
-            <ReadAloudButton text={nextStepsText} />
+        <Section title="What To Do Next" icon="ph-clipboard-text" action={<ReadAloudButton text={nextStepsText} />}>
+          <div style={{ display: "grid", gap: 8 }}>
+            {recommendations.map((r, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, fontSize: "0.875rem", lineHeight: 1.45, color: "var(--color-text)" }}>
+                <i className="ph ph-check" style={{ color: "var(--color-accent-400)", marginTop: 3, flex: "none" }} />
+                <span>{r}</span>
+              </div>
+            ))}
           </div>
-          <ul className="list-inside list-disc space-y-1.5 text-sm text-ink">
-            {recommendations.map((r, i) => <li key={i}>{r}</li>)}
-          </ul>
-        </Card>
+        </Section>
       )}
 
-      {/* E. Detailed Results - the full breakdown, collapsed by default so
-          the status/why/next-step hierarchy above is what people actually
-          read first. */}
-      <div>
-        <Button variant="ghost" onClick={() => setShowDetails((s) => !s)} className="w-full justify-center">
-          {showDetails ? "▲ Hide Detailed Results" : "▼ Show Detailed Results"}
-        </Button>
-      </div>
+      {/* E. Detailed Results */}
+      <button type="button" onClick={() => setShowDetails((s) => !s)} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
+        <i className={`ph ${showDetails ? "ph-caret-up" : "ph-caret-down"}`} />
+        {showDetails ? "Hide Detailed Results" : "Show Detailed Results"}
+      </button>
 
       {showDetails && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <p className="eyebrow mb-2">Risk Gauge</p>
-            <div className="mb-1 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-ink">{mri}</span>
-              <span className="text-sm text-muted">/ 100</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 14 }}>
+          <Section title="Risk Gauge">
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text)" }}>{mri}</span>
+              <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-500)" }}>/ 100</span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-hover">
-              <div
-                className={`h-full rounded-full ${mri >= 80 ? "bg-critical" : mri >= 60 ? "bg-critical/70" : mri >= 40 ? "bg-warning" : "bg-good"}`}
-                style={{ width: `${Math.min(mri, 100)}%` }}
-              />
+            <div style={{ height: 10, width: "100%", overflow: "hidden", borderRadius: 99, background: "var(--color-neutral-800)" }}>
+              <div style={{ height: "100%", borderRadius: 99, width: `${Math.min(mri, 100)}%`, background: mri >= 60 ? "var(--color-critical)" : mri >= 40 ? "var(--color-warning)" : "var(--color-good)" }} />
             </div>
-          </Card>
+          </Section>
 
           {ml && (
-            <Card>
-              <p className="eyebrow mb-2">
-                AI-Assisted Risk Estimate <span className="text-faint">({ml.modelName?.replace(/_/g, " ")})</span>
-              </p>
-              <div className="space-y-1.5">
+            <Section title="AI-Assisted Risk Estimate">
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)", marginTop: -4 }}>{ml.modelName?.replace(/_/g, " ")}</p>
+              <div style={{ display: "grid", gap: 6 }}>
                 {Object.entries(ml.probabilities).map(([label, prob]) => (
-                  <div key={label} className="flex items-center gap-2 text-xs">
-                    <span className="w-16 shrink-0 text-muted">{label}</span>
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-hover">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${prob * 100}%` }} />
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.75rem" }}>
+                    <span style={{ width: 64, flex: "none", color: "var(--color-neutral-400)" }}>{label}</span>
+                    <div style={{ height: 8, flex: 1, overflow: "hidden", borderRadius: 99, background: "var(--color-neutral-800)" }}>
+                      <div style={{ height: "100%", borderRadius: 99, width: `${prob * 100}%`, background: "var(--color-accent)" }} />
                     </div>
-                    <span className="w-10 shrink-0 text-right text-faint">{Math.round(prob * 100)}%</span>
+                    <span style={{ width: 40, flex: "none", textAlign: "right", color: "var(--color-neutral-500)" }}>{Math.round(prob * 100)}%</span>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-faint">A statistical estimate from vitals alone - not a diagnosis.</p>
-            </Card>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>A statistical estimate from vitals alone - not a diagnosis.</p>
+            </Section>
           )}
 
-          <Card>
-            <p className="eyebrow mb-2">Danger-Sign Ladder</p>
+          <Section title="Danger-Sign Ladder">
             {ladder?.rung > 0 ? (
               <>
-                <Pill tone={ladder.rung >= 4 ? "critical" : ladder.rung >= 3 ? "warning" : "neutral"}>Rung {ladder.rung} — {ladder.rungLabel}</Pill>
-                <p className="mt-2 text-xs text-muted">{ladder.description}</p>
+                <span style={{ display: "inline-flex", alignSelf: "start", borderRadius: 99, border: `1px solid ${ladder.rung >= 4 ? "var(--color-critical)" : ladder.rung >= 3 ? "var(--color-warning)" : "var(--color-neutral-600)"}`, color: ladder.rung >= 4 ? "var(--color-critical)" : ladder.rung >= 3 ? "var(--color-warning)" : "var(--color-neutral-400)", padding: "3px 10px", fontSize: "0.75rem" }}>
+                  Rung {ladder.rung} — {ladder.rungLabel}
+                </span>
+                <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>{ladder.description}</p>
               </>
             ) : (
-              <p className="text-xs text-muted">No danger-sign phrase matched.</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>No danger-sign phrase matched.</p>
             )}
-          </Card>
+          </Section>
 
           {rf && (
-            <Card>
-              <p className="eyebrow mb-2">Risk Factors <span className="text-faint">(×{rf.multiplier?.toFixed(2)})</span></p>
+            <Section title={`Risk Factors (×${rf.multiplier?.toFixed(2)})`}>
               <TagGroup label="Static" items={rf.staticRiskFactors} />
-              <TagGroup label="Dynamic" items={rf.dynamicRiskFactors} className="border-warning/30 text-warning" />
-            </Card>
+              <TagGroup label="Dynamic" items={rf.dynamicRiskFactors} color="var(--color-warning)" />
+            </Section>
           )}
 
           {hb && (
-            <Card>
-              <p className="eyebrow mb-2">Anemia Grading (India)</p>
-              <p className="text-sm text-ink"><strong>{hb.grade}</strong> ({hb.hemoglobin} g/dL)</p>
-              <p className="mt-1 text-xs text-faint">{hb.methodology}</p>
-            </Card>
+            <Section title="Anemia Grading (India)">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{hb.grade}</strong> ({hb.hemoglobin} g/dL)</p>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{hb.methodology}</p>
+            </Section>
           )}
 
           {psych && (
-            <Card>
-              <p className="eyebrow mb-2">Psychological Evaluation (EPDS)</p>
-              <p className="text-sm text-ink"><strong>{psych.classification}</strong> ({psych.total}/{psych.maxScore})</p>
+            <Section title="Psychological Evaluation (EPDS)">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{psych.classification}</strong> ({psych.total}/{psych.maxScore})</p>
               {psych.selfHarmFlagged && (
-                <div className="mt-2 rounded-md border border-critical/40 bg-critical-soft p-2.5 text-sm text-critical">
-                  🚨 Self-harm item flagged ({psych.selfHarmSeverityLabel}) — please reach out now.{" "}
-                  <a href="tel:1800-599-0019" className="font-semibold underline">Call KIRAN: 1800-599-0019</a>
+                <div style={{ borderRadius: 10, border: "1px solid var(--color-critical)", background: "var(--color-critical-soft)", padding: 10, fontSize: "0.875rem", color: "var(--color-text)" }}>
+                  <i className="ph ph-warning" /> Self-harm item flagged ({psych.selfHarmSeverityLabel}) — please reach out now.{" "}
+                  <a href="tel:1800-599-0019" style={{ fontWeight: 600, textDecoration: "underline", color: "var(--color-critical)" }}>Call KIRAN: 1800-599-0019</a>
                 </div>
               )}
               {psych.anxietySubscale?.flagged && (
-                <p className="mt-2 text-xs text-warning">💛 Anxiety subscale also flagged — worth mentioning to your ANC provider too.</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--color-warning)" }}>Anxiety subscale also flagged — worth mentioning to your ANC provider too.</p>
               )}
-            </Card>
+            </Section>
           )}
 
           {weight && (
-            <Card>
-              <p className="eyebrow mb-2">Weight Check</p>
-              <p className="text-sm text-ink">
+            <Section title="Weight Check">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
                 <strong>{weight.status}</strong>{weight.diffKg != null ? ` (${weight.diffKg > 0 ? "+" : ""}${weight.diffKg} kg since last check)` : ""}
               </p>
-              {weight.flag && <p className="mt-1 text-xs text-faint">{weight.flag}</p>}
-            </Card>
+              {weight.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{weight.flag}</p>}
+            </Section>
           )}
 
           {fetal && (
-            <Card>
-              <p className="eyebrow mb-2">Fetal Movement Check</p>
-              <p className="text-sm text-ink"><strong>{fetal.status}</strong></p>
-              {fetal.flag && <p className="mt-1 text-xs text-faint">{fetal.flag}</p>}
-            </Card>
+            <Section title="Fetal Movement Check">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{fetal.status}</strong></p>
+              {fetal.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{fetal.flag}</p>}
+            </Section>
           )}
 
           {fundal && (
-            <Card>
-              <p className="eyebrow mb-2">Fundal Height Check</p>
-              <p className="text-sm text-ink"><strong>{fundal.status}</strong></p>
-              {fundal.flag && <p className="mt-1 text-xs text-faint">{fundal.flag}</p>}
-            </Card>
+            <Section title="Fundal Height Check">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{fundal.status}</strong></p>
+              {fundal.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{fundal.flag}</p>}
+            </Section>
           )}
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-4">
-        <Button variant="ghost" onClick={onReset}>← Run another assessment</Button>
-        <Link to="/referral" className="text-sm font-semibold text-primary hover:underline">
-          📄 Generate Referral Summary →
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
+        <button type="button" onClick={onReset} className="btn btn-ghost">
+          <i className="ph ph-arrow-left" /> Run another assessment
+        </button>
+        <Link to="/referral" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-accent-400)", textDecoration: "none" }}>
+          <i className="ph ph-file-text" /> Generate Referral Summary →
         </Link>
       </div>
     </div>
