@@ -21,6 +21,13 @@ export function LangProvider({ children }) {
         setLang(next);
       },
       nextLangLabel: LANG_LABELS[LANG_CYCLE[(LANG_CYCLE.indexOf(lang) + 1) % LANG_CYCLE.length]],
+      // Direct 3-way picker (the mockup's segmented EN/HI/Hinglish control),
+      // alongside the single-button cycle above which some callers still use.
+      setLangDirect: (code) => {
+        if (!LANG_CYCLE.includes(code)) return;
+        localStorage.setItem(LANG_KEY, code);
+        setLang(code);
+      },
       t: (key) => dict[key] ?? translations.en[key] ?? key,
     };
   }, [lang]);

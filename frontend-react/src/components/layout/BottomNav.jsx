@@ -1,79 +1,144 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useLang } from "../../context/LangContext";
-import { PRIMARY_LINKS, MORE_LINKS } from "./navLinks";
+import { NAV_GROUPS, MOBILE_TABS } from "./navLinks";
 
-// Mobile-only tab bar (Home | Health | Nutrition | Reports | Profile) with
-// a "More" tab opening a bottom sheet for the remaining sections. Hidden
-// at the lg breakpoint, where Sidebar takes over navigation instead.
+// Literal port of the mockup's mobile bottom tab bar + "More" bottom
+// sheet (Janamdatri App v2.dc.html lines 463-477): 5-column tab row, and
+// a sheet that renders the SAME grouped navGroups structure as the
+// desktop sidebar (grouped sections, each a 3-column icon grid) rather
+// than one flat grid of "more" links.
 export default function BottomNav() {
   const { hasIdentity } = useAuth();
   const { t } = useLang();
+  const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   if (!hasIdentity) return null;
 
-  const tabClass = ({ isActive }) =>
-    `flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-      isActive ? "text-primary" : "text-muted"
-    }`;
+  const isTabActive = (to) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to));
 
   return (
     <>
       {moreOpen && (
-        <div data-print-hide className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setMoreOpen(false)}
-            className="absolute inset-0 bg-black/30"
-          />
+        <div
+          data-print-hide
+          onClick={() => setMoreOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(16,18,28,0.72)", zIndex: 50, display: "flex", alignItems: "flex-end" }}
+          className="lg:hidden"
+        >
           <div
-            role="dialog"
-            aria-modal="true"
-            className="absolute inset-x-0 bottom-0 rounded-t-lg bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              background: "var(--color-surface)",
+              borderRadius: "20px 20px 0 0",
+              padding: "10px 16px calc(24px + env(safe-area-inset-bottom))",
+              display: "grid",
+              gap: 14,
+              boxShadow: "var(--shadow-lg)",
+              maxHeight: "85%",
+              overflowY: "auto",
+            }}
           >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border-strong" />
-            <div className="grid grid-cols-3 gap-2">
-              {MORE_LINKS.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  onClick={() => setMoreOpen(false)}
-                  className={({ isActive }) =>
-                    `flex flex-col items-center gap-1.5 rounded-md px-2 py-3 text-xs font-medium ${
-                      isActive ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-hover hover:text-ink"
-                    }`
-                  }
-                >
-                  <span className="text-xl">{l.icon}</span>
-                  {t(l.label)}
-                </NavLink>
-              ))}
-            </div>
-            <a
-              href="tel:108"
-              className="mt-3 flex items-center justify-center gap-2 rounded-full bg-critical px-4 py-3 text-sm font-bold text-white"
-            >
-              🚨 {t("common.call108")}
-            </a>
+            <div style={{ justifySelf: "center", width: 36, height: 4, borderRadius: 2, background: "var(--color-neutral-700)" }} />
+            {NAV_GROUPS.map((g) => (
+              <div key={g.key} style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-neutral-500)" }}>{t(g.labelKey)}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+                  {g.items.map((it) => {
+                    const active = isTabActive(it.to);
+                    return (
+                      <NavLink
+                        key={it.to}
+                        to={it.to}
+                        end={it.to === "/"}
+                        onClick={() => setMoreOpen(false)}
+                        style={{
+                          display: "grid",
+                          justifyItems: "center",
+                          gap: 4,
+                          padding: "12px 4px",
+                          borderRadius: 12,
+                          border: `1px solid ${active ? "var(--color-accent)" : "var(--color-neutral-800)"}`,
+                          background: active ? "var(--color-accent-900)" : "transparent",
+                          color: active ? "var(--color-accent-200)" : "var(--color-neutral-400)",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          minHeight: 72,
+                          textDecoration: "none",
+                        }}
+                      >
+                        <i className={`ph ${it.icon}`} style={{ fontSize: 22 }} />
+                        {t(it.labelKey)}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      <nav data-print-hide className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {PRIMARY_LINKS.map((l) => (
-          <NavLink key={l.to} to={l.to} className={tabClass} end={l.to === "/"}>
-            <span className="text-lg leading-none">{l.icon}</span>
-            {t(l.label)}
-          </NavLink>
-        ))}
+      <nav
+        data-print-hide
+        className="lg:hidden"
+        style={{
+          position: "fixed",
+          insetInline: 0,
+          bottom: 0,
+          zIndex: 40,
+          display: "grid",
+          gridTemplateColumns: "repeat(5,1fr)",
+          borderTop: "1px solid var(--color-neutral-900)",
+          padding: "6px 6px calc(14px + env(safe-area-inset-bottom))",
+          background: "var(--color-bg)",
+        }}
+      >
+        {MOBILE_TABS.map((it) => {
+          const active = isTabActive(it.to);
+          return (
+            <NavLink
+              key={it.to}
+              to={it.to}
+              end={it.to === "/"}
+              style={{
+                display: "grid",
+                justifyItems: "center",
+                gap: 2,
+                padding: "6px 0",
+                minHeight: 48,
+                background: "none",
+                border: 0,
+                cursor: "pointer",
+                fontSize: 11,
+                color: active ? "var(--color-accent-400)" : "var(--color-neutral-500)",
+                textDecoration: "none",
+              }}
+            >
+              <i className={`ph ${it.icon}`} style={{ fontSize: 22 }} />
+              {t(it.labelKey)}
+            </NavLink>
+          );
+        })}
         <button
           type="button"
           onClick={() => setMoreOpen(true)}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-muted"
+          style={{
+            display: "grid",
+            justifyItems: "center",
+            gap: 2,
+            padding: "6px 0",
+            minHeight: 48,
+            background: "none",
+            border: 0,
+            cursor: "pointer",
+            fontSize: 11,
+            color: "var(--color-neutral-500)",
+          }}
         >
-          <span className="text-lg leading-none">⋯</span>
+          <i className="ph ph-dots-three" style={{ fontSize: 22 }} />
           {t("nav.more")}
         </button>
       </nav>
