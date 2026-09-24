@@ -42,6 +42,51 @@ function TrendTile({ label, values, color, unit }) {
   );
 }
 
+// Literal bar-chart port of the mockup's BP trend (Janamdatri App v2.dc.html
+// lines 365-371): bars scaled across a 60-180 mmHg range with a dashed
+// 140 mmHg threshold line, rather than the sparkline used for the other
+// metrics - blood pressure is the one trend the mockup gives its own
+// chart form, since crossing 140 is a clinically meaningful line to see.
+const BP_MIN = 60, BP_MAX = 180, BP_THRESHOLD = 140;
+function bpPct(v) {
+  return Math.max(4, Math.min(100, ((v - BP_MIN) / (BP_MAX - BP_MIN)) * 100));
+}
+
+function BpBarChart({ points }) {
+  if (!points.length) return null;
+  const thresholdBottom = bpPct(BP_THRESHOLD);
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14, display: "grid", gap: 10, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <p className="eyebrow">Blood pressure trend</p>
+        <div style={{ fontSize: "0.6875rem", color: "var(--color-neutral-500)", display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{ width: 14, borderTop: "1px dashed var(--color-critical)" }} />
+          {BP_THRESHOLD}
+        </div>
+      </div>
+      <div style={{ position: "relative", height: 120, display: "flex", alignItems: "flex-end", gap: 10, paddingTop: 6 }}>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: `${thresholdBottom}%`, borderTop: "1px dashed var(--color-critical)", opacity: 0.7 }} />
+        {points.map((p, i) => {
+          const color = p.sbp >= 140 ? "var(--color-critical)" : p.sbp >= 130 ? "var(--color-warning)" : "var(--color-good)";
+          return (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, justifyContent: "flex-end", height: "100%" }}>
+              <span style={{ fontSize: "0.6875rem", color: "var(--color-neutral-400)" }}>{p.sbp}</span>
+              <div style={{ width: "100%", maxWidth: 36, height: `${bpPct(p.sbp)}%`, borderRadius: "6px 6px 2px 2px", background: color, opacity: 0.85 }} />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        {points.map((p, i) => (
+          <span key={i} style={{ flex: 1, textAlign: "center", fontSize: "0.6875rem", color: "var(--color-neutral-500)" }}>
+            {p.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function buildTrendSummary(series, chronological) {
   const notes = [];
   const hbFl = firstLastValid(series.hb);
@@ -92,8 +137,8 @@ function buildTrendSummary(series, chronological) {
 function HealthTrends({ history }) {
   const reportLog = scopedGet(KEYS.REPORT_VITALS_LOG) || [];
 
-  const { tiles, summaryNotes, hasData } = useMemo(() => {
-    if (history.length < 2 && reportLog.length < 2) return { tiles: [], summaryNotes: [], hasData: false };
+  const { tiles, bpPoints, summaryNotes, hasData } = useMemo(() => {
+    if (history.length < 2 && reportLog.length < 2) return { tiles: [], bpPoints: [], summaryNotes: [], hasData: false };
 
     const chronological = [...history].reverse();
     const assessPoints = chronological.map((h) => ({
@@ -122,14 +167,16 @@ function HealthTrends({ history }) {
       weight: merged.map((p) => p.weight),
     };
 
+    const bpPoints = merged.filter((p) => p.sbp != null).map((p) => ({ date: new Date(p.t), sbp: p.sbp })).slice(-6);
+
     return {
       tiles: [
         { label: "Risk Score (MRI)", values: series.mri, color: "#ef6f93", unit: "" },
-        { label: "Systolic BP", values: series.sbp, color: "#ff5c5c", unit: " mmHg" },
         { label: "Blood Sugar", values: series.bs, color: "#f5b942", unit: " mmol/L" },
         { label: "Hemoglobin", values: series.hb, color: "#4ade80", unit: " g/dL" },
         { label: "Weight", values: series.weight, color: "#c99a4a", unit: " kg" },
       ],
+      bpPoints,
       summaryNotes: buildTrendSummary(series, chronological),
       hasData: true,
     };
@@ -139,12 +186,13 @@ function HealthTrends({ history }) {
     return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough data yet - run at least 2 assessments (or confirm values from an uploaded report in My Reports) to see trends here.</p>;
   }
   const visibleTiles = tiles.filter((t) => firstLastValid(t.values));
-  if (!visibleTiles.length) {
+  if (!visibleTiles.length && bpPoints.length < 2) {
     return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough repeated vitals/hemoglobin data yet to chart a trend - the risk trend needs at least 2 assessments with vitals or hemoglobin entered.</p>;
   }
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
+      {bpPoints.length >= 2 && <BpBarChart points={bpPoints} />}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
         {visibleTiles.map((t) => <TrendTile key={t.label} {...t} />)}
       </div>
