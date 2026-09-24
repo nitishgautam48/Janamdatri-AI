@@ -58,6 +58,7 @@ export default function Results({ data, onReset }) {
     severity, mri, clinicalExplanation: exp, mlPrediction: ml, dangerLadder: ladder,
     riskFormulation: rf, hemoglobinAssessment: hb, psychologicalEvaluation: psych,
     weightAssessment: weight, fetalMovementAssessment: fetal, fundalHeightAssessment: fundal,
+    urineProteinAssessment: urineProtein, bmiAssessment: bmi,
     recommendations,
   } = data;
 
@@ -247,6 +248,20 @@ export default function Results({ data, onReset }) {
             <Section title="Fundal Height Check">
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{fundal.status}</strong></p>
               {fundal.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{fundal.flag}</p>}
+            </Section>
+          )}
+
+          {urineProtein && (
+            <Section title="Urine Protein Check">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{urineProtein.status}</strong> ({urineProtein.reading})</p>
+              {urineProtein.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{urineProtein.flag}</p>}
+            </Section>
+          )}
+
+          {bmi && (
+            <Section title="BMI">
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{bmi.category}</strong> ({bmi.bmi})</p>
+              {bmi.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{bmi.flag}</p>}
             </Section>
           )}
         </div>

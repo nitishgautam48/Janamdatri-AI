@@ -8,7 +8,8 @@ const EMPTY_FORM = {
   vitalsEnabled: true,
   age: "", sbp: "", dbp: "", bs: "", temp: "", hr: "",
   hemoglobin: "", week: "",
-  weight: "", fetalMovementCount: "", fundalHeight: "",
+  weight: "", heightCm: "", fetalMovementCount: "", fundalHeight: "", urineProtein: "",
+  previousPregnancies: "",
   symptomText: "",
   historyFlags: {},
   includeEpds: true,
@@ -49,12 +50,16 @@ export default function AssessPage() {
     const pregnancyWeek = form.week ? Number(form.week) : null;
     const weight = form.weight ? Number(form.weight) : null;
     const previousWeight = weight != null ? lastKnownWeight() : null;
+    const heightCm = form.heightCm ? Number(form.heightCm) : null;
     const fetalMovementCount = form.fetalMovementCount ? Number(form.fetalMovementCount) : null;
     const fundalHeight = form.fundalHeight ? Number(form.fundalHeight) : null;
+    const urineProtein = form.urineProtein || null;
+    const previousPregnancies = form.previousPregnancies ? Number(form.previousPregnancies) : null;
     const epdsResponses = savedEpds && form.includeEpds ? savedEpds.responses : null;
 
-    if (!text && !vitals && hemoglobin === null && !epdsResponses && weight === null && fetalMovementCount === null && fundalHeight === null) {
-      setError("Provide vitals, symptoms, hemoglobin, weight, fetal movement, fundal height, or an EPDS score before running an assessment.");
+    if (!text && !vitals && hemoglobin === null && !epdsResponses && weight === null && fetalMovementCount === null
+        && fundalHeight === null && !urineProtein) {
+      setError("Provide vitals, symptoms, hemoglobin, weight, fetal movement, fundal height, urine protein, or an EPDS score before running an assessment.");
       return;
     }
 
@@ -68,8 +73,11 @@ export default function AssessPage() {
         pregnancyWeek,
         weight,
         previousWeight,
+        heightCm,
         fetalMovementCount,
         fundalHeight,
+        urineProtein,
+        previousPregnancies,
         epdsResponses: epdsResponses || undefined,
       });
       appendHistoryEntry(data);

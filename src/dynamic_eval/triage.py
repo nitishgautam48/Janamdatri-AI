@@ -108,7 +108,8 @@ def _psych_mri(psych_result: dict) -> float:
 
 def _build_explanation(level: str, escalated_by: str, ladder_result: dict, expert_rules: list,
                         risk_formulation_result: dict, ml_result: dict,
-                        weight_result: dict = None, fetal_movement_result: dict = None) -> dict:
+                        weight_result: dict = None, fetal_movement_result: dict = None,
+                        urine_protein_result: dict = None) -> dict:
     """Turns the raw signals synthesize() already computed into a plain-language
     "why did I get this result" block - a patient-facing "High/Medium/Low" label
     on its own doesn't tell anyone what to actually do about it."""
@@ -146,6 +147,8 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
         why.append(f"Weight check: {weight_result['flag']}")
     if fetal_movement_result and fetal_movement_result.get("flag"):
         why.append(f"Fetal movement check: {fetal_movement_result['flag']}")
+    if urine_protein_result and urine_protein_result.get("flag"):
+        why.append(f"Urine protein check: {urine_protein_result['flag']}")
 
     if not why:
         if ml_result:
@@ -186,7 +189,8 @@ def _build_explanation(level: str, escalated_by: str, ladder_result: dict, exper
 def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
                 hemoglobin: float = None, epds_responses: list = None, pregnancy_week: int = None,
                 weight: float = None, previous_weight: float = None, fetal_movement_count: int = None,
-                fundal_height: float = None) -> dict:
+                fundal_height: float = None, urine_protein: str = None, height_cm: float = None,
+                previous_pregnancies: int = None) -> dict:
     history = history or {}
 
     text_result = text_analyzer.analyze(text) if text else None
@@ -220,7 +224,36 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
     if fundal_height is not None and pregnancy_week is not None:
         fundal_height_result = clinical_inputs.assess_fundal_height(fundal_height, pregnancy_week)
 
-    risk_formulation_result = risk_formulation.assess(text, history)
+    urine_protein_result = None
+    if urine_protein:
+        urine_protein_result = clinical_inputs.assess_urine_protein(urine_protein)
+        text_scores["hypertensive_disorder"] = max(
+            text_scores.get("hypertensive_disorder", 0.0), urine_protein_result["hypertensiveScore"]
+        )
+
+    bmi_result = None
+    if weight is not None and height_cm is not None:
+        bmi_result = clinical_inputs.assess_bmi(weight, height_cm)
+
+    # Background risk factors that never escalate a symptom score on their
+    # own (unlike urine protein/weight/fetal movement above) - they only
+    # ever shift risk_formulation's multiplier, same tier as a prior
+    # C-section or chronic hypertension. Layered onto a COPY of the caller's
+    # history dict so a structured Wizard input and a phrase typed in free
+    # text both reach the exact same risk_formulation.py factor keys.
+    derived_history = dict(history)
+    if previous_pregnancies is not None and previous_pregnancies >= 4:
+        derived_history["grand_multipara"] = True
+    if bmi_result and bmi_result["category"] == "Obese":
+        derived_history["pre_pregnancy_obesity"] = True
+    elif bmi_result and bmi_result["category"] == "Underweight":
+        derived_history["underweight_bmi"] = True
+    # multiple_gestation itself needs no derivation - it's a plain boolean
+    # flag identical in shape to every other Wizard history checkbox
+    # (no_antenatal_care, prior_csection, ...), so it already reaches
+    # risk_formulation.py through the ordinary history dict above.
+
+    risk_formulation_result = risk_formulation.assess(text, derived_history)
     ladder_result = danger_ladder.classify(text)
     expert_rules = expert_system.apply_rules(text_scores)
 
@@ -289,7 +322,7 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         text_scores, ml_result, text_result, ladder_result, expert_rules, risk_formulation_result, psych_result
     )
     explanation = _build_explanation(level, escalated_by, ladder_result, expert_rules, risk_formulation_result,
-                                      ml_result, weight_result, fetal_movement_result)
+                                      ml_result, weight_result, fetal_movement_result, urine_protein_result)
 
     gestational_context = None
     if pregnancy_week is not None:
@@ -307,6 +340,8 @@ def synthesize(ml_result: dict = None, text: str = "", history: dict = None,
         "weightAssessment": weight_result,
         "fetalMovementAssessment": fetal_movement_result,
         "fundalHeightAssessment": fundal_height_result,
+        "urineProteinAssessment": urine_protein_result,
+        "bmiAssessment": bmi_result,
         "dangerLadder": ladder_result,
         "riskFormulation": risk_formulation_result,
         "activeExpertRules": [r for r in expert_rules if r["activated"]],

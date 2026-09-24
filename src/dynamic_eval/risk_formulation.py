@@ -35,6 +35,16 @@ STATIC_RISK_FACTORS = {
                         "had many pregnancies before", "many children already"],
     "teenage_or_advanced_age": ["i am under 18", "i am over 35", "very young mother",
                                 "older first-time mother"],
+    # These three have no natural spoken-language phrase worth matching on
+    # (nobody says "my BMI is 32" in a symptom narrative) - they're reached
+    # almost entirely through the structured history flag computed in
+    # triage.py from the Wizard's height/weight/multiples inputs. A couple
+    # of representative phrases are kept for consistency with every other
+    # entry in this dict, not as the primary detection path.
+    "pre_pregnancy_obesity": ["i was overweight before pregnancy", "obese before pregnancy"],
+    "underweight_bmi": ["i was underweight before pregnancy", "very thin before pregnancy"],
+    "multiple_gestation": ["expecting twins", "having twins", "twin pregnancy", "carrying twins",
+                           "multiple pregnancy confirmed"],
 }
 
 DYNAMIC_RISK_FACTORS = {

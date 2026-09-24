@@ -107,6 +107,13 @@ class AssessRequest(BaseModel):
     fundalHeight: Optional[float] = Field(
         default=None, description="Symphysis-fundal height in cm, if measured - graded against gestational week (McDonald's rule) when pregnancyWeek is also provided"
     )
+    urineProtein: Optional[str] = Field(
+        default=None, description="Urine dipstick protein reading, if tested: nil, trace, 1+, 2+, or 3+"
+    )
+    heightCm: Optional[float] = Field(default=None, description="Height in cm, if known - combined with weight for BMI")
+    previousPregnancies: Optional[int] = Field(
+        default=None, description="Number of PRIOR pregnancies, not counting this one - used to flag grand multiparity (5th+ pregnancy)"
+    )
 
 
 class PsychAssessRequest(BaseModel):
@@ -310,10 +317,12 @@ def model_info():
 @app.post("/assess")
 def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
     if not any([req.text, req.vitals, req.hemoglobin is not None, req.epdsResponses,
-                req.weight is not None, req.fetalMovementCount is not None, req.fundalHeight is not None]):
+                req.weight is not None, req.fetalMovementCount is not None, req.fundalHeight is not None,
+                req.urineProtein]):
         raise HTTPException(
             status_code=400,
-            detail="Provide at least one of: symptom text, vitals, hemoglobin, EPDS responses, weight, fetal movement count, or fundal height.",
+            detail="Provide at least one of: symptom text, vitals, hemoglobin, EPDS responses, weight, "
+                   "fetal movement count, fundal height, or urine protein.",
         )
 
     if req.epdsResponses is not None and len(req.epdsResponses) != 10:
@@ -339,6 +348,9 @@ def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
             previous_weight=req.previousWeight,
             fetal_movement_count=req.fetalMovementCount,
             fundal_height=req.fundalHeight,
+            urine_protein=req.urineProtein,
+            height_cm=req.heightCm,
+            previous_pregnancies=req.previousPregnancies,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -352,6 +364,8 @@ def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
         triage_result["weightInput"] = req.weight
     if req.fundalHeight is not None:
         triage_result["fundalHeightInput"] = req.fundalHeight
+    if req.heightCm is not None:
+        triage_result["heightInput"] = req.heightCm
 
     user = _current_user(x_user_token)
     if user:

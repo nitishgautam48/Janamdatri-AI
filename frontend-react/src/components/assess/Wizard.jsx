@@ -26,8 +26,18 @@ const HISTORY_FLAGS = {
     { key: "birth_preparedness_plan", label: "Has a birth preparedness plan", protective: true },
     { key: "family_support", label: "Supportive family", protective: true },
     { key: "no_antenatal_care", label: "No ANC visits so far", risk: true },
+    { key: "multiple_gestation", label: "Expecting twins/multiples", risk: true },
   ],
 };
+
+const URINE_PROTEIN_OPTIONS = [
+  { value: "", label: "Not tested" },
+  { value: "nil", label: "Nil" },
+  { value: "trace", label: "Trace" },
+  { value: "1+", label: "1+" },
+  { value: "2+", label: "2+" },
+  { value: "3+", label: "3+" },
+];
 
 function Field({ label, hint, why, ...props }) {
   const [showWhy, setShowWhy] = useState(false);
@@ -67,6 +77,39 @@ function Field({ label, hint, why, ...props }) {
       </div>
       {why && showWhy && <p className="mb-1.5 -mt-0.5" style={{ fontSize: "0.75rem", lineHeight: 1.4, color: "var(--color-accent-400)" }}>{why}</p>}
       <input id={id} {...props} className="input" />
+    </div>
+  );
+}
+
+function SelectField({ label, why, options, ...props }) {
+  const [showWhy, setShowWhy] = useState(false);
+  const id = `field-${slugify(label)}`;
+  return (
+    <div className="field">
+      <div className="mb-1 flex items-center gap-1">
+        <label htmlFor={id}>{label}</label>
+        {why && (
+          <button
+            type="button"
+            onClick={() => setShowWhy((s) => !s)}
+            aria-expanded={showWhy}
+            aria-label="Why this matters"
+            style={{
+              display: "flex", height: 16, width: 16, flexShrink: 0, alignItems: "center", justifyContent: "center",
+              borderRadius: "50%", border: "1px solid var(--color-neutral-700)", fontSize: "0.625rem", fontWeight: 700,
+              lineHeight: 1, color: "var(--color-neutral-500)", background: "none", cursor: "pointer",
+            }}
+          >
+            i
+          </button>
+        )}
+      </div>
+      {why && showWhy && <p className="mb-1.5 -mt-0.5" style={{ fontSize: "0.75rem", lineHeight: 1.4, color: "var(--color-accent-400)" }}>{why}</p>}
+      <select id={id} {...props} className="input">
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -231,12 +274,20 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
               why="A sudden jump in weight can be an early sign of fluid retention linked to pre-eclampsia, while weight loss can point to other concerns."
             />
             <Field
+              label="Height (cm)" type="number" step="0.1" placeholder="e.g. 158" value={form.heightCm} onChange={(e) => set("heightCm", e.target.value)}
+              why="Combined with your weight, height gives your BMI - a background risk factor for gestational diabetes and hypertensive disorders, not an emergency sign on its own."
+            />
+            <Field
               label="Fetal movements (last hour)" type="number" placeholder="e.g. 6" value={form.fetalMovementCount} onChange={(e) => set("fetalMovementCount", e.target.value)}
               why="A change in your baby's usual movement pattern is one of the clearest signs to get checked right away - this compares against the expected range."
             />
             <Field
               label="Fundal height (cm)" type="number" step="0.1" placeholder="e.g. 27" value={form.fundalHeight} onChange={(e) => set("fundalHeight", e.target.value)}
               why="Fundal height is a simple way to check whether the baby is growing as expected for this stage of pregnancy."
+            />
+            <SelectField
+              label="Urine protein" options={URINE_PROTEIN_OPTIONS} value={form.urineProtein} onChange={(e) => set("urineProtein", e.target.value)}
+              why="Protein in urine (checked by dipstick) is one of the two things - alongside blood pressure - used to diagnose pre-eclampsia. 2+ or higher on its own is worth an urgent check."
             />
           </div>
         </div>
@@ -288,6 +339,13 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
         <div>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>History</h2>
           <p className="mb-3 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Optional — helps weigh background risk factors.</p>
+          <div className="mb-6 max-w-[220px]">
+            <Field
+              label="Previous pregnancies" hint="not counting this one" type="number" placeholder="e.g. 0"
+              value={form.previousPregnancies} onChange={(e) => set("previousPregnancies", e.target.value)}
+              why="A 5th or later pregnancy (grand multiparity) carries a higher background risk of hemorrhage and other complications, regardless of how the earlier ones went."
+            />
+          </div>
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <h3 className="mb-2" style={{ fontSize: "0.6875rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Past pregnancy history</h3>
@@ -364,8 +422,11 @@ function ReviewSummary({ form }) {
   if (form.hemoglobin) rows.push(["Hemoglobin", `${form.hemoglobin} g/dL`]);
   if (form.week) rows.push(["Gestational week", form.week]);
   if (form.weight) rows.push(["Weight", `${form.weight} kg`]);
+  if (form.heightCm) rows.push(["Height", `${form.heightCm} cm`]);
   if (form.fetalMovementCount) rows.push(["Fetal movements", `${form.fetalMovementCount} in last hour`]);
   if (form.fundalHeight) rows.push(["Fundal height", `${form.fundalHeight} cm`]);
+  if (form.urineProtein) rows.push(["Urine protein", URINE_PROTEIN_OPTIONS.find((o) => o.value === form.urineProtein)?.label || form.urineProtein]);
+  if (form.previousPregnancies) rows.push(["Previous pregnancies", form.previousPregnancies]);
   if (form.symptomText) rows.push(["Symptoms", form.symptomText]);
   const flags = Object.entries(form.historyFlags).filter(([, v]) => v).map(([k]) => k.replace(/_/g, " "));
   if (flags.length) rows.push(["History", flags.join(", ")]);
