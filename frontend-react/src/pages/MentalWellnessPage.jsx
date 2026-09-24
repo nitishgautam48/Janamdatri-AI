@@ -4,7 +4,190 @@ import Pill from "../components/ui/Pill";
 import Spinner from "../components/ui/Spinner";
 import QuestionFlow from "../components/ui/QuestionFlow";
 import { api } from "../lib/api";
-import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue } from "../lib/storage";
+import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue, loadMoodLog, setTodayMood, loadPhq2, savePhq2 } from "../lib/storage";
+
+const MOODS = [
+  { key: "good", icon: "ph-smiley", label: "Good", color: "var(--color-good)" },
+  { key: "okay", icon: "ph-smiley-meh", label: "Okay", color: "var(--color-neutral-400)" },
+  { key: "low", icon: "ph-smiley-sad", label: "Low", color: "var(--color-warning)" },
+  { key: "worried", icon: "ph-smiley-nervous", label: "Worried", color: "var(--color-warning)" },
+  { key: "verysad", icon: "ph-cloud-rain", label: "Very sad", color: "var(--color-critical)" },
+];
+
+function MoodPicker() {
+  const [log, setLog] = useState(() => loadMoodLog());
+  const todayKey = new Date().toLocaleDateString("en-CA");
+  const today = log[todayKey];
+
+  function pick(key) {
+    setLog(setTodayMood(key));
+  }
+
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const key = d.toLocaleDateString("en-CA");
+    const mood = MOODS.find((m) => m.key === log[key]);
+    return { label: d.toLocaleDateString(undefined, { weekday: "narrow" }), icon: mood?.icon || "ph-circle-dashed", color: mood?.color || "var(--color-neutral-700)" };
+  });
+
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
+      <div>
+        <div style={{ fontSize: 15, color: "var(--color-text)" }}>How is your mood today?</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
+        {MOODS.map((m) => {
+          const selected = today === m.key;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => pick(m.key)}
+              style={{
+                border: `1px solid ${selected ? "var(--color-accent)" : "var(--color-neutral-800)"}`,
+                background: selected ? "var(--color-accent-900)" : "transparent",
+                borderRadius: 12,
+                padding: "10px 2px",
+                display: "grid",
+                justifyItems: "center",
+                gap: 4,
+                cursor: "pointer",
+                minHeight: 68,
+              }}
+            >
+              <i className={`ph ${m.icon}`} style={{ fontSize: 26, color: m.color }} />
+              <span style={{ fontSize: 11, color: "var(--color-neutral-400)" }}>{m.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, borderTop: "1px solid var(--color-neutral-800)", paddingTop: 10 }}>
+        {days.map((d, i) => (
+          <div key={i} style={{ display: "grid", justifyItems: "center", gap: 2 }}>
+            <i className={`ph ${d.icon}`} style={{ fontSize: 18, color: d.color }} />
+            <span style={{ fontSize: 10, color: "var(--color-neutral-600)" }}>{d.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const PHQ2_QUESTIONS = [
+  "Little interest or pleasure in doing things",
+  "Feeling down, depressed, or hopeless",
+];
+const PHQ2_OPTIONS = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+
+function Phq2Quick() {
+  const [saved, setSaved] = useState(() => loadPhq2());
+  const [answers, setAnswers] = useState(saved?.answers || {});
+
+  function pick(qIndex, score) {
+    const nextAnswers = { ...answers, [qIndex]: score };
+    setAnswers(nextAnswers);
+    if (Object.keys(nextAnswers).length === PHQ2_QUESTIONS.length) {
+      const total = PHQ2_QUESTIONS.reduce((sum, _, i) => sum + nextAnswers[i], 0);
+      const result = { answers: nextAnswers, total, flagged: total >= 3 };
+      savePhq2(result);
+      setSaved(result);
+    }
+  }
+
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 14, boxShadow: "var(--shadow-sm)" }}>
+      <div>
+        <div style={{ fontSize: 15, color: "var(--color-text)" }}>PHQ-2 quick check</div>
+        <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>In the last 2 weeks, how often have you had…</div>
+      </div>
+      {PHQ2_QUESTIONS.map((q, i) => (
+        <div key={q} style={{ display: "grid", gap: 8 }}>
+          <div style={{ fontSize: 14, color: "var(--color-text)" }}>{q}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {PHQ2_OPTIONS.map((label, score) => {
+              const selected = answers[i] === score;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => pick(i, score)}
+                  style={{
+                    padding: "6px 10px",
+                    whiteSpace: "nowrap",
+                    borderRadius: 99,
+                    border: `1px solid ${selected ? "var(--color-accent)" : "var(--color-neutral-700)"}`,
+                    background: selected ? "var(--color-accent-900)" : "transparent",
+                    color: selected ? "var(--color-accent-200)" : "var(--color-neutral-400)",
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {saved && (
+        <div style={{ padding: 12, borderRadius: 10, background: saved.flagged ? "var(--color-warning-soft)" : "var(--color-good-soft)", display: "grid", gap: 6 }}>
+          <div style={{ fontSize: 14, color: saved.flagged ? "var(--color-warning)" : "var(--color-good)" }}>
+            {saved.flagged ? "Worth a closer look" : "Nothing flagged right now"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>
+            {saved.flagged
+              ? "This quick check alone doesn't diagnose anything, but a score like this is often followed up with the fuller Mental Health Check (EPDS) above, or a conversation with your ANC provider."
+              : "This is a 2-question quick check, not the full EPDS - still worth doing the fuller check above from time to time."}
+          </div>
+          {saved.flagged && (
+            <a href="tel:14416" className="btn btn-primary" style={{ justifySelf: "start", fontSize: 13 }}>
+              <i className="ph ph-phone" /> Tele-MANAS 14416
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BreathingExercise() {
+  const [active, setActive] = useState(false);
+  const [phase, setPhase] = useState("in");
+
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setPhase((p) => (p === "in" ? "out" : "in")), 4000);
+    return () => clearInterval(id);
+  }, [active]);
+
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "20px 16px", display: "grid", gap: 16, justifyItems: "center", boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ justifySelf: "start", fontSize: 15, color: "var(--color-text)" }}>Breathing exercise</div>
+      <div style={{ width: 180, height: 180, borderRadius: "50%", border: "1px dashed var(--color-neutral-700)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            width: 170,
+            height: 170,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, var(--color-accent-700), var(--color-accent-900))",
+            boxShadow: "0 0 40px rgba(145,132,217,0.35)",
+            transform: `scale(${active && phase === "in" ? 1 : 0.7})`,
+            transition: "transform 4s ease-in-out",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <span style={{ fontSize: 15, color: "var(--color-accent-100)" }}>{active ? (phase === "in" ? "Breathe in…" : "Breathe out…") : "Ready"}</span>
+        </div>
+      </div>
+      <button type="button" onClick={() => setActive((a) => !a)} className="btn btn-primary" style={{ minWidth: 140 }}>
+        <i className={`ph ${active ? "ph-pause" : "ph-play"}`} /> {active ? "Stop" : "Start"}
+      </button>
+    </div>
+  );
+}
 
 const SUPPORTIVE_INFO = {
   "Low probability": "Your responses don't suggest significant depression or anxiety symptoms right now. Mood can shift during pregnancy and after birth, so it's worth checking in again in a couple of weeks, especially if anything changes.",
@@ -69,6 +252,24 @@ export default function MentalWellnessPage() {
           )}
         </Card>
       )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, alignItems: "start" }}>
+        <div style={{ display: "grid", gap: 14 }}>
+          <MoodPicker />
+          <Phq2Quick />
+        </div>
+        <div style={{ display: "grid", gap: 14 }}>
+          <BreathingExercise />
+          <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-sm)" }}>
+            <i className="ph ph-headset" style={{ fontSize: 24, color: "var(--color-accent-400)" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, color: "var(--color-text)" }}>Tele-MANAS · 14416</div>
+              <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Free, private mental health support, 24 hours</div>
+            </div>
+            <a href="tel:14416" className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" /></a>
+          </div>
+        </div>
+      </div>
 
       <Card>
         <h1 className="text-xl font-bold text-ink">Mental Health Check</h1>
