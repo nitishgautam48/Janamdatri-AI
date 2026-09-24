@@ -6,9 +6,54 @@ import { api } from "../lib/api";
 import {
   KEYS, lastKnownHemoglobin, scopedGet, scopedSet,
   loadMealLog, toggleMealLogGroup, mealLogFrequencyCounts, todayDateStr,
+  loadWaterState, saveWaterState,
 } from "../lib/storage";
 
 const STATUS_TONE = { Adequate: "good", Borderline: "warning", Low: "critical" };
+const WATER_TARGET = 10;
+
+function WaterTracker() {
+  const [state, setState] = useState(() => loadWaterState());
+
+  function change(delta) {
+    setState((s) => {
+      const glasses = Math.max(0, Math.min(WATER_TARGET, s.glasses + delta));
+      const next = { ...s, glasses };
+      saveWaterState(next);
+      return next;
+    });
+  }
+
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: 15, color: "var(--color-text)" }}>Water <span style={{ color: "var(--color-neutral-500)" }}>(today)</span></span>
+        <span style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>{state.glasses} / {WATER_TARGET}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${WATER_TARGET},1fr)`, gap: 4 }}>
+        {Array.from({ length: WATER_TARGET }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              height: 28,
+              borderRadius: "4px 4px 8px 8px",
+              border: `1px solid ${i < state.glasses ? "var(--color-accent)" : "var(--color-neutral-800)"}`,
+              background: i < state.glasses ? "var(--color-accent-900)" : "transparent",
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="button" onClick={() => change(-1)} className="btn btn-secondary btn-icon" aria-label="Remove glass">
+          <i className="ph ph-minus" />
+        </button>
+        <button type="button" onClick={() => change(1)} className="btn btn-primary" style={{ flex: 1 }}>
+          <i className="ph ph-plus" /> Add a glass
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // Turns a "logged N of the last 7 days" count into the same 0-3 scale the
 // frequency questionnaire already uses (see nutrition_eval.py's
@@ -118,6 +163,8 @@ export default function NutritionPage() {
           </div>
         </Card>
       )}
+
+      <WaterTracker />
 
       <Card>
         <h1 className="text-xl font-bold text-ink">Nutrition Analysis</h1>
