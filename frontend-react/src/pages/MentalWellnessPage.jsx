@@ -5,16 +5,18 @@ import Spinner from "../components/ui/Spinner";
 import QuestionFlow from "../components/ui/QuestionFlow";
 import { api } from "../lib/api";
 import { KEYS, scopedGet, scopedSet, epdsDaysSince, epdsFollowUpDue, loadMoodLog, setTodayMood, loadPhq2, savePhq2 } from "../lib/storage";
+import { useLang } from "../context/LangContext";
 
 const MOODS = [
-  { key: "good", icon: "ph-smiley", label: "Good", color: "var(--color-good)" },
-  { key: "okay", icon: "ph-smiley-meh", label: "Okay", color: "var(--color-neutral-400)" },
-  { key: "low", icon: "ph-smiley-sad", label: "Low", color: "var(--color-warning)" },
-  { key: "worried", icon: "ph-smiley-nervous", label: "Worried", color: "var(--color-warning)" },
-  { key: "verysad", icon: "ph-cloud-rain", label: "Very sad", color: "var(--color-critical)" },
+  { key: "good", icon: "ph-smiley", labelKey: "wellness.moodGood", color: "var(--color-good)" },
+  { key: "okay", icon: "ph-smiley-meh", labelKey: "wellness.moodOkay", color: "var(--color-neutral-400)" },
+  { key: "low", icon: "ph-smiley-sad", labelKey: "wellness.moodLow", color: "var(--color-warning)" },
+  { key: "worried", icon: "ph-smiley-nervous", labelKey: "wellness.moodWorried", color: "var(--color-warning)" },
+  { key: "verysad", icon: "ph-cloud-rain", labelKey: "wellness.moodVerySad", color: "var(--color-critical)" },
 ];
 
 function MoodPicker() {
+  const { t } = useLang();
   const [log, setLog] = useState(() => loadMoodLog());
   const todayKey = new Date().toLocaleDateString("en-CA");
   const today = log[todayKey];
@@ -34,7 +36,7 @@ function MoodPicker() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
       <div>
-        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>How is your mood today?</div>
+        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("wellness.howIsMood")}</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
         {MOODS.map((m) => {
@@ -57,7 +59,7 @@ function MoodPicker() {
               }}
             >
               <i className={`ph ${m.icon}`} style={{ fontSize: "1.625rem", color: m.color }} />
-              <span style={{ fontSize: "0.6875rem", color: "var(--color-neutral-400)" }}>{m.label}</span>
+              <span style={{ fontSize: "0.6875rem", color: "var(--color-neutral-400)" }}>{t(m.labelKey)}</span>
             </button>
           );
         })}
@@ -74,21 +76,19 @@ function MoodPicker() {
   );
 }
 
-const PHQ2_QUESTIONS = [
-  "Little interest or pleasure in doing things",
-  "Feeling down, depressed, or hopeless",
-];
-const PHQ2_OPTIONS = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+const PHQ2_QUESTION_KEYS = ["wellness.phq2Q1", "wellness.phq2Q2"];
+const PHQ2_OPTION_KEYS = ["wellness.phq2OptNotAtAll", "wellness.phq2OptSeveralDays", "wellness.phq2OptMoreThanHalf", "wellness.phq2OptNearlyEveryDay"];
 
 function Phq2Quick() {
+  const { t } = useLang();
   const [saved, setSaved] = useState(() => loadPhq2());
   const [answers, setAnswers] = useState(saved?.answers || {});
 
   function pick(qIndex, score) {
     const nextAnswers = { ...answers, [qIndex]: score };
     setAnswers(nextAnswers);
-    if (Object.keys(nextAnswers).length === PHQ2_QUESTIONS.length) {
-      const total = PHQ2_QUESTIONS.reduce((sum, _, i) => sum + nextAnswers[i], 0);
+    if (Object.keys(nextAnswers).length === PHQ2_QUESTION_KEYS.length) {
+      const total = PHQ2_QUESTION_KEYS.reduce((sum, _, i) => sum + nextAnswers[i], 0);
       const result = { answers: nextAnswers, total, flagged: total >= 3 };
       savePhq2(result);
       setSaved(result);
@@ -98,18 +98,18 @@ function Phq2Quick() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 14, boxShadow: "var(--shadow-sm)" }}>
       <div>
-        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>PHQ-2 quick check</div>
-        <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>In the last 2 weeks, how often have you had…</div>
+        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("wellness.phq2Title")}</div>
+        <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("wellness.phq2Subtitle")}</div>
       </div>
-      {PHQ2_QUESTIONS.map((q, i) => (
-        <div key={q} style={{ display: "grid", gap: 8 }}>
-          <div style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{q}</div>
+      {PHQ2_QUESTION_KEYS.map((qKey, i) => (
+        <div key={qKey} style={{ display: "grid", gap: 8 }}>
+          <div style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{t(qKey)}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {PHQ2_OPTIONS.map((label, score) => {
+            {PHQ2_OPTION_KEYS.map((labelKey, score) => {
               const selected = answers[i] === score;
               return (
                 <button
-                  key={label}
+                  key={labelKey}
                   type="button"
                   onClick={() => pick(i, score)}
                   style={{
@@ -123,7 +123,7 @@ function Phq2Quick() {
                     cursor: "pointer",
                   }}
                 >
-                  {label}
+                  {t(labelKey)}
                 </button>
               );
             })}
@@ -133,16 +133,14 @@ function Phq2Quick() {
       {saved && (
         <div style={{ padding: 12, borderRadius: 10, background: saved.flagged ? "var(--color-warning-soft)" : "var(--color-good-soft)", display: "grid", gap: 6 }}>
           <div style={{ fontSize: "0.875rem", color: saved.flagged ? "var(--color-warning)" : "var(--color-good)" }}>
-            {saved.flagged ? "Worth a closer look" : "Nothing flagged right now"}
+            {saved.flagged ? t("wellness.phq2WorthLook") : t("wellness.phq2NothingFlagged")}
           </div>
           <div style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
-            {saved.flagged
-              ? "This quick check alone doesn't diagnose anything, but a score like this is often followed up with the fuller Mental Health Check (EPDS) above, or a conversation with your ANC provider."
-              : "This is a 2-question quick check, not the full EPDS - still worth doing the fuller check above from time to time."}
+            {saved.flagged ? t("wellness.phq2FlaggedNote") : t("wellness.phq2OkNote")}
           </div>
           {saved.flagged && (
             <a href="tel:14416" className="btn btn-primary" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
-              <i className="ph ph-phone" /> Tele-MANAS 14416
+              <i className="ph ph-phone" /> {t("wellness.teleManas")}
             </a>
           )}
         </div>
@@ -152,6 +150,7 @@ function Phq2Quick() {
 }
 
 function BreathingExercise() {
+  const { t } = useLang();
   const [active, setActive] = useState(false);
   const [phase, setPhase] = useState("in");
 
@@ -163,7 +162,7 @@ function BreathingExercise() {
 
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "20px 16px", display: "grid", gap: 16, justifyItems: "center", boxShadow: "var(--shadow-sm)" }}>
-      <div style={{ justifySelf: "start", fontSize: "0.9375rem", color: "var(--color-text)" }}>Breathing exercise</div>
+      <div style={{ justifySelf: "start", fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("wellness.breathingExercise")}</div>
       <div style={{ width: 180, height: 180, borderRadius: "50%", border: "1px dashed var(--color-neutral-700)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div
           style={{
@@ -179,24 +178,36 @@ function BreathingExercise() {
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: "0.9375rem", color: "var(--color-accent-100)" }}>{active ? (phase === "in" ? "Breathe in…" : "Breathe out…") : "Ready"}</span>
+          <span style={{ fontSize: "0.9375rem", color: "var(--color-accent-100)" }}>{active ? (phase === "in" ? t("wellness.breatheIn") : t("wellness.breatheOut")) : t("wellness.ready")}</span>
         </div>
       </div>
       <button type="button" onClick={() => setActive((a) => !a)} className="btn btn-primary" style={{ minWidth: 140 }}>
-        <i className={`ph ${active ? "ph-pause" : "ph-play"}`} /> {active ? "Stop" : "Start"}
+        <i className={`ph ${active ? "ph-pause" : "ph-play"}`} /> {active ? t("wellness.stop") : t("wellness.start")}
       </button>
     </div>
   );
 }
 
-const SUPPORTIVE_INFO = {
-  "Low probability": "Your responses don't suggest significant depression or anxiety symptoms right now. Mood can shift during pregnancy and after birth, so it's worth checking in again in a couple of weeks, especially if anything changes.",
-  "Possible depression": "Your responses suggest some symptoms worth paying attention to. This is common during and after pregnancy, and it doesn't mean anything is wrong with you as a mother. Consider mentioning how you've been feeling at your next ANC visit.",
-  "Probable depression": "Your responses suggest a symptom pattern consistent with depression. This is common, treatable, and not a personal failing - please talk to your ANC provider or a counselor soon rather than waiting to see if it passes.",
-  "High symptom burden": "Your responses suggest a significant symptom burden right now. Please talk to your ANC provider or a counselor soon - support that actually helps is available, and reaching out is the fastest way to feel better.",
+// Both keyed by the exact English classification string psych_eval.py
+// returns (it has no i18n layer, so that value itself never changes) -
+// SUPPORTIVE_INFO_KEY for the matching supportive paragraph, and
+// CLASSIFICATION_LABEL_KEY (used below) purely for how the classification
+// itself is DISPLAYED, same pattern as Nutrition's status labels.
+const SUPPORTIVE_INFO_KEY = {
+  "Low probability": "wellness.supportiveLowProbability",
+  "Possible depression": "wellness.supportivePossible",
+  "Probable depression": "wellness.supportiveProbable",
+  "High symptom burden": "wellness.supportiveHigh",
+};
+const CLASSIFICATION_LABEL_KEY = {
+  "Low probability": "wellness.classificationLow",
+  "Possible depression": "wellness.classificationPossible",
+  "Probable depression": "wellness.classificationProbable",
+  "High symptom burden": "wellness.classificationHigh",
 };
 
 export default function MentalWellnessPage() {
+  const { t } = useLang();
   const [items, setItems] = useState(null);
   const [responses, setResponses] = useState({});
   const [savedEpds, setSavedEpds] = useState(() => scopedGet(KEYS.EPDS));
@@ -215,7 +226,7 @@ export default function MentalWellnessPage() {
     if (!items) return;
     const missing = items.items.some((_, i) => responses[i] === undefined);
     if (missing) {
-      setError("Please answer all 10 questions.");
+      setError(t("wellness.answerAllError"));
       return;
     }
     const orderedResponses = items.items.map((_, i) => responses[i]);
@@ -228,7 +239,7 @@ export default function MentalWellnessPage() {
       scopedSet(KEYS.EPDS, saved);
       setSavedEpds(saved);
     } catch (err) {
-      setError(err.message || "Could not score EPDS.");
+      setError(err.message || t("wellness.scoreError"));
     } finally {
       setBusy(false);
     }
@@ -240,14 +251,16 @@ export default function MentalWellnessPage() {
         <Card className={followUpDue ? "border-warning/40 bg-warning-soft" : ""}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-ink">
-              Last check: <strong>{savedEpds.result.classification}</strong> ({daysSince} day{daysSince === 1 ? "" : "s"} ago)
+              {t("wellness.lastCheck")} <strong>{t(CLASSIFICATION_LABEL_KEY[savedEpds.result.classification]) || savedEpds.result.classification}</strong>{" "}
+              ({daysSince} {daysSince === 1 ? t("wellness.dayAgo") : t("wellness.daysAgo")})
             </p>
-            {followUpDue && <Pill tone="warning">Follow-up due</Pill>}
+            {followUpDue && <Pill tone="warning">{t("wellness.followUpDue")}</Pill>}
           </div>
           {followUpDue && (
             <p className="mt-1.5 text-sm text-warning">
-              It's been {daysSince} days since your last check, which suggested {savedEpds.result.classification.toLowerCase()} —
-              worth checking in again below.
+              {t("wellness.followUpNotePrefix")} {daysSince} {t("wellness.followUpNoteMiddle")}{" "}
+              {(t(CLASSIFICATION_LABEL_KEY[savedEpds.result.classification]) || savedEpds.result.classification).toLowerCase()}{" "}
+              {t("wellness.followUpNoteSuffix")}
             </p>
           )}
         </Card>
@@ -263,21 +276,17 @@ export default function MentalWellnessPage() {
           <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-sm)" }}>
             <i className="ph ph-headset" style={{ fontSize: "1.5rem", color: "var(--color-accent-400)" }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Tele-MANAS · 14416</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Free, private mental health support, 24 hours</div>
+              <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("wellness.teleManasLabel")}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("wellness.teleManasDesc")}</div>
             </div>
-            <a href="tel:14416" className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" /></a>
+            <a href="tel:14416" className="btn btn-secondary btn-icon" aria-label={t("wellness.call")}><i className="ph ph-phone" /></a>
           </div>
         </div>
       </div>
 
       <Card>
-        <h1 className="text-xl font-bold text-ink">Mental Health Check</h1>
-        <p className="mt-1 text-sm text-muted">
-          The Edinburgh Postnatal Depression Scale (EPDS) — a validated 10-question screening tool for how you've
-          felt over the past 7 days, used during pregnancy and after birth. This is a screening aid, not a
-          diagnosis.
-        </p>
+        <h1 className="text-xl font-bold text-ink">{t("wellness.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("wellness.subtitle")}</p>
 
         {!items ? (
           <Spinner className="mt-4" />
@@ -287,7 +296,7 @@ export default function MentalWellnessPage() {
             responses={responses}
             onAnswer={(id, value) => setResponses((r) => ({ ...r, [id]: value }))}
             onComplete={handleSubmit}
-            submitLabel="Score My Mood"
+            submitLabel={t("wellness.scoreMyMood")}
             busy={busy}
             error={error}
           />
@@ -296,38 +305,37 @@ export default function MentalWellnessPage() {
 
       {result && (
         <Card>
-          <h3 className="mb-3 text-sm font-bold text-ink">Your Result</h3>
+          <h3 className="mb-3 text-sm font-bold text-ink">{t("wellness.yourResult")}</h3>
           <div className="mb-1 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-ink">{result.total}</span>
             <span className="text-sm text-muted">/ {result.maxScore}</span>
           </div>
-          <p className="mb-3 text-sm font-semibold text-ink">{result.classification}</p>
+          <p className="mb-3 text-sm font-semibold text-ink">{t(CLASSIFICATION_LABEL_KEY[result.classification]) || result.classification}</p>
 
           {result.selfHarmFlagged && (
             <div className="mb-3 rounded-md border border-critical/40 bg-critical-soft p-3 text-sm text-critical">
-              🚨 You indicated thoughts of self-harm have occurred to you ("{result.selfHarmSeverityLabel}"). Please talk to
-              someone you trust right now.
+              🚨 {t("wellness.selfHarmIndicated")} ("{result.selfHarmSeverityLabel}"). {t("wellness.selfHarmPleaseTalk")}
               <br />
               <a href="tel:1800-599-0019" className="mt-2 inline-block rounded-full bg-critical px-4 py-2 text-sm font-bold text-white">
-                📞 Call KIRAN: 1800-599-0019 (toll-free, 24x7)
+                📞 {t("wellness.callKiran")}
               </a>
             </div>
           )}
 
-          {SUPPORTIVE_INFO[result.classification] && (
-            <p className="mb-2 text-sm text-warning">💛 {SUPPORTIVE_INFO[result.classification]}</p>
+          {SUPPORTIVE_INFO_KEY[result.classification] && (
+            <p className="mb-2 text-sm text-warning">💛 {t(SUPPORTIVE_INFO_KEY[result.classification])}</p>
           )}
 
           {result.anxietySubscale?.flagged && (
             <p className="mb-2 text-sm text-warning">
-              💛 Your responses also suggest possible anxiety (a validated EPDS subscale), even{" "}
-              {result.classification === "Low probability" ? "though your overall mood score is low" : "alongside your mood score"} - this
-              is worth mentioning to your ANC provider too.
+              💛 {t("wellness.anxietyAlso")}{" "}
+              {result.classification === "Low probability" ? t("wellness.anxietyLowScore") : t("wellness.anxietyAlongside")}{" "}
+              {t("wellness.anxietySuffix")}
             </p>
           )}
 
           {!result.selfHarmFlagged && result.classification !== "Low probability" && (
-            <p className="mb-2 text-xs text-faint">We'll suggest a follow-up check in about 2 weeks - feelings during pregnancy can change, and it helps to keep checking in.</p>
+            <p className="mb-2 text-xs text-faint">{t("wellness.followUpSuggestion")}</p>
           )}
 
           <p className="text-xs text-faint">{result.methodology}</p>
