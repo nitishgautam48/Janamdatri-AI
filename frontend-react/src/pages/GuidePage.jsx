@@ -123,6 +123,13 @@ export default function GuidePage() {
   const [guide, setGuide] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Browsing a different week's ANC/danger-sign/nutrition content than
+  // the saved profile week - a real fetch of that week's real guide data
+  // (the backend already supports any week), never persisted to the
+  // profile, so "your" week on Home/elsewhere is untouched.
+  const [browsedGuide, setBrowsedGuide] = useState(null);
+  const [browsing, setBrowsing] = useState(false);
+  const shown = browsedGuide || guide;
 
   async function handleSubmit() {
     setError("");
@@ -131,11 +138,29 @@ export default function GuidePage() {
     try {
       const data = await api.pregnancyGuide(mode === "lmp" ? { lmp } : { week: Number(week) });
       setGuide(data);
+      setBrowsedGuide(null);
       scopedSet(KEYS.GUIDE, { ...data, savedAt: new Date().toISOString() });
     } catch (err) {
       setError(err.message || "Could not load your pregnancy guide.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function browseWeek(delta) {
+    const targetWeek = Math.max(4, Math.min(40, shown.week + delta));
+    if (targetWeek === guide.week) {
+      setBrowsedGuide(null);
+      return;
+    }
+    setBrowsing(true);
+    try {
+      const data = await api.pregnancyGuide({ week: targetWeek });
+      setBrowsedGuide(data);
+    } catch {
+      /* keep showing whatever was already loaded */
+    } finally {
+      setBrowsing(false);
     }
   }
 
@@ -191,23 +216,34 @@ export default function GuidePage() {
         <div className="mx-auto max-w-none" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 14 }}>
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, boxShadow: "var(--shadow-sm)" }}>
-              <div className="flex items-center gap-4">
-                <div style={{ borderRadius: 99, padding: "8px 16px", fontSize: "0.875rem", fontWeight: 600, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>Week {guide.week}</div>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => browseWeek(-1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label="Previous week">
+                  <i className="ph ph-caret-left" />
+                </button>
+                <div style={{ borderRadius: 99, padding: "8px 16px", fontSize: "0.875rem", fontWeight: 600, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>Week {shown.week}</div>
+                <button type="button" onClick={() => browseWeek(1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label="Next week">
+                  <i className="ph ph-caret-right" />
+                </button>
                 <div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>Trimester {guide.trimester}</div>
+                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>Trimester {shown.trimester}</div>
                   <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
-                    {guide.estimatedDueDate ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go` : `${guide.weeksUntilDue} weeks to go`}
+                    {shown === guide && guide.estimatedDueDate ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go` : `${shown.weeksUntilDue} weeks to go`}
                   </div>
                 </div>
               </div>
+              {browsedGuide && (
+                <button type="button" onClick={() => setBrowsedGuide(null)} className="btn btn-ghost mt-2" style={{ fontSize: "0.75rem" }}>
+                  ← Back to your week ({guide.week})
+                </button>
+              )}
               <div className="mt-5">
-                <PregnancyTimeline week={guide.week} />
+                <PregnancyTimeline week={shown.week} />
               </div>
             </div>
 
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
               <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>This Week</h3>
-              <ThisWeekAccordion guide={guide} />
+              <ThisWeekAccordion guide={shown} />
             </div>
 
             <div style={{ display: "grid", gap: 8 }}>
@@ -228,8 +264,8 @@ export default function GuidePage() {
 
             <div style={{ display: "grid", gap: 8 }}>
               <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Clinic visits (ANC)</h3>
-              {guide.ancSchedule.map((visit) => {
-                const isNext = visit.visit === guide.nextAncVisit.visit;
+              {shown.ancSchedule.map((visit) => {
+                const isNext = visit.visit === shown.nextAncVisit.visit;
                 return (
                   <div
                     key={visit.visit}
