@@ -45,15 +45,15 @@ export default function Sidebar() {
           <i className="ph ph-heartbeat" />
         </span>
         <span style={{ textAlign: "left", lineHeight: 1.2 }}>
-          <span style={{ display: "block", fontWeight: 500, fontSize: 15, color: "var(--color-text)" }}>Janamdatri AI</span>
-          <span style={{ display: "block", fontSize: 12, color: "var(--color-neutral-500)" }}>जन्मदात्री</span>
+          <span style={{ display: "block", fontWeight: 500, fontSize: "0.9375rem", color: "var(--color-text)" }}>Janamdatri AI</span>
+          <span style={{ display: "block", fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>जन्मदात्री</span>
         </span>
       </NavLink>
 
       <nav style={{ display: "grid", gap: 12 }}>
         {NAV_GROUPS.map((g) => (
           <div key={g.key} style={{ display: "grid", gap: 1 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-neutral-600)", padding: "0 10px 3px" }}>
+            <div style={{ fontSize: "0.6875rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-neutral-600)", padding: "0 10px 3px" }}>
               {t(g.labelKey)}
             </div>
             {g.items.map((it) => (
@@ -62,9 +62,9 @@ export default function Sidebar() {
                 to={it.to}
                 end={it.to === "/"}
                 className={({ isActive }) => `jd-navlink${isActive ? " jd-navlink-active" : ""}`}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: 0, cursor: "pointer", fontSize: 14, textAlign: "left", width: "100%", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: 0, cursor: "pointer", fontSize: "0.875rem", textAlign: "left", width: "100%", textDecoration: "none" }}
               >
-                <i className={`ph ${it.icon}`} style={{ fontSize: 17 }} />
+                <i className={`ph ${it.icon}`} style={{ fontSize: "1.0625rem" }} />
                 {t(it.labelKey)}
               </NavLink>
             ))}

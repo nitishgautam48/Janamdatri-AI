@@ -30,9 +30,9 @@ function QuickDial({ icon, number, label, tel, tone }) {
       className={tone === "critical" ? "jd-dial-critical" : "jd-dial"}
       style={{ borderRadius: 14, padding: 14, display: "grid", gap: 4, textAlign: "left", cursor: "pointer", textDecoration: "none" }}
     >
-      <i className={`ph ${icon}`} style={{ fontSize: 22 }} />
-      <span style={{ fontSize: 24, fontWeight: 500 }}>{number}</span>
-      <span style={{ fontSize: 12 }}>{label}</span>
+      <i className={`ph ${icon}`} style={{ fontSize: "1.375rem" }} />
+      <span style={{ fontSize: "1.5rem", fontWeight: 500 }}>{number}</span>
+      <span style={{ fontSize: "0.75rem" }}>{label}</span>
     </a>
   );
 }
@@ -40,23 +40,23 @@ function QuickDial({ icon, number, label, tel, tone }) {
 function FacilityCard({ f }) {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-sm)" }}>
-      <i className={`ph ${f.icon}`} style={{ fontSize: 22, color: "var(--color-accent-400)", flex: "none" }} />
+      <i className={`ph ${f.icon}`} style={{ fontSize: "1.375rem", color: "var(--color-accent-400)", flex: "none" }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, color: "var(--color-text)" }}>{f.name}</div>
-        <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>
+        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{f.name}</div>
+        <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
           {f.distanceKm.toFixed(1)} km · {f.typeLabel}
           {f.emergency && " · 24hr emergency"}
           {f.openingHours ? ` · ${f.openingHours}` : ""}
         </div>
-        {f.address && <div style={{ fontSize: 12, color: "var(--color-neutral-600)" }}>{f.address}</div>}
+        {f.address && <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-600)" }}>{f.address}</div>}
       </div>
       {f.phone && (
         <a href={`tel:${f.phone}`} className="btn btn-secondary btn-icon" aria-label="Call">
-          <i className="ph ph-phone" style={{ fontSize: 16 }} />
+          <i className="ph ph-phone" style={{ fontSize: "1rem" }} />
         </a>
       )}
       <a href={f.mapsUrl} target="_blank" rel="noreferrer" className="btn btn-secondary btn-icon" aria-label="Directions">
-        <i className="ph ph-navigation-arrow" style={{ fontSize: 16 }} />
+        <i className="ph ph-navigation-arrow" style={{ fontSize: "1rem" }} />
       </a>
     </div>
   );
@@ -117,7 +117,7 @@ function NearbyCare() {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Nearby care</div>
+        <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Nearby care</div>
         {facilities.length > 0 && (
           <div style={{ display: "flex", border: "1px solid var(--color-neutral-800)", borderRadius: 8, overflow: "hidden" }}>
             {FILTERS.map((f) => (
@@ -125,7 +125,7 @@ function NearbyCare() {
                 key={f.key}
                 type="button"
                 onClick={() => setFilter(f.key)}
-                style={{ padding: "5px 10px", border: 0, cursor: "pointer", fontSize: 12, background: filter === f.key ? "var(--color-accent-900)" : "transparent", color: filter === f.key ? "var(--color-accent-200)" : "var(--color-neutral-400)" }}
+                style={{ padding: "5px 10px", border: 0, cursor: "pointer", fontSize: "0.75rem", background: filter === f.key ? "var(--color-accent-900)" : "transparent", color: filter === f.key ? "var(--color-accent-200)" : "var(--color-neutral-400)" }}
               >
                 {f.label}
               </button>
@@ -136,7 +136,7 @@ function NearbyCare() {
 
       {status === "idle" && (
         <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 16, display: "grid", gap: 10 }}>
-          <p style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>
+          <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
             Find hospitals, clinics, and pharmacies actually near you, using your phone's location and OpenStreetMap - free, and nothing is sent anywhere except the search itself.
           </p>
           <button type="button" onClick={useMyLocation} className="btn btn-primary" style={{ justifySelf: "start" }}>
@@ -150,20 +150,20 @@ function NearbyCare() {
       )}
 
       {(status === "locating" || status === "loading") && (
-        <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--color-neutral-400)" }}>
-          <i className="ph ph-spinner-gap" style={{ fontSize: 18, animation: "jd-spin 1s linear infinite" }} />
+        <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 16, display: "flex", alignItems: "center", gap: 10, fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
+          <i className="ph ph-spinner-gap" style={{ fontSize: "1.125rem", animation: "jd-spin 1s linear infinite" }} />
           {status === "locating" ? "Finding your location…" : "Looking for nearby care…"}
         </div>
       )}
 
       {error && status !== "locating" && status !== "loading" && (
         <div style={{ background: "var(--color-warning-soft)", border: "1px solid var(--color-warning)", borderRadius: 12, padding: 14, display: "grid", gap: 8 }}>
-          <p style={{ fontSize: 13, color: "var(--color-text)" }}>{error}</p>
+          <p style={{ fontSize: "0.8125rem", color: "var(--color-text)" }}>{error}</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={useMyLocation} className="btn btn-secondary" style={{ fontSize: 12 }}>Try again</button>
+            <button type="button" onClick={useMyLocation} className="btn btn-secondary" style={{ fontSize: "0.75rem" }}>Try again</button>
             <form onSubmit={searchPlace} style={{ display: "flex", gap: 8 }}>
-              <input className="input" placeholder="Search a place instead" value={placeQuery} onChange={(e) => setPlaceQuery(e.target.value)} style={{ fontSize: 12 }} />
-              <button type="submit" className="btn btn-secondary" style={{ fontSize: 12 }}>Search</button>
+              <input className="input" placeholder="Search a place instead" value={placeQuery} onChange={(e) => setPlaceQuery(e.target.value)} style={{ fontSize: "0.75rem" }} />
+              <button type="submit" className="btn btn-secondary" style={{ fontSize: "0.75rem" }}>Search</button>
             </form>
           </div>
         </div>
@@ -171,7 +171,7 @@ function NearbyCare() {
 
       {status === "ready" && shown.length > 0 && (
         <div style={{ display: "grid", gap: 8 }}>
-          {origin?.label && <p style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Near {origin.label}</p>}
+          {origin?.label && <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Near {origin.label}</p>}
           {shown.map((f) => (
             <FacilityCard key={f.id} f={f} />
           ))}
@@ -206,12 +206,12 @@ export default function HelplinesPage() {
               {(extra.ashaName || "?").charAt(0).toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Your ASHA worker</div>
-              <div style={{ fontSize: 15, color: "var(--color-text)" }}>{extra.ashaName || extra.ashaPhone}</div>
-              {extra.ashaPhone && <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>{extra.ashaPhone}</div>}
+              <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Your ASHA worker</div>
+              <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{extra.ashaName || extra.ashaPhone}</div>
+              {extra.ashaPhone && <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{extra.ashaPhone}</div>}
             </div>
             {extra.ashaPhone && (
-              <a href={`tel:${extra.ashaPhone}`} className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" style={{ fontSize: 16 }} /></a>
+              <a href={`tel:${extra.ashaPhone}`} className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" style={{ fontSize: "1rem" }} /></a>
             )}
           </div>
         )}
@@ -219,7 +219,7 @@ export default function HelplinesPage() {
         <NearbyCare />
 
         <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Emergency numbers</div>
+          <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Emergency numbers</div>
           <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
             {(helplines
               ? [
@@ -230,7 +230,7 @@ export default function HelplinesPage() {
                 ]
               : []
             ).map((h) => (
-              <a key={h.tel} href={`tel:${h.tel}`} style={{ background: "#1b1d2a", padding: "10px 14px", display: "flex", justifyContent: "space-between", fontSize: 14, textDecoration: "none", color: "var(--color-text)" }}>
+              <a key={h.tel} href={`tel:${h.tel}`} style={{ background: "#1b1d2a", padding: "10px 14px", display: "flex", justifyContent: "space-between", fontSize: "0.875rem", textDecoration: "none", color: "var(--color-text)" }}>
                 <span>{h.label}</span>
                 <span style={{ color: "var(--color-accent-400)" }}>{h.number}</span>
               </a>
@@ -241,7 +241,7 @@ export default function HelplinesPage() {
 
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Good to know</div>
+          <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Good to know</div>
           <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
             {TIPS.map((tip, i) => (
               <div key={tip.q} style={{ background: "#1b1d2a" }}>
@@ -250,22 +250,22 @@ export default function HelplinesPage() {
                   onClick={() => setOpenTip(openTip === i ? null : i)}
                   style={{ width: "100%", padding: 14, display: "flex", gap: 12, alignItems: "center", background: "none", border: 0, cursor: "pointer", textAlign: "left" }}
                 >
-                  <span style={{ flex: 1, fontSize: 15, color: "var(--color-text)" }}>{tip.q}</span>
+                  <span style={{ flex: 1, fontSize: "0.9375rem", color: "var(--color-text)" }}>{tip.q}</span>
                   <i className={`ph ${openTip === i ? "ph-caret-up" : "ph-caret-down"}`} style={{ color: "var(--color-neutral-500)" }} />
                 </button>
-                {openTip === i && <div style={{ padding: "0 14px 14px", fontSize: 14, lineHeight: 1.55, color: "var(--color-neutral-300)" }}>{tip.a}</div>}
+                {openTip === i && <div style={{ padding: "0 14px 14px", fontSize: "0.875rem", lineHeight: 1.55, color: "var(--color-neutral-300)" }}>{tip.a}</div>}
               </div>
             ))}
           </div>
         </div>
 
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Government schemes</div>
+          <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Government schemes</div>
           <div style={{ display: "grid", gap: 8 }}>
             {Object.entries(SCHEMES).map(([name, desc]) => (
               <div key={name} style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14 }}>
-                <strong style={{ fontSize: 14, color: "var(--color-text)" }}>{name}</strong>
-                <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-neutral-500)" }}>{desc}</p>
+                <strong style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{name}</strong>
+                <p style={{ marginTop: 4, fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{desc}</p>
               </div>
             ))}
           </div>

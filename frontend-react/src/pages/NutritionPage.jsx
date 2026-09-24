@@ -27,8 +27,8 @@ function WaterTracker() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 15, color: "var(--color-text)" }}>Water <span style={{ color: "var(--color-neutral-500)" }}>(today)</span></span>
-        <span style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>{state.glasses} / {WATER_TARGET}</span>
+        <span style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Water <span style={{ color: "var(--color-neutral-500)" }}>(today)</span></span>
+        <span style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{state.glasses} / {WATER_TARGET}</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${WATER_TARGET},1fr)`, gap: 4 }}>
         {Array.from({ length: WATER_TARGET }).map((_, i) => (

@@ -24,7 +24,7 @@ function LangSegment() {
             padding: "5px 10px",
             border: 0,
             cursor: "pointer",
-            fontSize: 12,
+            fontSize: "0.75rem",
             background: lang === l.code ? "var(--color-accent-900)" : "transparent",
             color: lang === l.code ? "var(--color-accent-200)" : "var(--color-neutral-400)",
           }}
@@ -53,7 +53,7 @@ function IconToggle({ active, onClick, label, children }) {
         background: active ? "var(--color-accent-900)" : "var(--color-surface)",
         color: active ? "var(--color-accent-300)" : "var(--color-neutral-400)",
         cursor: "pointer",
-        fontSize: 12,
+        fontSize: "0.75rem",
         fontWeight: 600,
       }}
     >
@@ -77,7 +77,7 @@ function Avatar() {
         border: "1px solid var(--color-neutral-700)",
         background: "var(--color-surface)",
         cursor: "pointer",
-        fontSize: 13,
+        fontSize: "0.8125rem",
         fontWeight: 500,
         display: "flex",
         alignItems: "center",
@@ -133,7 +133,7 @@ export default function TopBar() {
           >
             <i className="ph ph-heartbeat" />
           </span>
-          <span style={{ fontWeight: 500, fontSize: 14, color: "var(--color-text)" }}>Janamdatri</span>
+          <span style={{ fontWeight: 500, fontSize: "0.875rem", color: "var(--color-text)" }}>Janamdatri</span>
         </NavLink>
       </header>
     );
@@ -146,9 +146,9 @@ export default function TopBar() {
         className="hidden lg:flex"
         style={{ alignItems: "center", gap: 12, padding: "12px 32px", borderBottom: "1px solid var(--color-neutral-900)", flex: "none" }}
       >
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, fontSize: "0.8125rem", whiteSpace: "nowrap", overflow: "hidden" }}>
           <span style={{ color: "var(--color-neutral-600)" }}>{curGroup ? t(curGroup.labelKey) : ""}</span>
-          <i className="ph ph-caret-right" style={{ fontSize: 11, color: "var(--color-neutral-700)" }} />
+          <i className="ph ph-caret-right" style={{ fontSize: "0.6875rem", color: "var(--color-neutral-700)" }} />
           <span style={{ color: "var(--color-neutral-300)" }}>{curItem ? t(curItem.labelKey) : ""}</span>
         </div>
         <IconToggle active={largeText} onClick={toggleLargeText} label="Large text">
@@ -168,7 +168,7 @@ export default function TopBar() {
             padding: "6px 12px",
             border: "1px solid oklch(0.72 0.13 25)",
             borderRadius: 8,
-            fontSize: 13,
+            fontSize: "0.8125rem",
             color: "oklch(0.87 0.07 25)",
             background: "none",
             cursor: "pointer",
@@ -200,7 +200,7 @@ export default function TopBar() {
           >
             <i className="ph ph-heartbeat" />
           </span>
-          <span style={{ fontWeight: 500, fontSize: 14, color: "var(--color-text)" }}>Janamdatri</span>
+          <span style={{ fontWeight: 500, fontSize: "0.875rem", color: "var(--color-text)" }}>Janamdatri</span>
         </NavLink>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <LangSegment />

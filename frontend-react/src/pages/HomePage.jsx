@@ -60,22 +60,22 @@ function Tile({ icon, label, value, unit, sub, tone, emptyHint, to }) {
         textDecoration: "none",
       }}
     >
-      <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-neutral-500)", fontSize: 12 }}>
-        <i className={`ph ${icon}`} style={{ fontSize: 16, color: tone || "var(--color-accent-400)" }} />
+      <span style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-neutral-500)", fontSize: "0.75rem" }}>
+        <i className={`ph ${icon}`} style={{ fontSize: "1rem", color: tone || "var(--color-accent-400)" }} />
         {label}
       </span>
       {value != null ? (
         <>
-          <span style={{ fontSize: 20, fontWeight: 500, whiteSpace: "nowrap", color: "var(--color-text)" }}>
+          <span style={{ fontSize: "1.25rem", fontWeight: 500, whiteSpace: "nowrap", color: "var(--color-text)" }}>
             {value}
-            {unit && <span style={{ fontSize: 12, color: "var(--color-neutral-500)", marginLeft: 4 }}>{unit}</span>}
+            {unit && <span style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)", marginLeft: 4 }}>{unit}</span>}
           </span>
-          <span style={{ fontSize: 12, color: "var(--color-neutral-500)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</span>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</span>
         </>
       ) : (
         <>
-          <span style={{ fontSize: 15, color: "var(--color-neutral-400)" }}>Not recorded</span>
-          <span style={{ fontSize: 12, color: "var(--color-accent-400)" }}>{emptyHint} →</span>
+          <span style={{ fontSize: "0.9375rem", color: "var(--color-neutral-400)" }}>Not recorded</span>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-accent-400)" }}>{emptyHint} →</span>
         </>
       )}
     </Link>
@@ -97,8 +97,8 @@ function TodayCare({ history }) {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 10, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Today's Care</span>
-        <span style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>{doneCount} / {tasks.length}</span>
+        <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Today's Care</span>
+        <span style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{doneCount} / {tasks.length}</span>
       </div>
       {tasks.map((t) => {
         const checked = t.manual ? !!state.checked[t.id] : !!t.done;
@@ -110,7 +110,7 @@ function TodayCare({ history }) {
               alignItems: "flex-start",
               gap: 10,
               cursor: t.manual ? "pointer" : "default",
-              fontSize: 14,
+              fontSize: "0.875rem",
               color: checked ? "var(--color-neutral-500)" : "var(--color-text)",
               textDecoration: checked ? "line-through" : "none",
             }}
@@ -134,7 +134,7 @@ function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
 
   if (alreadyAnswered && record.soughtCare) {
     return (
-      <p style={{ marginTop: 10, fontSize: 13, color: "var(--color-good)" }}>
+      <p style={{ marginTop: 10, fontSize: "0.8125rem", color: "var(--color-good)" }}>
         ✓ You confirmed you sought care for this on {new Date(record.respondedAt).toLocaleDateString()}. If anything
         changes or gets worse, treat it as urgent again.
       </p>
@@ -144,17 +144,17 @@ function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
   return (
     <div style={{ marginTop: 12, borderRadius: 10, border: "1px solid var(--color-critical)", padding: 12, display: "grid", gap: 8 }}>
       {alreadyAnswered && !record.soughtCare ? (
-        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-critical)" }}>
+        <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-critical)" }}>
           Please don't wait - this ({severityLevel}) still needs medical attention today.
         </p>
       ) : (
-        <p style={{ fontSize: 13, color: "var(--color-text)" }}>Have you been able to get medical attention for this?</p>
+        <p style={{ fontSize: "0.8125rem", color: "var(--color-text)" }}>Have you been able to get medical attention for this?</p>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button type="button" onClick={() => respond(true)} className="btn btn-primary" style={{ fontSize: 12 }}>
+        <button type="button" onClick={() => respond(true)} className="btn btn-primary" style={{ fontSize: "0.75rem" }}>
           ✓ Yes, I got checked
         </button>
-        <button type="button" onClick={() => respond(false)} className="btn btn-secondary" style={{ fontSize: 12 }}>
+        <button type="button" onClick={() => respond(false)} className="btn btn-secondary" style={{ fontSize: "0.75rem" }}>
           Not yet
         </button>
       </div>
@@ -214,7 +214,7 @@ export default function HomePage() {
         <p className="eyebrow" style={{ marginBottom: 6 }}>
           {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
         </p>
-        <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-0.015em", color: "var(--color-text)" }}>
+        <div style={{ fontSize: "1.75rem", fontWeight: 500, letterSpacing: "-0.015em", color: "var(--color-text)" }}>
           {t(greetingKey)}
           {name ? `, ${name}` : ""} 👋
         </div>
@@ -222,7 +222,7 @@ export default function HomePage() {
 
       {(isDanger || selfHarm) && (
         <div style={{ background: "var(--color-critical-soft)", border: "1px solid var(--color-critical)", borderRadius: 14, padding: 16, display: "grid", gap: 4 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
+          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>
             {selfHarm
               ? "A Mental Health Check flagged thoughts of self-harm — please reach out now."
               : `Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.`}
@@ -245,7 +245,7 @@ export default function HomePage() {
       {isFirstTimeUser && (
         <div style={{ background: "var(--color-accent-900)", border: "1px solid var(--color-accent-800)", borderRadius: 14, padding: 16, display: "grid", gap: 10 }}>
           <p className="eyebrow" style={{ color: "var(--color-accent-300)" }}>Get Started</p>
-          <p style={{ fontSize: 14, color: "var(--color-text)" }}>Three things to set up so this dashboard can actually work for you:</p>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Three things to set up so this dashboard can actually work for you:</p>
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}>
             <Link to="/profile" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>1. Set up your Pregnancy Profile</Link>
             <Link to="/assess" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>2. Run your first Assessment</Link>
@@ -262,8 +262,8 @@ export default function HomePage() {
           {isPostpartum ? (
             <Link to="/postpartum" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", display: "grid", gap: 10, textDecoration: "none" }}>
               <span style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
-                <span style={{ fontSize: 48, fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{postpartumGuide.daysPostpartum}</span>
-                <span style={{ flex: 1, fontSize: 13, color: "var(--color-neutral-400)", lineHeight: 1.35 }}>days after birth</span>
+                <span style={{ fontSize: "3rem", fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{postpartumGuide.daysPostpartum}</span>
+                <span style={{ flex: 1, fontSize: "0.8125rem", color: "var(--color-neutral-400)", lineHeight: 1.35 }}>days after birth</span>
               </span>
               <span style={{ display: "block", height: 4, background: "var(--color-neutral-900)", borderRadius: 2, overflow: "hidden" }}>
                 <span style={{ display: "block", width: `${ppPct}%`, height: "100%", background: "var(--color-accent)", boxShadow: "0 0 10px var(--color-accent)" }} />
@@ -272,8 +272,8 @@ export default function HomePage() {
           ) : guide ? (
             <Link to="/guide" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", display: "grid", gap: 10, textDecoration: "none" }}>
               <span style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
-                <span style={{ fontSize: 48, fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{guide.week}</span>
-                <span style={{ flex: 1, fontSize: 13, color: "var(--color-neutral-400)", lineHeight: 1.35 }}>
+                <span style={{ fontSize: "3rem", fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{guide.week}</span>
+                <span style={{ flex: 1, fontSize: "0.8125rem", color: "var(--color-neutral-400)", lineHeight: 1.35 }}>
                   weeks pregnant
                   <span style={{ display: "block", color: "var(--color-neutral-500)" }}>Trimester {guide.trimester}</span>
                 </span>
@@ -281,15 +281,15 @@ export default function HomePage() {
               <span style={{ display: "block", height: 4, background: "var(--color-neutral-900)", borderRadius: 2, overflow: "hidden" }}>
                 <span style={{ display: "block", width: `${weekPct}%`, height: "100%", background: "var(--color-accent)", boxShadow: "0 0 10px var(--color-accent)" }} />
               </span>
-              <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, color: "var(--color-neutral-500)", whiteSpace: "nowrap" }}>
+              <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: "0.75rem", color: "var(--color-neutral-500)", whiteSpace: "nowrap" }}>
                 {guide.estimatedDueDate && <span>Due {guide.estimatedDueDate}</span>}
                 <span>{Math.max(40 - guide.week, 0)} weeks to go</span>
               </span>
             </Link>
           ) : (
             <div>
-              <div style={{ fontSize: 24, fontWeight: 500, color: "var(--color-text)" }}>{t("home.weekNotSet")}</div>
-              <Link to="/profile" style={{ fontSize: 13, color: "var(--color-accent-400)" }}>Set up your profile →</Link>
+              <div style={{ fontSize: "1.5rem", fontWeight: 500, color: "var(--color-text)" }}>{t("home.weekNotSet")}</div>
+              <Link to="/profile" style={{ fontSize: "0.8125rem", color: "var(--color-accent-400)" }}>Set up your profile →</Link>
             </div>
           )}
         </div>
@@ -313,18 +313,18 @@ export default function HomePage() {
             className="jd-hover-tint"
           >
             <span style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-accent-900)", color: "var(--color-accent-300)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <i className="ph ph-stethoscope" style={{ fontSize: 20 }} />
+              <i className="ph ph-stethoscope" style={{ fontSize: "1.25rem" }} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: 16, fontWeight: 500, color: "var(--color-text)" }}>Start today's health check</span>
-              <span style={{ display: "block", fontSize: 13, color: "var(--color-neutral-400)" }}>Danger signs, vitals, and an AI-assisted risk estimate</span>
+              <span style={{ display: "block", fontSize: "1rem", fontWeight: 500, color: "var(--color-text)" }}>Start today's health check</span>
+              <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>Danger signs, vitals, and an AI-assisted risk estimate</span>
             </span>
-            <i className="ph ph-arrow-right" style={{ fontSize: 20, color: "var(--color-accent-400)" }} />
+            <i className="ph ph-arrow-right" style={{ fontSize: "1.25rem", color: "var(--color-accent-400)" }} />
           </Link>
           {latest && (
-            <Link to="/history" style={{ display: "flex", alignItems: "center", gap: 10, padding: 2, fontSize: 13, color: "var(--color-neutral-400)", background: "none", border: 0, cursor: "pointer", textDecoration: "none" }}>
+            <Link to="/history" style={{ display: "flex", alignItems: "center", gap: 10, padding: 2, fontSize: "0.8125rem", color: "var(--color-neutral-400)", background: "none", border: 0, cursor: "pointer", textDecoration: "none" }}>
               {bucket && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 99, background: RISK_COLORS[bucket].tint, color: RISK_COLORS[bucket].text, fontSize: 12, whiteSpace: "nowrap" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 99, background: RISK_COLORS[bucket].tint, color: RISK_COLORS[bucket].text, fontSize: "0.75rem", whiteSpace: "nowrap" }}>
                   <i className={`ph ${RISK_COLORS[bucket].icon}`} />
                   {latest.severityLevel}
                 </span>
@@ -356,10 +356,10 @@ export default function HomePage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, alignItems: "start" }}>
         <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 14, boxShadow: "var(--shadow-sm)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <i className="ph ph-warning" style={{ fontSize: 18, color: "var(--color-critical)" }} />
+            <i className="ph ph-warning" style={{ fontSize: "1.125rem", color: "var(--color-critical)" }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text)" }}>Call 108 right away if</div>
-              {guide && <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>For where you are in pregnancy right now</div>}
+              <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>Call 108 right away if</div>
+              {guide && <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>For where you are in pregnancy right now</div>}
             </div>
           </div>
           <div style={{ display: "grid", gap: 8 }}>
@@ -370,8 +370,8 @@ export default function HomePage() {
               "Baby moving much less than usual",
               "Water breaking or leaking before labour",
             ]).map((d) => (
-              <div key={d} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 14, color: "var(--color-text)" }}>
-                <i className="ph ph-dot-outline" style={{ color: "var(--color-critical)", fontSize: 16, flex: "none" }} />
+              <div key={d} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: "0.875rem", color: "var(--color-text)" }}>
+                <i className="ph ph-dot-outline" style={{ color: "var(--color-critical)", fontSize: "1rem", flex: "none" }} />
                 <span style={{ flex: 1, minWidth: 0 }}>{d}</span>
               </div>
             ))}
@@ -385,11 +385,11 @@ export default function HomePage() {
           {guide?.nextAncVisit && (
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-sm)" }}>
               <span style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-accent-900)", color: "var(--color-accent-300)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                <i className="ph ph-calendar-check" style={{ fontSize: 20 }} />
+                <i className="ph ph-calendar-check" style={{ fontSize: "1.25rem" }} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Next clinic visit</div>
-                <div style={{ fontSize: 15, color: "var(--color-text)" }}>Visit {guide.nextAncVisit.visit} · {guide.nextAncVisit.window}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Next clinic visit</div>
+                <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Visit {guide.nextAncVisit.visit} · {guide.nextAncVisit.window}</div>
               </div>
               <Link to="/guide" className="btn btn-secondary btn-icon" aria-label="Details"><i className="ph ph-arrow-right" /></Link>
             </div>
@@ -401,8 +401,8 @@ export default function HomePage() {
                 {(extra.ashaName || "?").charAt(0).toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Your ASHA worker</div>
-                <div style={{ fontSize: 15, color: "var(--color-text)" }}>{extra.ashaName || extra.ashaPhone}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Your ASHA worker</div>
+                <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{extra.ashaName || extra.ashaPhone}</div>
               </div>
               {extra.ashaPhone && (
                 <a href={`tel:${extra.ashaPhone}`} className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" /></a>
@@ -414,14 +414,14 @@ export default function HomePage() {
               )}
             </div>
           ) : (
-            <Link to="/profile" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: 13 }}>
+            <Link to="/profile" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
               <i className="ph ph-user-plus" /> Add your ASHA worker's contact
             </Link>
           )}
 
           <TodayCare history={history} />
 
-          <Link to="/help" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: 13 }}>
+          <Link to="/help" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
             <i className="ph ph-map-pin" /> Find nearby care <i className="ph ph-arrow-right" />
           </Link>
         </div>
@@ -429,7 +429,7 @@ export default function HomePage() {
 
       <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, boxShadow: "var(--shadow-sm)" }}>
         <p className="eyebrow" style={{ marginBottom: 8 }}>{t("home.tipOfDay")}</p>
-        <p style={{ fontSize: 14, lineHeight: 1.5, color: "var(--color-text)" }}>{tip}</p>
+        <p style={{ fontSize: "0.875rem", lineHeight: 1.5, color: "var(--color-text)" }}>{tip}</p>
       </div>
 
       {loading && <Spinner label="Loading your history…" />}

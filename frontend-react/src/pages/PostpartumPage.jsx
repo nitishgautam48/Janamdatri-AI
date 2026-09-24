@@ -19,7 +19,7 @@ function HomeVisitChecklist({ deliveryDate }) {
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>ASHA home visits</div>
+      <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>ASHA home visits</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 6 }}>
         {HOME_VISIT_DAYS.map((day) => {
           const date = new Date(base);
@@ -41,11 +41,11 @@ function HomeVisitChecklist({ deliveryDate }) {
                 cursor: "pointer",
               }}
             >
-              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, color: "var(--color-text)" }}>
+              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.875rem", color: "var(--color-text)" }}>
                 Day {day}
                 <i className={`ph ${done ? "ph-check-circle" : "ph-circle"}`} style={{ color: done ? "var(--color-good)" : "var(--color-neutral-600)" }} />
               </span>
-              <span style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>{date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+              <span style={{ fontSize: "0.6875rem", color: "var(--color-neutral-500)" }}>{date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
             </button>
           );
         })}
@@ -72,12 +72,12 @@ function VaccineChecklist({ schedule }) {
             onClick={() => toggle(v.visit)}
             style={{ background: "#1b1d2a", padding: "10px 14px", display: "flex", gap: 12, alignItems: "center", border: 0, cursor: "pointer", textAlign: "left", width: "100%" }}
           >
-            <i className={`ph ${done ? "ph-check-circle" : "ph-circle"}`} style={{ color: done ? "var(--color-good)" : "var(--color-neutral-600)", fontSize: 18, flex: "none" }} />
+            <i className={`ph ${done ? "ph-check-circle" : "ph-circle"}`} style={{ color: done ? "var(--color-good)" : "var(--color-neutral-600)", fontSize: "1.125rem", flex: "none" }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, color: "var(--color-text)" }}>{v.visit}</div>
-              <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>{v.vaccines}</div>
+              <div style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{v.visit}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{v.vaccines}</div>
             </div>
-            {done && <span style={{ fontSize: 11, color: "var(--color-good)" }}>Given</span>}
+            {done && <span style={{ fontSize: "0.6875rem", color: "var(--color-good)" }}>Given</span>}
           </button>
         );
       })}

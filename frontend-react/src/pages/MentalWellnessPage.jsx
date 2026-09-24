@@ -34,7 +34,7 @@ function MoodPicker() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
       <div>
-        <div style={{ fontSize: 15, color: "var(--color-text)" }}>How is your mood today?</div>
+        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>How is your mood today?</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6 }}>
         {MOODS.map((m) => {
@@ -56,8 +56,8 @@ function MoodPicker() {
                 minHeight: 68,
               }}
             >
-              <i className={`ph ${m.icon}`} style={{ fontSize: 26, color: m.color }} />
-              <span style={{ fontSize: 11, color: "var(--color-neutral-400)" }}>{m.label}</span>
+              <i className={`ph ${m.icon}`} style={{ fontSize: "1.625rem", color: m.color }} />
+              <span style={{ fontSize: "0.6875rem", color: "var(--color-neutral-400)" }}>{m.label}</span>
             </button>
           );
         })}
@@ -65,8 +65,8 @@ function MoodPicker() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, borderTop: "1px solid var(--color-neutral-800)", paddingTop: 10 }}>
         {days.map((d, i) => (
           <div key={i} style={{ display: "grid", justifyItems: "center", gap: 2 }}>
-            <i className={`ph ${d.icon}`} style={{ fontSize: 18, color: d.color }} />
-            <span style={{ fontSize: 10, color: "var(--color-neutral-600)" }}>{d.label}</span>
+            <i className={`ph ${d.icon}`} style={{ fontSize: "1.125rem", color: d.color }} />
+            <span style={{ fontSize: "0.625rem", color: "var(--color-neutral-600)" }}>{d.label}</span>
           </div>
         ))}
       </div>
@@ -98,12 +98,12 @@ function Phq2Quick() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 14, boxShadow: "var(--shadow-sm)" }}>
       <div>
-        <div style={{ fontSize: 15, color: "var(--color-text)" }}>PHQ-2 quick check</div>
-        <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>In the last 2 weeks, how often have you had…</div>
+        <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>PHQ-2 quick check</div>
+        <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>In the last 2 weeks, how often have you had…</div>
       </div>
       {PHQ2_QUESTIONS.map((q, i) => (
         <div key={q} style={{ display: "grid", gap: 8 }}>
-          <div style={{ fontSize: 14, color: "var(--color-text)" }}>{q}</div>
+          <div style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{q}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {PHQ2_OPTIONS.map((label, score) => {
               const selected = answers[i] === score;
@@ -119,7 +119,7 @@ function Phq2Quick() {
                     border: `1px solid ${selected ? "var(--color-accent)" : "var(--color-neutral-700)"}`,
                     background: selected ? "var(--color-accent-900)" : "transparent",
                     color: selected ? "var(--color-accent-200)" : "var(--color-neutral-400)",
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                     cursor: "pointer",
                   }}
                 >
@@ -132,16 +132,16 @@ function Phq2Quick() {
       ))}
       {saved && (
         <div style={{ padding: 12, borderRadius: 10, background: saved.flagged ? "var(--color-warning-soft)" : "var(--color-good-soft)", display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 14, color: saved.flagged ? "var(--color-warning)" : "var(--color-good)" }}>
+          <div style={{ fontSize: "0.875rem", color: saved.flagged ? "var(--color-warning)" : "var(--color-good)" }}>
             {saved.flagged ? "Worth a closer look" : "Nothing flagged right now"}
           </div>
-          <div style={{ fontSize: 13, color: "var(--color-neutral-400)" }}>
+          <div style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
             {saved.flagged
               ? "This quick check alone doesn't diagnose anything, but a score like this is often followed up with the fuller Mental Health Check (EPDS) above, or a conversation with your ANC provider."
               : "This is a 2-question quick check, not the full EPDS - still worth doing the fuller check above from time to time."}
           </div>
           {saved.flagged && (
-            <a href="tel:14416" className="btn btn-primary" style={{ justifySelf: "start", fontSize: 13 }}>
+            <a href="tel:14416" className="btn btn-primary" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
               <i className="ph ph-phone" /> Tele-MANAS 14416
             </a>
           )}
@@ -163,7 +163,7 @@ function BreathingExercise() {
 
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "20px 16px", display: "grid", gap: 16, justifyItems: "center", boxShadow: "var(--shadow-sm)" }}>
-      <div style={{ justifySelf: "start", fontSize: 15, color: "var(--color-text)" }}>Breathing exercise</div>
+      <div style={{ justifySelf: "start", fontSize: "0.9375rem", color: "var(--color-text)" }}>Breathing exercise</div>
       <div style={{ width: 180, height: 180, borderRadius: "50%", border: "1px dashed var(--color-neutral-700)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div
           style={{
@@ -179,7 +179,7 @@ function BreathingExercise() {
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 15, color: "var(--color-accent-100)" }}>{active ? (phase === "in" ? "Breathe in…" : "Breathe out…") : "Ready"}</span>
+          <span style={{ fontSize: "0.9375rem", color: "var(--color-accent-100)" }}>{active ? (phase === "in" ? "Breathe in…" : "Breathe out…") : "Ready"}</span>
         </div>
       </div>
       <button type="button" onClick={() => setActive((a) => !a)} className="btn btn-primary" style={{ minWidth: 140 }}>
@@ -261,10 +261,10 @@ export default function MentalWellnessPage() {
         <div style={{ display: "grid", gap: 14 }}>
           <BreathingExercise />
           <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-sm)" }}>
-            <i className="ph ph-headset" style={{ fontSize: 24, color: "var(--color-accent-400)" }} />
+            <i className="ph ph-headset" style={{ fontSize: "1.5rem", color: "var(--color-accent-400)" }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, color: "var(--color-text)" }}>Tele-MANAS · 14416</div>
-              <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>Free, private mental health support, 24 hours</div>
+              <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Tele-MANAS · 14416</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Free, private mental health support, 24 hours</div>
             </div>
             <a href="tel:14416" className="btn btn-secondary btn-icon" aria-label="Call"><i className="ph ph-phone" /></a>
           </div>

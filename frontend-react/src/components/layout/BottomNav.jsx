@@ -44,7 +44,7 @@ export default function BottomNav() {
             <div style={{ justifySelf: "center", width: 36, height: 4, borderRadius: 2, background: "var(--color-neutral-700)" }} />
             {NAV_GROUPS.map((g) => (
               <div key={g.key} style={{ display: "grid", gap: 6 }}>
-                <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-neutral-500)" }}>{t(g.labelKey)}</div>
+                <div style={{ fontSize: "0.6875rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-neutral-500)" }}>{t(g.labelKey)}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
                   {g.items.map((it) => {
                     const active = isTabActive(it.to);
@@ -64,12 +64,12 @@ export default function BottomNav() {
                           background: active ? "var(--color-accent-900)" : "transparent",
                           color: active ? "var(--color-accent-200)" : "var(--color-neutral-400)",
                           cursor: "pointer",
-                          fontSize: 12,
+                          fontSize: "0.75rem",
                           minHeight: 72,
                           textDecoration: "none",
                         }}
                       >
-                        <i className={`ph ${it.icon}`} style={{ fontSize: 22 }} />
+                        <i className={`ph ${it.icon}`} style={{ fontSize: "1.375rem" }} />
                         {t(it.labelKey)}
                       </NavLink>
                     );
@@ -111,12 +111,12 @@ export default function BottomNav() {
                 background: "none",
                 border: 0,
                 cursor: "pointer",
-                fontSize: 11,
+                fontSize: "0.6875rem",
                 color: active ? "var(--color-accent-400)" : "var(--color-neutral-500)",
                 textDecoration: "none",
               }}
             >
-              <i className={`ph ${it.icon}`} style={{ fontSize: 22 }} />
+              <i className={`ph ${it.icon}`} style={{ fontSize: "1.375rem" }} />
               {t(it.labelKey)}
             </NavLink>
           );
@@ -133,11 +133,11 @@ export default function BottomNav() {
             background: "none",
             border: 0,
             cursor: "pointer",
-            fontSize: 11,
+            fontSize: "0.6875rem",
             color: "var(--color-neutral-500)",
           }}
         >
-          <i className="ph ph-dots-three" style={{ fontSize: 22 }} />
+          <i className="ph ph-dots-three" style={{ fontSize: "1.375rem" }} />
           {t("nav.more")}
         </button>
       </nav>

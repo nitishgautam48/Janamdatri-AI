@@ -53,7 +53,7 @@ function Field({ label, hint, why, ...props }) {
               justifyContent: "center",
               borderRadius: "50%",
               border: "1px solid var(--color-neutral-700)",
-              fontSize: 10,
+              fontSize: "0.625rem",
               fontWeight: 700,
               lineHeight: 1,
               color: "var(--color-neutral-500)",
@@ -65,7 +65,7 @@ function Field({ label, hint, why, ...props }) {
           </button>
         )}
       </div>
-      {why && showWhy && <p className="mb-1.5 -mt-0.5" style={{ fontSize: 12, lineHeight: 1.4, color: "var(--color-accent-400)" }}>{why}</p>}
+      {why && showWhy && <p className="mb-1.5 -mt-0.5" style={{ fontSize: "0.75rem", lineHeight: 1.4, color: "var(--color-accent-400)" }}>{why}</p>}
       <input id={id} {...props} className="input" />
     </div>
   );
@@ -135,22 +135,22 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
             />
           ))}
         </div>
-        <div style={{ fontSize: 12, color: "var(--color-neutral-500)", minWidth: 44, textAlign: "right" }}>
+        <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)", minWidth: 44, textAlign: "right" }}>
           {step + 1} / {STEPS.length}
         </div>
       </div>
-      <p className="mb-2" style={{ fontSize: 12, color: "var(--color-accent-400)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{STEPS[step]}</p>
+      <p className="mb-2" style={{ fontSize: "0.75rem", color: "var(--color-accent-400)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{STEPS[step]}</p>
 
       {/* Every step after Vitals is explicitly marked optional already -
           this just says so up front, so the 6-step layout reads as "fill
           in what you know" rather than a form that must be completed in
           full before it's useful. */}
-      <p className="mb-4" style={{ fontSize: 12, color: "var(--color-neutral-600)" }}>
+      <p className="mb-4" style={{ fontSize: "0.75rem", color: "var(--color-neutral-600)" }}>
         Most steps are optional - fill in what you know and skip the rest with "Skip to Review" below.
       </p>
 
       {error && (
-        <p className="mb-4" style={{ borderRadius: 10, border: "1px solid var(--color-critical)", background: "var(--color-critical-soft)", padding: "8px 12px", fontSize: 14, color: "var(--color-text)" }}>
+        <p className="mb-4" style={{ borderRadius: 10, border: "1px solid var(--color-critical)", background: "var(--color-critical-soft)", padding: "8px 12px", fontSize: "0.875rem", color: "var(--color-text)" }}>
           {error}
         </p>
       )}
@@ -158,8 +158,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {step === 0 && (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Vitals</h2>
-            <label className="flex items-center gap-2" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Vitals</h2>
+            <label className="flex items-center gap-2" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>
               <input type="checkbox" checked={form.vitalsEnabled} onChange={(e) => set("vitalsEnabled", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
               Include vitals
             </label>
@@ -198,8 +198,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Anemia Check <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
-            <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Anemia Check <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+            <p className="mb-2 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>If you have a recent hemoglobin (Hb) test result, enter it here for India-specific anemia grading.</p>
             <div className="max-w-[220px]">
               <Field
                 label="Hemoglobin (g/dL)" type="number" step="0.1" placeholder="e.g. 10.5" value={form.hemoglobin} onChange={(e) => set("hemoglobin", e.target.value)}
@@ -209,8 +209,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
           </div>
 
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Pregnancy Stage <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
-            <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Lets the assessment factor in trimester-specific risks and week-appropriate warning signs.</p>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Pregnancy Stage <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+            <p className="mb-2 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Lets the assessment factor in trimester-specific risks and week-appropriate warning signs.</p>
             <div className="max-w-[220px]">
               <Field
                 label="Current gestational week" type="number" placeholder="e.g. 24" value={form.week} onChange={(e) => set("week", e.target.value)}
@@ -223,8 +223,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
       {step === 2 && (
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Additional Checks <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
-          <p className="mb-2 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Each is a well-established antenatal screening check, not a diagnosis.</p>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Additional Checks <span className="tag tag-neutral" style={{ marginLeft: 4, verticalAlign: "middle" }}>optional</span></h2>
+          <p className="mb-2 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Each is a well-established antenatal screening check, not a diagnosis.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field
               label="Current weight (kg)" type="number" step="0.1" placeholder="e.g. 62" value={form.weight} onChange={(e) => set("weight", e.target.value)}
@@ -244,8 +244,8 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
       {step === 3 && (
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Symptoms</h2>
-          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Tap any that apply — they'll be added to the description below, or type your own.</p>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Symptoms</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Tap any that apply — they'll be added to the description below, or type your own.</p>
           <div className="mb-3 flex flex-wrap gap-2">
             {SYMPTOM_CHIPS.map((phrase) => {
               const selected = selectedChips.has(phrase);
@@ -261,7 +261,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
                     background: selected ? "var(--color-accent-900)" : "transparent",
                     color: selected ? "var(--color-accent-200)" : "var(--color-neutral-400)",
                     padding: "6px 12px",
-                    fontSize: 12,
+                    fontSize: "0.75rem",
                     fontWeight: 500,
                     cursor: "pointer",
                   }}
@@ -286,14 +286,14 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
 
       {step === 4 && (
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>History</h2>
-          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Optional — helps weigh background risk factors.</p>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>History</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Optional — helps weigh background risk factors.</p>
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-2" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Past pregnancy history</h3>
+              <h3 className="mb-2" style={{ fontSize: "0.6875rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Past pregnancy history</h3>
               <div className="space-y-2">
                 {HISTORY_FLAGS.past.map((f) => (
-                  <label key={f.key} className="flex items-center gap-2" style={{ fontSize: 14, color: "var(--color-text)" }}>
+                  <label key={f.key} className="flex items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
                     <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} style={{ accentColor: "var(--color-accent)" }} />
                     {f.label}
                   </label>
@@ -301,13 +301,13 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
               </div>
             </div>
             <div>
-              <h3 className="mb-2" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Current pregnancy care</h3>
+              <h3 className="mb-2" style={{ fontSize: "0.6875rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-600)" }}>Current pregnancy care</h3>
               <div className="space-y-2">
                 {HISTORY_FLAGS.current.map((f) => (
                   <label
                     key={f.key}
                     className="flex items-center gap-2"
-                    style={{ fontSize: 14, color: f.protective ? "var(--color-good)" : f.risk ? "var(--color-critical)" : "var(--color-text)" }}
+                    style={{ fontSize: "0.875rem", color: f.protective ? "var(--color-good)" : f.risk ? "var(--color-critical)" : "var(--color-text)" }}
                   >
                     <input type="checkbox" checked={!!form.historyFlags[f.key]} onChange={() => toggleFlag(f.key)} style={{ accentColor: "var(--color-accent)" }} />
                     {f.label}
@@ -322,13 +322,13 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
       {step === 5 && (
         <div>
           {hasSavedEpds && (
-            <label className="mb-4 flex items-center gap-2" style={{ fontSize: 14, color: "var(--color-text)" }}>
+            <label className="mb-4 flex items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
               <input type="checkbox" checked={form.includeEpds} onChange={(e) => set("includeEpds", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
               Include my saved Mental Health Check (EPDS) score in this assessment
             </label>
           )}
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: "var(--color-text)" }}>Review</h2>
-          <p className="mb-3 mt-1" style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Check what you're about to submit, then run the assessment.</p>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 500, color: "var(--color-text)" }}>Review</h2>
+          <p className="mb-3 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>Check what you're about to submit, then run the assessment.</p>
           <ReviewSummary form={form} />
         </div>
       )}
@@ -338,7 +338,7 @@ export default function Wizard({ form, setForm, hasSavedEpds, onSubmit, submitti
             given enough (or is in a hurry) go straight to submitting
             instead of clicking "Next" through steps they don't need. */}
         {step > 0 && step < STEPS.length - 1 && (
-          <button type="button" onClick={() => setStep(STEPS.length - 1)} className="btn btn-ghost" style={{ fontSize: 12 }}>
+          <button type="button" onClick={() => setStep(STEPS.length - 1)} className="btn btn-ghost" style={{ fontSize: "0.75rem" }}>
             Skip to Review
           </button>
         )}
@@ -370,12 +370,12 @@ function ReviewSummary({ form }) {
   const flags = Object.entries(form.historyFlags).filter(([, v]) => v).map(([k]) => k.replace(/_/g, " "));
   if (flags.length) rows.push(["History", flags.join(", ")]);
 
-  if (!rows.length) return <p style={{ fontSize: 14, color: "var(--color-neutral-400)" }}>Nothing entered yet — go back and add at least one input.</p>;
+  if (!rows.length) return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Nothing entered yet — go back and add at least one input.</p>;
 
   return (
     <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
       {rows.map(([label, value]) => (
-        <div key={label} style={{ background: "#1b1d2a", display: "flex", justifyContent: "space-between", gap: 16, padding: "10px 14px", fontSize: 14 }}>
+        <div key={label} style={{ background: "#1b1d2a", display: "flex", justifyContent: "space-between", gap: 16, padding: "10px 14px", fontSize: "0.875rem" }}>
           <span style={{ flexShrink: 0, fontWeight: 500, color: "var(--color-neutral-400)" }}>{label}</span>
           <span style={{ textAlign: "right", color: "var(--color-text)" }}>{value}</span>
         </div>
