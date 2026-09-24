@@ -4,14 +4,16 @@ import Button from "../components/ui/Button";
 import PregnancyTimeline from "../components/ui/PregnancyTimeline";
 import { api } from "../lib/api";
 import { KEYS, scopedSet, loadKickLog, appendKickLog } from "../lib/storage";
+import { useLang } from "../context/LangContext";
 
 function ThisWeekAccordion({ guide }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(null);
   const sections = [
-    { id: "mother", label: "Mother's Health", detail: <p>{guide.note}</p> },
-    { id: "nutrition", label: "Nutrition Tips", detail: <ul className="list-inside list-disc space-y-1">{guide.nutrition.map((n) => <li key={n}>{n}</li>)}</ul> },
-    { id: "tests", label: "Tests & Checkups", detail: <ul className="list-inside list-disc space-y-1">{guide.nextAncVisit.checks.map((c) => <li key={c}>{c}</li>)}</ul> },
-    { id: "warning", label: "Warning Signs", detail: <ul className="list-inside list-disc space-y-1 text-critical">{guide.dangerSigns.map((d) => <li key={d}>{d}</li>)}</ul> },
+    { id: "mother", label: t("guide.motherHealth"), detail: <p>{guide.note}</p> },
+    { id: "nutrition", label: t("guide.nutritionTips"), detail: <ul className="list-inside list-disc space-y-1">{guide.nutrition.map((n) => <li key={n}>{n}</li>)}</ul> },
+    { id: "tests", label: t("guide.testsCheckups"), detail: <ul className="list-inside list-disc space-y-1">{guide.nextAncVisit.checks.map((c) => <li key={c}>{c}</li>)}</ul> },
+    { id: "warning", label: t("guide.warningSigns"), detail: <ul className="list-inside list-disc space-y-1 text-critical">{guide.dangerSigns.map((d) => <li key={d}>{d}</li>)}</ul> },
   ];
 
   return (
@@ -36,6 +38,7 @@ function ThisWeekAccordion({ guide }) {
 const KICK_TARGET = 10;
 
 function KickCounter() {
+  const { t } = useLang();
   const [count, setCount] = useState(0);
   const [startedAt, setStartedAt] = useState(null);
   const [log, setLog] = useState(() => loadKickLog());
@@ -63,9 +66,9 @@ function KickCounter() {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Kick counter <span style={{ color: "var(--color-neutral-500)" }}>(fetal movement)</span></span>
+        <span style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{t("guide.kickCounter")} <span style={{ color: "var(--color-neutral-500)" }}>{t("guide.fetalMovement")}</span></span>
       </div>
-      <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-500)" }}>Lie on your left side and tap each time you feel a movement. Aim for {KICK_TARGET} in 2 hours.</p>
+      <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-500)" }}>{t("guide.kickInstructions").replace("{n}", KICK_TARGET)}</p>
       <button
         type="button"
         onClick={tap}
@@ -84,30 +87,30 @@ function KickCounter() {
         }}
       >
         <span style={{ fontSize: "2.5rem", fontWeight: 500, lineHeight: 1, color: "var(--color-text)" }}>{count}</span>
-        <span style={{ fontSize: "0.75rem", color: "var(--color-accent-300)" }}>Tap on movement</span>
+        <span style={{ fontSize: "0.75rem", color: "var(--color-accent-300)" }}>{t("guide.tapOnMovement")}</span>
       </button>
       {count >= KICK_TARGET && (
         <div style={{ fontSize: "0.8125rem", lineHeight: 1.5, padding: "10px 12px", borderRadius: 10, background: "var(--color-good-soft)", color: "var(--color-good)" }}>
-          {KICK_TARGET}+ movements — a reassuring pattern. Keep an eye out tomorrow too.
+          {t("guide.kickGoodPattern").replace("{n}", KICK_TARGET)}
         </div>
       )}
       {saved && count > 0 && count < KICK_TARGET && (
         <div style={{ fontSize: "0.8125rem", lineHeight: 1.5, padding: "10px 12px", borderRadius: 10, background: "var(--color-warning-soft)", color: "var(--color-warning)" }}>
-          Fewer than {KICK_TARGET} — if this continues, mention it to your ASHA or provider.
+          {t("guide.kickFewerThan").replace("{n}", KICK_TARGET)}
         </div>
       )}
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         <button type="button" onClick={save} className="btn btn-primary" style={{ fontSize: "0.8125rem" }}>
-          <i className="ph ph-floppy-disk" /> Save
+          <i className="ph ph-floppy-disk" /> {t("guide.save")}
         </button>
-        <button type="button" onClick={reset} className="btn btn-secondary" style={{ fontSize: "0.8125rem" }}>Reset</button>
+        <button type="button" onClick={reset} className="btn btn-secondary" style={{ fontSize: "0.8125rem" }}>{t("guide.reset")}</button>
       </div>
       {log.length > 0 && (
         <div style={{ display: "grid", gap: 4, borderTop: "1px solid var(--color-neutral-800)", paddingTop: 10 }}>
           {log.slice(0, 5).map((l, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>
               <span>{new Date(l.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-              <span>{l.count} movements{l.minutes ? ` in ~${l.minutes} min` : ""}</span>
+              <span>{l.count} {t("guide.movements")}{l.minutes ? ` ${t("guide.inAboutMin").replace("{n}", l.minutes)}` : ""}</span>
             </div>
           ))}
         </div>
@@ -117,6 +120,7 @@ function KickCounter() {
 }
 
 export default function GuidePage() {
+  const { t } = useLang();
   const [mode, setMode] = useState("lmp");
   const [lmp, setLmp] = useState("");
   const [week, setWeek] = useState(20);
@@ -141,7 +145,7 @@ export default function GuidePage() {
       setBrowsedGuide(null);
       scopedSet(KEYS.GUIDE, { ...data, savedAt: new Date().toISOString() });
     } catch (err) {
-      setError(err.message || "Could not load your pregnancy guide.");
+      setError(err.message || t("guide.loadError"));
     } finally {
       setBusy(false);
     }
@@ -167,24 +171,24 @@ export default function GuidePage() {
   return (
     <div className="space-y-5">
       <Card style={{ maxWidth: guide ? "none" : 640 }}>
-        <h1 className="text-xl font-bold text-ink">Pregnancy Guide</h1>
-        <p className="mt-1 text-sm text-muted">Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.</p>
+        <h1 className="text-xl font-bold text-ink">{t("guide.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("guide.subtitle")}</p>
 
         <div className="mt-4 flex gap-4 text-sm text-ink">
           <label className="flex items-center gap-2">
             <input type="radio" checked={mode === "lmp"} onChange={() => setMode("lmp")} />
-            By last menstrual period (LMP)
+            {t("guide.byLmp")}
           </label>
           <label className="flex items-center gap-2">
             <input type="radio" checked={mode === "week"} onChange={() => setMode("week")} />
-            By current week
+            {t("guide.byWeek")}
           </label>
         </div>
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
           {mode === "lmp" ? (
             <div>
-              <label htmlFor="guide-lmp" className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
+              <label htmlFor="guide-lmp" className="mb-1 block text-sm font-medium text-muted">{t("guide.lmpDateLabel")}</label>
               <input
                 id="guide-lmp"
                 type="date"
@@ -195,7 +199,7 @@ export default function GuidePage() {
             </div>
           ) : (
             <div>
-              <label htmlFor="guide-week" className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
+              <label htmlFor="guide-week" className="mb-1 block text-sm font-medium text-muted">{t("guide.currentWeekLabel")}</label>
               <input
                 id="guide-week"
                 type="number"
@@ -207,7 +211,7 @@ export default function GuidePage() {
               />
             </div>
           )}
-          <Button onClick={handleSubmit} disabled={busy}>{busy ? "…" : "Get My Guide"}</Button>
+          <Button onClick={handleSubmit} disabled={busy}>{busy ? "…" : t("guide.getMyGuide")}</Button>
         </div>
         {error && <p className="mt-3 text-sm text-critical">{error}</p>}
       </Card>
@@ -217,23 +221,25 @@ export default function GuidePage() {
           <div style={{ display: "grid", gap: 14 }}>
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, boxShadow: "var(--shadow-sm)" }}>
               <div className="flex items-center gap-3">
-                <button type="button" onClick={() => browseWeek(-1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label="Previous week">
+                <button type="button" onClick={() => browseWeek(-1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label={t("guide.previousWeek")}>
                   <i className="ph ph-caret-left" />
                 </button>
-                <div style={{ borderRadius: 99, padding: "8px 16px", fontSize: "0.875rem", fontWeight: 600, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>Week {shown.week}</div>
-                <button type="button" onClick={() => browseWeek(1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label="Next week">
+                <div style={{ borderRadius: 99, padding: "8px 16px", fontSize: "0.875rem", fontWeight: 600, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>{t("guide.weekLabel")} {shown.week}</div>
+                <button type="button" onClick={() => browseWeek(1)} disabled={browsing} className="btn btn-secondary btn-icon" aria-label={t("guide.nextWeek")}>
                   <i className="ph ph-caret-right" />
                 </button>
                 <div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>Trimester {shown.trimester}</div>
+                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>{t("guide.trimesterLabel")} {shown.trimester}</div>
                   <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
-                    {shown === guide && guide.estimatedDueDate ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go` : `${shown.weeksUntilDue} weeks to go`}
+                    {shown === guide && guide.estimatedDueDate
+                      ? `${t("guide.estimatedDueDate")} ${guide.estimatedDueDate} · ${guide.weeksUntilDue} ${t("guide.weeksToGo")}`
+                      : `${shown.weeksUntilDue} ${t("guide.weeksToGo")}`}
                   </div>
                 </div>
               </div>
               {browsedGuide && (
                 <button type="button" onClick={() => setBrowsedGuide(null)} className="btn btn-ghost mt-2" style={{ fontSize: "0.75rem" }}>
-                  ← Back to your week ({guide.week})
+                  {t("guide.backToYourWeek").replace("{n}", guide.week)}
                 </button>
               )}
               <div className="mt-5">
@@ -242,12 +248,12 @@ export default function GuidePage() {
             </div>
 
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>This Week</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>{t("guide.thisWeek")}</h3>
               <ThisWeekAccordion guide={shown} />
             </div>
 
             <div style={{ display: "grid", gap: 8 }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Government Schemes</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>{t("guide.governmentSchemes")}</h3>
               <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
                 {Object.entries(guide.schemes).map(([name, desc]) => (
                   <div key={name} style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14 }}>
@@ -263,7 +269,7 @@ export default function GuidePage() {
             <KickCounter />
 
             <div style={{ display: "grid", gap: 8 }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Clinic visits (ANC)</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>{t("guide.clinicVisits")}</h3>
               {shown.ancSchedule.map((visit) => {
                 const isNext = visit.visit === shown.nextAncVisit.visit;
                 return (
@@ -281,8 +287,8 @@ export default function GuidePage() {
                     <i className={`ph ${isNext ? "ph-calendar-check" : "ph-calendar"}`} style={{ fontSize: "1.25rem", color: isNext ? "var(--color-accent-300)" : "var(--color-neutral-500)", marginTop: 1 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                        <span style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Visit {visit.visit} — {visit.window}</span>
-                        {isNext && <span style={{ fontSize: "0.75rem", color: "var(--color-accent-300)" }}>Next up</span>}
+                        <span style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{t("guide.visitLabel")} {visit.visit} — {visit.window}</span>
+                        {isNext && <span style={{ fontSize: "0.75rem", color: "var(--color-accent-300)" }}>{t("guide.nextUp")}</span>}
                       </div>
                       <ul className="mt-1 list-inside list-disc space-y-0.5" style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
                         {visit.checks.map((c) => <li key={c}>{c}</li>)}

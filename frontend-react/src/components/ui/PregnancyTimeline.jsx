@@ -1,13 +1,15 @@
-const TRIMESTERS = [
-  { label: "1st Trimester", range: [1, 13] },
-  { label: "2nd Trimester", range: [14, 27] },
-  { label: "3rd Trimester", range: [28, 40] },
-];
+import { useLang } from "../../context/LangContext";
 
 // A week 1-40 timeline with trimester bands and a marker at the current
 // week - richer than a single progress bar, but still just a read of the
 // same guide.week value everything else already uses (no new data).
 export default function PregnancyTimeline({ week }) {
+  const { t } = useLang();
+  const TRIMESTERS = [
+    { key: "t1", labelKey: "guide.trimester1", range: [1, 13] },
+    { key: "t2", labelKey: "guide.trimester2", range: [14, 27] },
+    { key: "t3", labelKey: "guide.trimester3", range: [28, 40] },
+  ];
   const clampedWeek = Math.min(Math.max(Math.round(week), 1), 40);
   const pct = ((clampedWeek - 1) / 39) * 100;
 
@@ -20,27 +22,27 @@ export default function PregnancyTimeline({ week }) {
         <div
           className="absolute top-1/2 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary bg-paper-ink text-[10px] font-bold text-primary shadow"
           style={{ left: `${pct}%` }}
-          title={`Week ${clampedWeek}`}
+          title={`${t("guide.weekLabel")} ${clampedWeek}`}
         >
           {clampedWeek}
         </div>
       </div>
       <div className="mt-4 flex justify-between text-[11px] font-medium text-faint">
-        <span>Week 1</span>
-        <span>Week 40</span>
+        <span>{t("guide.week1")}</span>
+        <span>{t("guide.week40")}</span>
       </div>
       <div className="mt-2 grid grid-cols-3 gap-2">
-        {TRIMESTERS.map((t) => {
-          const active = clampedWeek >= t.range[0] && clampedWeek <= t.range[1];
+        {TRIMESTERS.map((tri) => {
+          const active = clampedWeek >= tri.range[0] && clampedWeek <= tri.range[1];
           return (
             <div
-              key={t.label}
+              key={tri.key}
               className={`rounded-md border px-2 py-1.5 text-center text-xs font-semibold ${
                 active ? "border-primary/40 bg-primary-soft text-primary" : "border-border text-faint"
               }`}
             >
-              {t.label}
-              <div className="text-[10px] font-normal">Wk {t.range[0]}–{t.range[1]}</div>
+              {t(tri.labelKey)}
+              <div className="text-[10px] font-normal">{t("guide.wkAbbrev")} {tri.range[0]}–{tri.range[1]}</div>
             </div>
           );
         })}
