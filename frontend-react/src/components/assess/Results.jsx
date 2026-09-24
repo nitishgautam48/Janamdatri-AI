@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import ReadAloudButton from "../ui/ReadAloudButton";
+import { useLang } from "../../context/LangContext";
 
 const LEVEL_COLOR = {
   Critical: "var(--color-critical)", Severe: "var(--color-critical)",
@@ -53,6 +54,7 @@ function TagGroup({ label, items, color }) {
 }
 
 export default function Results({ data, onReset }) {
+  const { t } = useLang();
   const [showDetails, setShowDetails] = useState(false);
   const {
     severity, mri, clinicalExplanation: exp, mlPrediction: ml, dangerLadder: ladder,
@@ -67,8 +69,13 @@ export default function Results({ data, onReset }) {
   const icon = LEVEL_ICON[severity.level] || "ph-info";
   const isHigh = severity.level === "Critical" || severity.level === "Severe";
 
+  // The clinical content read aloud here (recommendedNextAction,
+  // whyThisResult, recommendations below) comes straight from the Python
+  // triage engine, which has no i18n layer of its own - only the static
+  // page chrome around it is translated in this pass. Read aloud always
+  // speaks it in the language it was generated in (English).
   const whyText = [
-    `Your result: ${severity.level}.`,
+    `${t("results.yourResult")} ${severity.level}.`,
     exp?.recommendedNextAction,
     ...(exp?.whyThisResult || []),
   ].filter(Boolean).join(" ");
@@ -84,11 +91,11 @@ export default function Results({ data, onReset }) {
             <i className={`ph ${icon}`} style={{ fontSize: "1.75rem", color }} />
           </span>
           <div>
-            <p className="eyebrow" style={{ marginBottom: 4 }}>Overall Risk Assessment</p>
+            <p className="eyebrow" style={{ marginBottom: 4 }}>{t("results.overallRisk")}</p>
             <div style={{ fontSize: "1.875rem", fontWeight: 500, color: "var(--color-text)", lineHeight: 1.1 }}>{severity.level}</div>
             <div style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
-              Maternal Risk Index: {mri}
-              {severity.escalatedBy ? ` · escalated by: ${severity.escalatedBy.replace(/_/g, " ")}` : ""}
+              {t("results.mriLabel")} {mri}
+              {severity.escalatedBy ? ` · ${t("results.escalatedBy")} ${severity.escalatedBy.replace(/_/g, " ")}` : ""}
             </div>
             {exp?.actionTierLabel && (
               <span style={{ display: "inline-flex", marginTop: 8, borderRadius: 99, border: `1px solid ${color}`, color, padding: "3px 10px", fontSize: "0.75rem" }}>
@@ -97,23 +104,17 @@ export default function Results({ data, onReset }) {
             )}
           </div>
         </div>
-        <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>
-          This combines a WHO danger-sign check, clinical risk-factor rules, and an AI model's prediction from your
-          vitals into one result - whichever of the three finds the most serious signal decides the level shown here.
-        </p>
-        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>
-          This is a screening aid to guide you toward the right next step - it is not a medical diagnosis. High-risk
-          or emergency signs should always be checked by a healthcare professional.
-        </p>
+        <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>{t("results.combinesNote")}</p>
+        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{t("results.screeningNote")}</p>
         {isHigh && (
           <a href="tel:108" className="jd-call108-fill" style={{ textDecoration: "none" }}>
-            <i className="ph ph-phone-call" /> Call 108 ambulance
+            <i className="ph ph-phone-call" /> {t("results.call108Ambulance")}
           </a>
         )}
       </div>
 
       {/* B. Why This Result */}
-      <Section title="Why This Result" icon="ph-compass" action={<ReadAloudButton text={whyText} />}>
+      <Section title={t("results.whyThisResult")} icon="ph-compass" action={<ReadAloudButton text={whyText} />}>
         {exp?.recommendedNextAction && <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text)" }}>{exp.recommendedNextAction}</p>}
         {exp?.whyThisResult?.length > 0 && (
           <div style={{ display: "grid", gap: 8 }}>
@@ -125,20 +126,20 @@ export default function Results({ data, onReset }) {
             ))}
           </div>
         )}
-        <TagGroup label="Warning Signs" items={exp?.warningSigns} color="var(--color-critical)" />
+        <TagGroup label={t("results.warningSigns")} items={exp?.warningSigns} color="var(--color-critical)" />
         {exp?.disclaimer && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{exp.disclaimer}</p>}
       </Section>
 
       {/* C. Protective Factors */}
       {rf?.protectiveFactors?.length > 0 && (
-        <Section title="What's Working In Your Favour" icon="ph-check-circle">
+        <Section title={t("results.workingInFavour")} icon="ph-check-circle">
           <TagGroup items={rf.protectiveFactors} color="var(--color-good)" />
         </Section>
       )}
 
       {/* D. What To Do Next */}
       {recommendations?.length > 0 && (
-        <Section title="What To Do Next" icon="ph-clipboard-text" action={<ReadAloudButton text={nextStepsText} />}>
+        <Section title={t("results.whatToDoNext")} icon="ph-clipboard-text" action={<ReadAloudButton text={nextStepsText} />}>
           <div style={{ display: "grid", gap: 8 }}>
             {recommendations.map((r, i) => (
               <div key={i} style={{ display: "flex", gap: 10, fontSize: "0.875rem", lineHeight: 1.45, color: "var(--color-text)" }}>
@@ -153,12 +154,12 @@ export default function Results({ data, onReset }) {
       {/* E. Detailed Results */}
       <button type="button" onClick={() => setShowDetails((s) => !s)} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
         <i className={`ph ${showDetails ? "ph-caret-up" : "ph-caret-down"}`} />
-        {showDetails ? "Hide Detailed Results" : "Show Detailed Results"}
+        {showDetails ? t("results.hideDetails") : t("results.showDetails")}
       </button>
 
       {showDetails && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 14 }}>
-          <Section title="Risk Gauge">
+          <Section title={t("results.riskGauge")}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text)" }}>{mri}</span>
               <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-500)" }}>/ 100</span>
@@ -169,7 +170,7 @@ export default function Results({ data, onReset }) {
           </Section>
 
           {ml && (
-            <Section title="AI-Assisted Risk Estimate">
+            <Section title={t("results.aiRiskEstimate")}>
               <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)", marginTop: -4 }}>{ml.modelName?.replace(/_/g, " ")}</p>
               <div style={{ display: "grid", gap: 6 }}>
                 {Object.entries(ml.probabilities).map(([label, prob]) => (
@@ -182,54 +183,54 @@ export default function Results({ data, onReset }) {
                   </div>
                 ))}
               </div>
-              <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>A statistical estimate from vitals alone - not a diagnosis.</p>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{t("results.aiDisclaimer")}</p>
             </Section>
           )}
 
-          <Section title="Danger-Sign Ladder">
+          <Section title={t("results.dangerLadder")}>
             {ladder?.rung > 0 ? (
               <>
                 <span style={{ display: "inline-flex", alignSelf: "start", borderRadius: 99, border: `1px solid ${ladder.rung >= 4 ? "var(--color-critical)" : ladder.rung >= 3 ? "var(--color-warning)" : "var(--color-neutral-600)"}`, color: ladder.rung >= 4 ? "var(--color-critical)" : ladder.rung >= 3 ? "var(--color-warning)" : "var(--color-neutral-400)", padding: "3px 10px", fontSize: "0.75rem" }}>
-                  Rung {ladder.rung} — {ladder.rungLabel}
+                  {t("results.rungPrefix")} {ladder.rung} — {ladder.rungLabel}
                 </span>
                 <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>{ladder.description}</p>
               </>
             ) : (
-              <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>No danger-sign phrase matched.</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("results.noDangerSign")}</p>
             )}
           </Section>
 
           {rf && (
-            <Section title={`Risk Factors (×${rf.multiplier?.toFixed(2)})`}>
-              <TagGroup label="Static" items={rf.staticRiskFactors} />
-              <TagGroup label="Dynamic" items={rf.dynamicRiskFactors} color="var(--color-warning)" />
+            <Section title={`${t("results.riskFactors")} (×${rf.multiplier?.toFixed(2)})`}>
+              <TagGroup label={t("results.staticFactors")} items={rf.staticRiskFactors} />
+              <TagGroup label={t("results.dynamicFactors")} items={rf.dynamicRiskFactors} color="var(--color-warning)" />
             </Section>
           )}
 
           {hb && (
-            <Section title="Anemia Grading (India)">
+            <Section title={t("results.anemiaGrading")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{hb.grade}</strong> ({hb.hemoglobin} g/dL)</p>
               <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{hb.methodology}</p>
             </Section>
           )}
 
           {psych && (
-            <Section title="Psychological Evaluation (EPDS)">
+            <Section title={t("results.psychEval")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{psych.classification}</strong> ({psych.total}/{psych.maxScore})</p>
               {psych.selfHarmFlagged && (
                 <div style={{ borderRadius: 10, border: "1px solid var(--color-critical)", background: "var(--color-critical-soft)", padding: 10, fontSize: "0.875rem", color: "var(--color-text)" }}>
-                  <i className="ph ph-warning" /> Self-harm item flagged ({psych.selfHarmSeverityLabel}) — please reach out now.{" "}
-                  <a href="tel:1800-599-0019" style={{ fontWeight: 600, textDecoration: "underline", color: "var(--color-critical)" }}>Call KIRAN: 1800-599-0019</a>
+                  <i className="ph ph-warning" /> {t("results.selfHarmFlagged")} ({psych.selfHarmSeverityLabel}) — {t("results.pleaseReachOut")}.{" "}
+                  <a href="tel:1800-599-0019" style={{ fontWeight: 600, textDecoration: "underline", color: "var(--color-critical)" }}>{t("results.callKiran")}</a>
                 </div>
               )}
               {psych.anxietySubscale?.flagged && (
-                <p style={{ fontSize: "0.75rem", color: "var(--color-warning)" }}>Anxiety subscale also flagged — worth mentioning to your ANC provider too.</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--color-warning)" }}>{t("results.anxietyFlagged")}</p>
               )}
             </Section>
           )}
 
           {weight && (
-            <Section title="Weight Check">
+            <Section title={t("results.weightCheck")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
                 <strong>{weight.status}</strong>{weight.diffKg != null ? ` (${weight.diffKg > 0 ? "+" : ""}${weight.diffKg} kg since last check)` : ""}
               </p>
@@ -238,28 +239,28 @@ export default function Results({ data, onReset }) {
           )}
 
           {fetal && (
-            <Section title="Fetal Movement Check">
+            <Section title={t("results.fetalMovementCheck")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{fetal.status}</strong></p>
               {fetal.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{fetal.flag}</p>}
             </Section>
           )}
 
           {fundal && (
-            <Section title="Fundal Height Check">
+            <Section title={t("results.fundalHeightCheck")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{fundal.status}</strong></p>
               {fundal.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{fundal.flag}</p>}
             </Section>
           )}
 
           {urineProtein && (
-            <Section title="Urine Protein Check">
+            <Section title={t("results.urineProteinCheck")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{urineProtein.status}</strong> ({urineProtein.reading})</p>
               {urineProtein.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{urineProtein.flag}</p>}
             </Section>
           )}
 
           {bmi && (
-            <Section title="BMI">
+            <Section title={t("results.bmiCheck")}>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}><strong>{bmi.category}</strong> ({bmi.bmi})</p>
               {bmi.flag && <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{bmi.flag}</p>}
             </Section>
@@ -269,10 +270,10 @@ export default function Results({ data, onReset }) {
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
         <button type="button" onClick={onReset} className="btn btn-ghost">
-          <i className="ph ph-arrow-left" /> Run another assessment
+          <i className="ph ph-arrow-left" /> {t("results.runAnother")}
         </button>
         <Link to="/referral" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-accent-400)", textDecoration: "none" }}>
-          <i className="ph ph-file-text" /> Generate Referral Summary →
+          <i className="ph ph-file-text" /> {t("results.generateReferral")}
         </Link>
       </div>
     </div>
