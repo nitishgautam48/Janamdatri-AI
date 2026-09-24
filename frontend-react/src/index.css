@@ -1,43 +1,48 @@
 @import "tailwindcss";
 
-/* Command-centre healthcare theme: soft white/off-white background, a
-   calm teal/green primary, and clean rounded cards - deliberately
-   replacing the earlier dark Vaadhan-style shell. Token NAMES are kept
-   the same as before (bg/surface/ink/primary/critical/warning/good/
-   paper-ink...) so every existing component that already references
-   them (Button, Card, Pill, every page) repaints correctly just by
-   changing values here, with no per-component edits needed. */
+/* "Nocturne" dark theme, adopted from the Maternal Risk Triage UI
+   mockups (full redesign, per explicit decision) - a deep indigo ground,
+   a soft blurple accent, and desaturated neutral ramps. Token NAMES are
+   kept the same as the previous light theme (bg/surface/ink/primary/
+   critical/warning/good/paper-ink...) so every existing component that
+   already references them (Button, Card, Pill, every page) repaints
+   correctly just by changing values here, with no per-component edits
+   needed - the same mechanism that already powered the light/high-
+   contrast toggle below. critical/warning/good use oklch() directly
+   (not converted to hex) to match the mockup's exact hues losslessly -
+   modern browsers resolve oklch() natively, same as any other CSS color. */
 @theme {
   --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
 
-  --color-bg: #f6f9f8;
-  --color-bg-soft: #eef4f2;
-  --color-surface: #ffffff;
-  --color-surface-hover: #eef6f4;
-  --color-border: #e3e9e7;
-  --color-border-strong: #cfdad7;
+  --color-bg: #161826;
+  --color-bg-soft: #1b1d2a;
+  --color-surface: #232532;
+  --color-surface-hover: #2a2d3d;
+  --color-border: rgba(233, 233, 237, 0.14);
+  --color-border-strong: rgba(233, 233, 237, 0.28);
 
-  --color-ink: #142420;
-  --color-muted: #5c6b67;
-  --color-faint: #8b9995;
+  --color-ink: #e9e9ed;
+  --color-muted: #9397ab;
+  --color-faint: #75798c;
 
-  --color-primary: #0f9488;
-  --color-primary-dark: #0b7a70;
-  --color-primary-soft: rgba(15, 148, 136, 0.1);
+  --color-primary: #9184d9;
+  --color-primary-dark: #796cbf;
+  --color-primary-soft: rgba(145, 132, 217, 0.14);
 
-  --color-critical: #dc2626;
-  --color-critical-soft: rgba(220, 38, 38, 0.09);
-  --color-warning: #d97706;
-  --color-warning-soft: rgba(217, 119, 6, 0.1);
-  --color-good: #16a34a;
-  --color-good-soft: rgba(22, 163, 74, 0.09);
-  --color-info: #0284c7;
-  --color-info-soft: rgba(2, 132, 199, 0.09);
+  --color-critical: oklch(0.72 0.13 25);
+  --color-critical-soft: oklch(0.3 0.06 25);
+  --color-warning: oklch(0.78 0.12 80);
+  --color-warning-soft: oklch(0.32 0.05 80);
+  --color-good: oklch(0.75 0.12 155);
+  --color-good-soft: oklch(0.3 0.05 155);
+  --color-info: oklch(0.72 0.12 230);
+  --color-info-soft: oklch(0.3 0.05 230);
 
-  /* "On-primary" text/background - white text sits on the teal/green
-     primary buttons and pills; "paper" itself is a light neutral card
-     variant, distinct from the main surface only where that matters. */
-  --color-paper: #fbfdfc;
+  /* "On-primary" text/background - the mockup's buttons are outlined
+     (accent border + text on transparent), not filled, so paper-ink is
+     now only used where a genuinely filled, high-contrast surface is
+     needed (e.g. the 108 emergency button's solid critical fill). */
+  --color-paper: #1b1d2a;
   --color-paper-ink: #ffffff;
 
   --radius-lg: 20px;
@@ -46,7 +51,7 @@
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
@@ -91,23 +96,28 @@ html[data-text-scale="large"] {
   font-size: 118%;
 }
 
+/* High contrast raises contrast WITHIN the current (dark) theme - pure
+   black ground, pure white text, fully-opaque borders and saturated
+   accent/status colors - rather than flipping to a light theme, which
+   would be a jarring, unrelated change for someone who asked only for
+   more contrast. */
 html[data-contrast="high"] {
-  --color-bg: #ffffff;
-  --color-bg-soft: #f0f0f0;
-  --color-surface: #ffffff;
-  --color-surface-hover: #e5e5e5;
-  --color-border: #333333;
-  --color-border-strong: #000000;
-  --color-ink: #000000;
-  --color-muted: #1a1a1a;
-  --color-faint: #333333;
-  --color-primary: #006b60;
-  --color-primary-dark: #004d44;
-  --color-primary-soft: rgba(0, 107, 96, 0.18);
-  --color-critical: #b30000;
-  --color-critical-soft: rgba(179, 0, 0, 0.16);
-  --color-warning: #8a5600;
-  --color-warning-soft: rgba(138, 86, 0, 0.16);
-  --color-good: #0a6b1f;
-  --color-good-soft: rgba(10, 107, 31, 0.16);
+  --color-bg: #000000;
+  --color-bg-soft: #0a0a0a;
+  --color-surface: #0d0d0d;
+  --color-surface-hover: #1a1a1a;
+  --color-border: #ffffff;
+  --color-border-strong: #ffffff;
+  --color-ink: #ffffff;
+  --color-muted: #e5e5e5;
+  --color-faint: #cccccc;
+  --color-primary: #c3b8ff;
+  --color-primary-dark: #a897ff;
+  --color-primary-soft: rgba(195, 184, 255, 0.22);
+  --color-critical: #ff6b6b;
+  --color-critical-soft: rgba(255, 107, 107, 0.2);
+  --color-warning: #ffcc4d;
+  --color-warning-soft: rgba(255, 204, 77, 0.2);
+  --color-good: #4ade80;
+  --color-good-soft: rgba(74, 222, 128, 0.2);
 }

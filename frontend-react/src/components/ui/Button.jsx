@@ -1,7 +1,10 @@
+// Nocturne's buttons are outlined (accent border + text on transparent),
+// not filled - "primary" reads as an accent-colored action against the
+// dark ground rather than needing a solid fill for contrast.
 const VARIANTS = {
-  primary: "bg-primary text-paper-ink hover:bg-primary-dark",
+  primary: "bg-transparent text-primary border border-primary hover:bg-primary-soft",
   ghost: "bg-transparent text-ink border border-border-strong hover:bg-surface-hover",
-  paper: "bg-paper text-paper-ink hover:bg-white",
+  paper: "bg-paper text-paper-ink hover:bg-white/10",
   danger: "bg-transparent text-critical border border-critical/40 hover:bg-critical-soft",
 };
 
