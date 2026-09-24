@@ -11,6 +11,7 @@ import {
   loadCriticalFollowup, acknowledgeCriticalFollowup,
 } from "../lib/storage";
 import { buildTodayCareTasks } from "../lib/todayCare";
+import { computeHealthTrends } from "../lib/trends";
 
 const TIPS_EN = [
   "Take your iron/folic acid tablet at the same time every day — it's easier to remember with a meal.",
@@ -187,6 +188,16 @@ export default function HomePage() {
   const isDanger = !!(latest && (latest.severityLevel === "Critical" || latest.severityLevel === "Severe"));
   const selfHarm = assessSelfHarm || standaloneSelfHarm;
 
+  // Most-urgent-first: a "Needs Attention" note (rising BP, declining Hb,
+  // an escalated risk level) is worth surfacing here over a merely
+  // "Improving" one, since this is the one line someone sees without going
+  // looking for it.
+  const trendNote = useMemo(() => {
+    const { summaryNotes } = computeHealthTrends(history);
+    if (!summaryNotes.length) return null;
+    return summaryNotes.find((n) => n.label === "Needs Attention") || summaryNotes[0];
+  }, [history]);
+
   const hour = new Date().getHours();
   const greetingKey = hour < 12 ? "home.greetingMorning" : hour < 17 ? "home.greetingAfternoon" : "home.greetingEvening";
   const name = user ? user.name || user.email.split("@")[0] : "";
@@ -353,6 +364,27 @@ export default function HomePage() {
           sub={weight?.status} tone={weight?.status ? (/tracking normally/i.test(weight.status) ? "var(--color-good)" : "var(--color-warning)") : null}
           emptyHint={t("home.addWeightCheck")} to="/assess" />
       </div>
+
+      {/* One-line trend hint - each assessment used to be fully stateless
+          from Home's point of view (the full breakdown only ever showed up
+          on History, which most people don't visit unless they think to).
+          Surfacing just the single most relevant "what changed" note here,
+          computed the same way as History's own trend engine (lib/trends.js),
+          means a rising BP or a declining hemoglobin is visible on the very
+          first screen, not just to someone who goes looking for it. */}
+      {trendNote && (
+        <Link
+          to="/history"
+          style={{
+            display: "flex", alignItems: "center", gap: 10, borderRadius: 12, border: `1px solid ${trendNote.tone}`,
+            padding: "10px 14px", fontSize: "0.8125rem", color: "var(--color-text)", textDecoration: "none",
+          }}
+        >
+          <i className="ph ph-trend-up" style={{ color: trendNote.tone, flex: "none" }} />
+          <span style={{ flex: 1, minWidth: 0 }}>{trendNote.text}</span>
+          <span style={{ flex: "none", color: "var(--color-accent-400)" }}>{t("home.viewLink")}</span>
+        </Link>
+      )}
 
       {/* Danger signs + right column (next visit, ASHA, today's care) */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, alignItems: "start" }}>
