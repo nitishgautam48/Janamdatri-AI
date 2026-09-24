@@ -43,6 +43,7 @@ function riskBucket(level) {
 // value, and a short sub caption - or, when there's no reading yet, the
 // same shape with a prompt link instead of blocking on empty state.
 function Tile({ icon, label, value, unit, sub, tone, emptyHint, to }) {
+  const { t } = useLang();
   return (
     <Link
       to={to}
@@ -74,7 +75,7 @@ function Tile({ icon, label, value, unit, sub, tone, emptyHint, to }) {
         </>
       ) : (
         <>
-          <span style={{ fontSize: "0.9375rem", color: "var(--color-neutral-400)" }}>Not recorded</span>
+          <span style={{ fontSize: "0.9375rem", color: "var(--color-neutral-400)" }}>{t("home.notRecorded")}</span>
           <span style={{ fontSize: "0.75rem", color: "var(--color-accent-400)" }}>{emptyHint} →</span>
         </>
       )}
@@ -83,6 +84,7 @@ function Tile({ icon, label, value, unit, sub, tone, emptyHint, to }) {
 }
 
 function TodayCare({ history }) {
+  const { t } = useLang();
   const [state, setState] = useState(() => loadTodayCareState());
   const tasks = useMemo(() => buildTodayCareTasks(history), [history]);
 
@@ -97,7 +99,7 @@ function TodayCare({ history }) {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 10, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>Today's Care</span>
+        <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>{t("home.todaysCare")}</span>
         <span style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{doneCount} / {tasks.length}</span>
       </div>
       {tasks.map((t) => {
@@ -125,6 +127,7 @@ function TodayCare({ history }) {
 }
 
 function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
+  const { t } = useLang();
   const [record, setRecord] = useState(() => loadCriticalFollowup());
   const alreadyAnswered = record?.assessmentTimestamp === assessmentTimestamp;
 
@@ -135,8 +138,7 @@ function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
   if (alreadyAnswered && record.soughtCare) {
     return (
       <p style={{ marginTop: 10, fontSize: "0.8125rem", color: "var(--color-good)" }}>
-        ✓ You confirmed you sought care for this on {new Date(record.respondedAt).toLocaleDateString()}. If anything
-        changes or gets worse, treat it as urgent again.
+        ✓ {t("home.followupConfirmedPrefix")}{new Date(record.respondedAt).toLocaleDateString()}{t("home.followupConfirmedSuffix")}
       </p>
     );
   }
@@ -145,17 +147,17 @@ function CriticalFollowUp({ assessmentTimestamp, severityLevel }) {
     <div style={{ marginTop: 12, borderRadius: 10, border: "1px solid var(--color-critical)", padding: 12, display: "grid", gap: 8 }}>
       {alreadyAnswered && !record.soughtCare ? (
         <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-critical)" }}>
-          Please don't wait - this ({severityLevel}) still needs medical attention today.
+          {t("home.followupUrgentPrefix")}{severityLevel}{t("home.followupUrgentSuffix")}
         </p>
       ) : (
-        <p style={{ fontSize: "0.8125rem", color: "var(--color-text)" }}>Have you been able to get medical attention for this?</p>
+        <p style={{ fontSize: "0.8125rem", color: "var(--color-text)" }}>{t("home.followupQuestion")}</p>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         <button type="button" onClick={() => respond(true)} className="btn btn-primary" style={{ fontSize: "0.75rem" }}>
-          ✓ Yes, I got checked
+          ✓ {t("home.followupYes")}
         </button>
         <button type="button" onClick={() => respond(false)} className="btn btn-secondary" style={{ fontSize: "0.75rem" }}>
-          Not yet
+          {t("home.followupNotYet")}
         </button>
       </div>
     </div>
@@ -224,19 +226,19 @@ export default function HomePage() {
         <div style={{ background: "var(--color-critical-soft)", border: "1px solid var(--color-critical)", borderRadius: 14, padding: 16, display: "grid", gap: 4 }}>
           <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>
             {selfHarm
-              ? "A Mental Health Check flagged thoughts of self-harm — please reach out now."
-              : `Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.`}
+              ? t("home.selfHarmAlert")
+              : `${t("home.dangerAlertPrefix")}${latest.severityLevel}${t("home.dangerAlertSuffix")}`}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
             <a href="tel:108" className="btn" style={{ background: "var(--color-critical)", color: "#fff", borderColor: "var(--color-critical)" }}>
-              <i className="ph ph-phone-call" /> Call 108
+              <i className="ph ph-phone-call" /> {t("common.call108")}
             </a>
             {selfHarm && (
               <a href="tel:1800-599-0019" className="btn" style={{ background: "var(--color-critical)", color: "#fff", borderColor: "var(--color-critical)" }}>
                 KIRAN 1800-599-0019
               </a>
             )}
-            <Link to="/help" className="btn btn-secondary">View Helplines</Link>
+            <Link to="/help" className="btn btn-secondary">{t("home.viewHelplines")}</Link>
           </div>
           {isDanger && <CriticalFollowUp assessmentTimestamp={latest.timestamp} severityLevel={latest.severityLevel} />}
         </div>
@@ -244,12 +246,12 @@ export default function HomePage() {
 
       {isFirstTimeUser && (
         <div style={{ background: "var(--color-accent-900)", border: "1px solid var(--color-accent-800)", borderRadius: 14, padding: 16, display: "grid", gap: 10 }}>
-          <p className="eyebrow" style={{ color: "var(--color-accent-300)" }}>Get Started</p>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Three things to set up so this dashboard can actually work for you:</p>
+          <p className="eyebrow" style={{ color: "var(--color-accent-300)" }}>{t("home.getStarted")}</p>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{t("home.getStartedIntro")}</p>
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}>
-            <Link to="/profile" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>1. Set up your Pregnancy Profile</Link>
-            <Link to="/assess" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>2. Run your first Assessment</Link>
-            <Link to="/nutrition" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>3. Check your Nutrition</Link>
+            <Link to="/profile" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>{t("home.setupProfileStep")}</Link>
+            <Link to="/assess" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>{t("home.runAssessmentStep")}</Link>
+            <Link to="/nutrition" className="btn btn-secondary" style={{ justifyContent: "flex-start", padding: 12 }}>{t("home.checkNutritionStep")}</Link>
           </div>
         </div>
       )}
@@ -263,7 +265,7 @@ export default function HomePage() {
             <Link to="/postpartum" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", display: "grid", gap: 10, textDecoration: "none" }}>
               <span style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
                 <span style={{ fontSize: "3rem", fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{postpartumGuide.daysPostpartum}</span>
-                <span style={{ flex: 1, fontSize: "0.8125rem", color: "var(--color-neutral-400)", lineHeight: 1.35 }}>days after birth</span>
+                <span style={{ flex: 1, fontSize: "0.8125rem", color: "var(--color-neutral-400)", lineHeight: 1.35 }}>{t("home.daysAfterBirth")}</span>
               </span>
               <span style={{ display: "block", height: 4, background: "var(--color-neutral-900)", borderRadius: 2, overflow: "hidden" }}>
                 <span style={{ display: "block", width: `${ppPct}%`, height: "100%", background: "var(--color-accent)", boxShadow: "0 0 10px var(--color-accent)" }} />
@@ -274,22 +276,22 @@ export default function HomePage() {
               <span style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
                 <span style={{ fontSize: "3rem", fontWeight: 500, lineHeight: 0.9, letterSpacing: "-0.03em", color: "var(--color-text)" }}>{guide.week}</span>
                 <span style={{ flex: 1, fontSize: "0.8125rem", color: "var(--color-neutral-400)", lineHeight: 1.35 }}>
-                  weeks pregnant
-                  <span style={{ display: "block", color: "var(--color-neutral-500)" }}>Trimester {guide.trimester}</span>
+                  {t("home.weeksPregnant")}
+                  <span style={{ display: "block", color: "var(--color-neutral-500)" }}>{t("home.trimesterLabel")} {guide.trimester}</span>
                 </span>
               </span>
               <span style={{ display: "block", height: 4, background: "var(--color-neutral-900)", borderRadius: 2, overflow: "hidden" }}>
                 <span style={{ display: "block", width: `${weekPct}%`, height: "100%", background: "var(--color-accent)", boxShadow: "0 0 10px var(--color-accent)" }} />
               </span>
               <span style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: "0.75rem", color: "var(--color-neutral-500)", whiteSpace: "nowrap" }}>
-                {guide.estimatedDueDate && <span>Due {guide.estimatedDueDate}</span>}
-                <span>{Math.max(40 - guide.week, 0)} weeks to go</span>
+                {guide.estimatedDueDate && <span>{t("home.due")} {guide.estimatedDueDate}</span>}
+                <span>{Math.max(40 - guide.week, 0)} {t("home.weeksToGo")}</span>
               </span>
             </Link>
           ) : (
             <div>
               <div style={{ fontSize: "1.5rem", fontWeight: 500, color: "var(--color-text)" }}>{t("home.weekNotSet")}</div>
-              <Link to="/profile" style={{ fontSize: "0.8125rem", color: "var(--color-accent-400)" }}>Set up your profile →</Link>
+              <Link to="/profile" style={{ fontSize: "0.8125rem", color: "var(--color-accent-400)" }}>{t("home.setupProfileLink")}</Link>
             </div>
           )}
         </div>
@@ -316,8 +318,8 @@ export default function HomePage() {
               <i className="ph ph-stethoscope" style={{ fontSize: "1.25rem" }} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: "1rem", fontWeight: 500, color: "var(--color-text)" }}>Start today's health check</span>
-              <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>Danger signs, vitals, and an AI-assisted risk estimate</span>
+              <span style={{ display: "block", fontSize: "1rem", fontWeight: 500, color: "var(--color-text)" }}>{t("home.startCheck")}</span>
+              <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{t("home.startCheckSub")}</span>
             </span>
             <i className="ph ph-arrow-right" style={{ fontSize: "1.25rem", color: "var(--color-accent-400)" }} />
           </Link>
@@ -329,8 +331,8 @@ export default function HomePage() {
                   {latest.severityLevel}
                 </span>
               )}
-              <span style={{ flex: 1, minWidth: 0 }}>Last check · {new Date(latest.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-              <span style={{ color: "var(--color-accent-400)" }}>View</span>
+              <span style={{ flex: 1, minWidth: 0 }}>{t("home.lastCheckLabel")} {new Date(latest.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+              <span style={{ color: "var(--color-accent-400)" }}>{t("home.viewLink")}</span>
             </Link>
           )}
         </div>
@@ -338,18 +340,18 @@ export default function HomePage() {
 
       {/* Today tiles */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 }}>
-        <Tile icon="ph-drop" label="Blood pressure" value={vitals ? `${vitals.SystolicBP}/${vitals.DiastolicBP}` : null}
-          sub={vitals && (bpHigh ? "Above the safe limit" : "Normal")} tone={vitals ? (bpHigh ? "var(--color-critical)" : "var(--color-good)") : null}
-          emptyHint="Record vitals" to="/assess" />
-        <Tile icon="ph-heartbeat" label="Haemoglobin" value={hb ? hb.hemoglobin : null} unit="g/dL"
+        <Tile icon="ph-drop" label={t("home.bloodPressure")} value={vitals ? `${vitals.SystolicBP}/${vitals.DiastolicBP}` : null}
+          sub={vitals && (bpHigh ? t("home.aboveLimit") : t("home.normalLabel"))} tone={vitals ? (bpHigh ? "var(--color-critical)" : "var(--color-good)") : null}
+          emptyHint={t("home.recordVitals")} to="/assess" />
+        <Tile icon="ph-heartbeat" label={t("home.haemoglobin")} value={hb ? hb.hemoglobin : null} unit="g/dL"
           sub={hb?.grade} tone={hb ? (hbCritical ? "var(--color-critical)" : hb.grade === "Normal" ? "var(--color-good)" : "var(--color-warning)") : null}
-          emptyHint="Add Hb reading" to="/assess" />
-        <Tile icon="ph-drop-half-bottom" label="Blood sugar" value={vitals ? vitals.BS : null} unit="mmol/L"
-          sub={vitals && (bsHigh ? "Above the safe limit" : "Normal")} tone={vitals ? (bsHigh ? "var(--color-critical)" : "var(--color-good)") : null}
-          emptyHint="Record vitals" to="/assess" />
-        <Tile icon="ph-scales" label="Weight" value={weight ? weight.valueKg : null} unit="kg"
+          emptyHint={t("home.addHbReading")} to="/assess" />
+        <Tile icon="ph-drop-half-bottom" label={t("home.bloodSugar")} value={vitals ? vitals.BS : null} unit="mmol/L"
+          sub={vitals && (bsHigh ? t("home.aboveLimit") : t("home.normalLabel"))} tone={vitals ? (bsHigh ? "var(--color-critical)" : "var(--color-good)") : null}
+          emptyHint={t("home.recordVitals")} to="/assess" />
+        <Tile icon="ph-scales" label={t("home.weightLabel")} value={weight ? weight.valueKg : null} unit="kg"
           sub={weight?.status} tone={weight?.status ? (/tracking normally/i.test(weight.status) ? "var(--color-good)" : "var(--color-warning)") : null}
-          emptyHint="Add weight check" to="/assess" />
+          emptyHint={t("home.addWeightCheck")} to="/assess" />
       </div>
 
       {/* Danger signs + right column (next visit, ASHA, today's care) */}
@@ -358,18 +360,12 @@ export default function HomePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <i className="ph ph-warning" style={{ fontSize: "1.125rem", color: "var(--color-critical)" }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>Call 108 right away if</div>
-              {guide && <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>For where you are in pregnancy right now</div>}
+              <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>{t("home.call108If")}</div>
+              {guide && <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("home.forThisWeek")}</div>}
             </div>
           </div>
           <div style={{ display: "grid", gap: 8 }}>
-            {(guide?.dangerSigns || [
-              "Bleeding or spotting from the vagina",
-              "Severe headache, blurred vision, or swelling in the face/hands",
-              "Fits, fainting, or loss of consciousness",
-              "Baby moving much less than usual",
-              "Water breaking or leaking before labour",
-            ]).map((d) => (
+            {(guide?.dangerSigns || t("home.defaultDangerSigns")).map((d) => (
               <div key={d} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: "0.875rem", color: "var(--color-text)" }}>
                 <i className="ph ph-dot-outline" style={{ color: "var(--color-critical)", fontSize: "1rem", flex: "none" }} />
                 <span style={{ flex: 1, minWidth: 0 }}>{d}</span>
@@ -377,7 +373,7 @@ export default function HomePage() {
             ))}
           </div>
           <a href="tel:108" className="btn jd-call108-fill">
-            <i className="ph ph-phone-call" /> Call 108 ambulance
+            <i className="ph ph-phone-call" /> {t("home.call108Ambulance")}
           </a>
         </div>
 
@@ -388,7 +384,7 @@ export default function HomePage() {
                 <i className="ph ph-calendar-check" style={{ fontSize: "1.25rem" }} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Next clinic visit</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("home.nextVisit")}</div>
                 <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>Visit {guide.nextAncVisit.visit} · {guide.nextAncVisit.window}</div>
               </div>
               <Link to="/guide" className="btn btn-secondary btn-icon" aria-label="Details"><i className="ph ph-arrow-right" /></Link>
@@ -401,7 +397,7 @@ export default function HomePage() {
                 {(extra.ashaName || "?").charAt(0).toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Your ASHA worker</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{t("home.yourAsha")}</div>
                 <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{extra.ashaName || extra.ashaPhone}</div>
               </div>
               {extra.ashaPhone && (
@@ -415,14 +411,14 @@ export default function HomePage() {
             </div>
           ) : (
             <Link to="/profile" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
-              <i className="ph ph-user-plus" /> Add your ASHA worker's contact
+              <i className="ph ph-user-plus" /> {t("home.addAshaContact")}
             </Link>
           )}
 
           <TodayCare history={history} />
 
           <Link to="/help" className="btn btn-ghost" style={{ justifySelf: "start", fontSize: "0.8125rem" }}>
-            <i className="ph ph-map-pin" /> Find nearby care <i className="ph ph-arrow-right" />
+            <i className="ph ph-map-pin" /> {t("home.findNearbyCare")} <i className="ph ph-arrow-right" />
           </Link>
         </div>
       </div>
