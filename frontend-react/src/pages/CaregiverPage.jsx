@@ -65,7 +65,7 @@ export default function CaregiverPage() {
 
       {data && (
         <Card className={isDanger ? "border-critical/40 bg-critical-soft" : ""}>
-          <h2 className="text-lg font-bold text-ink">{data.patientName}</h2>
+          <h2 className="break-words text-lg font-bold text-ink">{data.patientName}</h2>
 
           {sev ? (
             <>
