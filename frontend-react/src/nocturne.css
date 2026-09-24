@@ -180,6 +180,18 @@ html { color-scheme: dark; background: var(--color-bg); }
   box-shadow: inset 2px 0 0 var(--color-accent);
 }
 .jd-call108:hover { background: oklch(0.3 0.06 25); }
+.jd-hover-tint:hover { background: rgba(145, 132, 217, 0.08); }
+.jd-call108-fill {
+  border: 1px solid var(--color-critical);
+  background: var(--color-critical-soft);
+  color: oklch(0.93 0.04 25);
+  border-radius: 10px;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  width: 100%;
+}
+.jd-call108-fill:hover { background: oklch(0.34 0.07 25); }
 
 @media print {
   [data-print-hide] { display: none !important; }

@@ -19,6 +19,10 @@ function loadInitialForm() {
     vaccineDose1: !!extra?.vaccineDose1,
     vaccineDose2: !!extra?.vaccineDose2,
     deliveryDate: postpartum?.deliveryDate || "",
+    ashaName: extra?.ashaName || "",
+    ashaPhone: extra?.ashaPhone || "",
+    familyName: extra?.familyName || "",
+    familyPhone: extra?.familyPhone || "",
   };
 }
 
@@ -52,6 +56,10 @@ export default function ProfilePage() {
         ancVisitsCompleted: form.ancVisitsCompleted === "" ? null : Number(form.ancVisitsCompleted),
         vaccineDose1: form.vaccineDose1,
         vaccineDose2: form.vaccineDose2,
+        ashaName: form.ashaName,
+        ashaPhone: form.ashaPhone,
+        familyName: form.familyName,
+        familyPhone: form.familyPhone,
         updatedAt: new Date().toISOString(),
       });
 
@@ -193,6 +201,49 @@ export default function ProfilePage() {
             className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           <p className="mt-1 text-xs text-faint">Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.</p>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="profile-asha-name" className="mb-1 block text-sm font-medium text-muted">ASHA worker's name</label>
+            <input
+              id="profile-asha-name"
+              value={form.ashaName}
+              onChange={(e) => set("ashaName", e.target.value)}
+              placeholder="e.g. Sunita Devi"
+              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-asha-phone" className="mb-1 block text-sm font-medium text-muted">ASHA worker's phone</label>
+            <input
+              id="profile-asha-phone"
+              value={form.ashaPhone}
+              onChange={(e) => set("ashaPhone", e.target.value)}
+              placeholder="e.g. +91 98390 12345"
+              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-family-name" className="mb-1 block text-sm font-medium text-muted">Family contact's name (optional)</label>
+            <input
+              id="profile-family-name"
+              value={form.familyName}
+              onChange={(e) => set("familyName", e.target.value)}
+              placeholder="e.g. Ramesh (husband)"
+              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-family-phone" className="mb-1 block text-sm font-medium text-muted">Family contact's phone (optional)</label>
+            <input
+              id="profile-family-phone"
+              value={form.familyPhone}
+              onChange={(e) => set("familyPhone", e.target.value)}
+              placeholder="e.g. +91 94150 67890"
+              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
         </div>
 
         <Button className="mt-6" onClick={handleSave} disabled={busy}>{busy ? "…" : "Save My Profile"}</Button>
