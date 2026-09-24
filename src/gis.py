@@ -16,13 +16,24 @@ is same-origin, exactly like every other endpoint already works.
 """
 
 import json
+import logging
 import math
 import urllib.error
 import urllib.request
 
+logger = logging.getLogger("janamdatri.gis")
+
+# Several independent public mirrors, tried in order - overpass-api.de in
+# particular is a shared, heavily-loaded community service that regularly
+# times out or rate-limits under load (and cloud-provider egress IPs like
+# Render's are especially prone to hitting its fair-use limits, since many
+# unrelated apps share the same outbound IP). One mirror being down
+# shouldn't take the whole feature down with it.
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass.osm.ch/api/interpreter",
 ]
 NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org/search"
 # Nominatim's usage policy asks for an identifying User-Agent on
@@ -49,19 +60,34 @@ def _classify(tags):
 
 
 def _overpass_query(lat, lon, radius_m):
+    # The query's own internal timeout is kept a few seconds under our
+    # urllib timeout below, so Overpass has a chance to send back its own
+    # "query ran too long" error response instead of us cutting the raw
+    # TCP connection first and losing that detail.
     flt = '["amenity"~"^(hospital|clinic|doctors|pharmacy)$"]|["healthcare"]'
     return (
-        f"[out:json][timeout:20];"
+        f"[out:json][timeout:25];"
         f"(node{flt}(around:{radius_m},{lat},{lon});"
         f"way{flt}(around:{radius_m},{lat},{lon}););"
         f"out center tags 80;"
     )
 
 
-def _post_json(url, data_bytes, headers, timeout=20):
+def _post_json(url, data_bytes, headers, timeout=30):
     req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
+
+def _describe_error(exc):
+    if isinstance(exc, urllib.error.HTTPError):
+        body = ""
+        try:
+            body = exc.read(300).decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001 - best-effort diagnostic only
+            pass
+        return f"HTTP {exc.code}: {body}"
+    return repr(exc)
 
 
 def _query_overpass(lat, lon, radius_m):
@@ -72,7 +98,8 @@ def _query_overpass(lat, lon, radius_m):
         try:
             return _post_json(endpoint, body, headers)
         except Exception as exc:  # noqa: BLE001 - try the next mirror regardless of failure kind
-            last_err = exc
+            last_err = _describe_error(exc)
+            logger.warning("Overpass mirror %s failed: %s", endpoint, last_err)
     raise RuntimeError(f"Could not reach the map data service: {last_err}")
 
 
@@ -137,10 +164,12 @@ def geocode_place(query):
     url = f"{NOMINATIM_ENDPOINT}?format=jsonv2&limit=1&q={quote(query)}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             rows = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Place search failed: {exc}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        detail = _describe_error(exc)
+        logger.warning("Nominatim geocode failed: %s", detail)
+        raise RuntimeError(f"Place search failed: {detail}") from exc
     if not rows:
         return None
     row = rows[0]

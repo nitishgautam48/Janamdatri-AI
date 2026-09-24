@@ -109,6 +109,7 @@ export const translations = {
 
     "common.call108": "Call 108",
     "common.logout": "Log out",
+    "common.viewDetails": "View details",
   },
   hi: {
     tagline: "मातृ स्वास्थ्य जोखिम मूल्यांकन",
@@ -210,6 +211,7 @@ export const translations = {
 
     "common.call108": "108 पर कॉल करें",
     "common.logout": "लॉग आउट",
+    "common.viewDetails": "विवरण देखें",
   },
   // Roman-script Hindi-English mix - the register a lot of Indian users
   // actually type/read day-to-day, distinct from formal Devanagari Hindi
@@ -315,5 +317,6 @@ export const translations = {
 
     "common.call108": "108 par Call karein",
     "common.logout": "Log out",
+    "common.viewDetails": "Details Dekhein",
   },
 };

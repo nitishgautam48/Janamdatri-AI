@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useLang } from "../../context/LangContext";
 import { useHistory } from "../../lib/useHistory";
 import { loadSavedEpds, scopedKey } from "../../lib/storage";
 import ReadAloudButton from "../ui/ReadAloudButton";
 
 // A danger sign shouldn't only be visible on the Home tab - ported from
 // the vanilla-JS app's checkGlobalEmergencyBanner(), this stays sticky
-// under the header on every view for as long as the most recent result is
-// unresolved (Critical/Severe, or a self-harm flag). Dismissing hides it
-// for THIS specific result only (tracked by its timestamp) - a session-
-// only choice, not a persistent one, so a fresh page load still shows it
-// if nothing has actually changed.
+// under the header on every OTHER view for as long as the most recent
+// result is unresolved (Critical/Severe, or a self-harm flag). Home is
+// excluded because it already shows this same alert inline, with the
+// richer "did you seek care" follow-up (CriticalFollowUp in
+// HomePage.jsx) - showing both stacked one after another read as a
+// visual glitch rather than two different pieces of information.
+// Dismissing hides it for THIS specific result only (tracked by its
+// timestamp) - a session-only choice, not a persistent one, so a fresh
+// page load still shows it if nothing has actually changed.
 export default function GlobalEmergencyBanner() {
   const { hasIdentity, identityKey } = useAuth();
+  const { t } = useLang();
   const { history } = useHistory();
+  const location = useLocation();
   const [dismissedFor, setDismissedFor] = useState(null);
 
   const latest = history[0];
@@ -38,11 +45,9 @@ export default function GlobalEmergencyBanner() {
     // identityKey ensures this re-reads when switching between accounts/guest.
   }, [storageKey, identityKey]);
 
-  if (!hasIdentity || (!isDanger && !selfHarm) || dismissedFor === dismissKey) return null;
+  if (!hasIdentity || location.pathname === "/" || (!isDanger && !selfHarm) || dismissedFor === dismissKey) return null;
 
-  const bannerText = selfHarm
-    ? "A Mental Health Check flagged thoughts of self-harm. Please reach out to someone you trust, or call KIRAN now."
-    : `Your last assessment, ${latest.severityLevel}, flagged something that needs prompt attention.`;
+  const bannerText = selfHarm ? t("home.selfHarmAlert") : `${t("home.dangerAlertPrefix")}${latest.severityLevel}${t("home.dangerAlertSuffix")}`;
 
   function dismiss() {
     try {
@@ -60,14 +65,10 @@ export default function GlobalEmergencyBanner() {
       className="sticky z-30 border-b border-critical/40 bg-critical px-4 py-3 text-white"
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug">
-          {selfHarm
-            ? "🚨 A Mental Health Check flagged thoughts of self-harm — please reach out to someone you trust or KIRAN now."
-            : `🚨 Your last assessment (${latest.severityLevel}) flagged something that needs prompt attention.`}
-        </p>
+        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug">🚨 {bannerText}</p>
         <ReadAloudButton text={bannerText} className="!border-white/50 !text-white hover:!border-white hover:!text-white" />
         <a href="tel:108" className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-bold text-critical">
-          🚨 Call 108
+          🚨 {t("common.call108")}
         </a>
         {selfHarm && (
           <a href="tel:1800-599-0019" className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-bold text-critical">
@@ -75,7 +76,7 @@ export default function GlobalEmergencyBanner() {
           </a>
         )}
         <Link to="/history" className="whitespace-nowrap text-xs font-semibold text-white underline">
-          View details
+          {t("common.viewDetails")}
         </Link>
         <button type="button" onClick={dismiss} aria-label="Dismiss" className="text-white/80 hover:text-white">
           ✕

@@ -554,6 +554,7 @@ def nearby_facilities(req: NearbyFacilitiesRequest):
     try:
         facilities = gis.fetch_nearby_facilities(req.lat, req.lon)
     except Exception as exc:
+        gis.logger.exception("nearby-facilities lookup failed for (%s, %s)", req.lat, req.lon)
         raise HTTPException(status_code=502, detail="Could not reach the map data service. Please try again.") from exc
     return {"success": True, "data": {"facilities": facilities}}
 
@@ -565,6 +566,7 @@ def geocode(q: str):
     try:
         place = gis.geocode_place(q.strip())
     except Exception as exc:
+        gis.logger.exception("geocode lookup failed for %r", q)
         raise HTTPException(status_code=502, detail="Place search failed. Please try again.") from exc
     if not place:
         raise HTTPException(status_code=404, detail=f'Could not find "{q}". Try a nearby town or district name.')

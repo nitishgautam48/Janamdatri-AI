@@ -98,7 +98,7 @@ function Avatar() {
 export default function TopBar() {
   const { hasIdentity } = useAuth();
   const { t } = useLang();
-  const { largeText, toggleLargeText, highContrast, toggleHighContrast } = useAccessibility();
+  const { largeText, toggleLargeText } = useAccessibility();
   const location = useLocation();
   const headerRef = useRef(null);
 
@@ -153,9 +153,6 @@ export default function TopBar() {
         </div>
         <IconToggle active={largeText} onClick={toggleLargeText} label="Large text">
           Aa
-        </IconToggle>
-        <IconToggle active={highContrast} onClick={toggleHighContrast} label="High contrast">
-          ◐
         </IconToggle>
         <LangSegment />
         <a
