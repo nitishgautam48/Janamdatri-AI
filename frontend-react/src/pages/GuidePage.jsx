@@ -3,7 +3,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import PregnancyTimeline from "../components/ui/PregnancyTimeline";
 import { api } from "../lib/api";
-import { KEYS, scopedSet } from "../lib/storage";
+import { KEYS, scopedSet, loadKickLog, appendKickLog } from "../lib/storage";
 
 function ThisWeekAccordion({ guide }) {
   const [open, setOpen] = useState(null);
@@ -15,20 +15,103 @@ function ThisWeekAccordion({ guide }) {
   ];
 
   return (
-    <div className="divide-y divide-border rounded-md border border-border">
+    <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
       {sections.map((s) => (
-        <div key={s.id}>
+        <div key={s.id} style={{ background: "#1b1d2a" }}>
           <button
             type="button"
             onClick={() => setOpen(open === s.id ? null : s.id)}
-            className="flex w-full items-center justify-between px-3.5 py-3 text-left text-sm font-medium text-ink hover:bg-surface-hover"
+            style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", textAlign: "left", fontSize: 14, fontWeight: 500, color: "var(--color-text)", background: "none", border: 0, cursor: "pointer" }}
           >
             <span>{s.label}</span>
-            <span className="text-muted">{open === s.id ? "−" : "→"}</span>
+            <i className={`ph ${open === s.id ? "ph-caret-up" : "ph-caret-down"}`} style={{ color: "var(--color-neutral-500)" }} />
           </button>
-          {open === s.id && <div className="px-3.5 pb-3.5 text-sm text-muted">{s.detail}</div>}
+          {open === s.id && <div style={{ padding: "0 14px 14px", fontSize: 13, color: "var(--color-neutral-300)" }}>{s.detail}</div>}
         </div>
       ))}
+    </div>
+  );
+}
+
+const KICK_TARGET = 10;
+
+function KickCounter() {
+  const [count, setCount] = useState(0);
+  const [startedAt, setStartedAt] = useState(null);
+  const [log, setLog] = useState(() => loadKickLog());
+  const [saved, setSaved] = useState(false);
+
+  function tap() {
+    setSaved(false);
+    setCount((c) => c + 1);
+    setStartedAt((s) => s || Date.now());
+  }
+
+  function save() {
+    if (count === 0) return;
+    const minutes = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 60000)) : null;
+    setLog(appendKickLog(count, minutes));
+    setSaved(true);
+  }
+
+  function reset() {
+    setCount(0);
+    setStartedAt(null);
+    setSaved(false);
+  }
+
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ fontSize: 15, color: "var(--color-text)" }}>Kick counter <span style={{ color: "var(--color-neutral-500)" }}>(fetal movement)</span></span>
+      </div>
+      <p style={{ fontSize: 13, color: "var(--color-neutral-500)" }}>Lie on your left side and tap each time you feel a movement. Aim for {KICK_TARGET} in 2 hours.</p>
+      <button
+        type="button"
+        onClick={tap}
+        style={{
+          justifySelf: "center",
+          width: 140,
+          height: 140,
+          borderRadius: "50%",
+          border: "1px solid var(--color-accent)",
+          background: count >= KICK_TARGET ? "var(--color-accent-900)" : "var(--color-surface)",
+          boxShadow: "0 0 30px rgba(145,132,217,0.2)",
+          cursor: "pointer",
+          display: "grid",
+          placeContent: "center",
+          gap: 2,
+        }}
+      >
+        <span style={{ fontSize: 40, fontWeight: 500, lineHeight: 1, color: "var(--color-text)" }}>{count}</span>
+        <span style={{ fontSize: 12, color: "var(--color-accent-300)" }}>Tap on movement</span>
+      </button>
+      {count >= KICK_TARGET && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, padding: "10px 12px", borderRadius: 10, background: "var(--color-good-soft)", color: "var(--color-good)" }}>
+          {KICK_TARGET}+ movements — a reassuring pattern. Keep an eye out tomorrow too.
+        </div>
+      )}
+      {saved && count > 0 && count < KICK_TARGET && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, padding: "10px 12px", borderRadius: 10, background: "var(--color-warning-soft)", color: "var(--color-warning)" }}>
+          Fewer than {KICK_TARGET} — if this continues, mention it to your ASHA or provider.
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+        <button type="button" onClick={save} className="btn btn-primary" style={{ fontSize: 13 }}>
+          <i className="ph ph-floppy-disk" /> Save
+        </button>
+        <button type="button" onClick={reset} className="btn btn-secondary" style={{ fontSize: 13 }}>Reset</button>
+      </div>
+      {log.length > 0 && (
+        <div style={{ display: "grid", gap: 4, borderTop: "1px solid var(--color-neutral-800)", paddingTop: 10 }}>
+          {log.slice(0, 5).map((l, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--color-neutral-400)" }}>
+              <span>{new Date(l.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+              <span>{l.count} movements{l.minutes ? ` in ~${l.minutes} min` : ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -57,8 +140,8 @@ export default function GuidePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <Card>
+    <div className="space-y-5">
+      <Card style={{ maxWidth: guide ? "none" : 640 }}>
         <h1 className="text-xl font-bold text-ink">Pregnancy Guide</h1>
         <p className="mt-1 text-sm text-muted">Week-by-week ANC visit schedule, nutrition tips, and danger signs — aligned with India's RCH programme.</p>
 
@@ -105,59 +188,76 @@ export default function GuidePage() {
       </Card>
 
       {guide && (
-        <>
-          <Card>
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-primary-soft px-4 py-2 text-sm font-bold text-primary">Week {guide.week}</div>
-              <div>
-                <div className="text-sm font-semibold text-ink">Trimester {guide.trimester}</div>
-                <div className="text-xs text-muted">
-                  {guide.estimatedDueDate ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go` : `${guide.weeksUntilDue} weeks to go`}
+        <div className="mx-auto max-w-none" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, boxShadow: "var(--shadow-sm)" }}>
+              <div className="flex items-center gap-4">
+                <div style={{ borderRadius: 99, padding: "8px 16px", fontSize: 14, fontWeight: 600, background: "var(--color-accent-900)", color: "var(--color-accent-200)" }}>Week {guide.week}</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>Trimester {guide.trimester}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>
+                    {guide.estimatedDueDate ? `Estimated due date: ${guide.estimatedDueDate} · ${guide.weeksUntilDue} weeks to go` : `${guide.weeksUntilDue} weeks to go`}
+                  </div>
                 </div>
               </div>
+              <div className="mt-5">
+                <PregnancyTimeline week={guide.week} />
+              </div>
             </div>
-            <div className="mt-5">
-              <PregnancyTimeline week={guide.week} />
+
+            <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
+              <h3 style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>This Week</h3>
+              <ThisWeekAccordion guide={guide} />
             </div>
-          </Card>
 
-          <Card>
-            <h3 className="mb-2 text-sm font-bold text-ink">This Week</h3>
-            <ThisWeekAccordion guide={guide} />
-          </Card>
-
-          <Card>
-            <h3 className="mb-3 text-sm font-bold text-ink">Pregnancy Check-up Schedule (ANC)</h3>
-            <div className="space-y-3">
-              {guide.ancSchedule.map((visit) => (
-                <div
-                  key={visit.visit}
-                  className={`rounded-md border p-3.5 ${visit.visit === guide.nextAncVisit.visit ? "border-primary/40 bg-primary-soft" : "border-border"}`}
-                >
-                  <div className="flex items-center justify-between text-sm font-semibold text-ink">
-                    <span>Visit {visit.visit} — {visit.window}</span>
-                    {visit.visit === guide.nextAncVisit.visit && <span className="text-xs font-bold text-primary">Next up</span>}
+            <div style={{ display: "grid", gap: 8 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Government Schemes</h3>
+              <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
+                {Object.entries(guide.schemes).map(([name, desc]) => (
+                  <div key={name} style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>{name}</div>
+                    <div style={{ marginTop: 4, fontSize: 12, color: "var(--color-neutral-500)" }}>{desc}</div>
                   </div>
-                  <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-muted">
-                    {visit.checks.map((c) => <li key={c}>{c}</li>)}
-                  </ul>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
 
-          <Card>
-            <h3 className="mb-3 text-sm font-bold text-ink">Government Schemes</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {Object.entries(guide.schemes).map(([name, desc]) => (
-                <div key={name} className="rounded-md border border-border p-3.5">
-                  <div className="text-sm font-semibold text-ink">{name}</div>
-                  <div className="mt-1 text-xs text-muted">{desc}</div>
-                </div>
-              ))}
+          <div style={{ display: "grid", gap: 14 }}>
+            <KickCounter />
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>Clinic visits (ANC)</h3>
+              {guide.ancSchedule.map((visit) => {
+                const isNext = visit.visit === guide.nextAncVisit.visit;
+                return (
+                  <div
+                    key={visit.visit}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: `1px solid ${isNext ? "var(--color-accent)" : "var(--color-neutral-800)"}`,
+                      background: isNext ? "var(--color-accent-900)" : "var(--color-surface)",
+                    }}
+                  >
+                    <i className={`ph ${isNext ? "ph-calendar-check" : "ph-calendar"}`} style={{ fontSize: 20, color: isNext ? "var(--color-accent-300)" : "var(--color-neutral-500)", marginTop: 1 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontSize: 14, color: "var(--color-text)" }}>Visit {visit.visit} — {visit.window}</span>
+                        {isNext && <span style={{ fontSize: 12, color: "var(--color-accent-300)" }}>Next up</span>}
+                      </div>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5" style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>
+                        {visit.checks.map((c) => <li key={c}>{c}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </Card>
-        </>
+          </div>
+        </div>
       )}
     </div>
   );
