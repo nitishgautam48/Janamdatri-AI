@@ -24,8 +24,8 @@ export default function BottomNav() {
         <div
           data-print-hide
           onClick={() => setMoreOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(16,18,28,0.72)", zIndex: 50, display: "flex", alignItems: "flex-end" }}
-          className="lg:hidden"
+          style={{ position: "fixed", inset: 0, background: "rgba(16,18,28,0.72)", zIndex: 50, alignItems: "flex-end" }}
+          className="flex lg:hidden"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -83,13 +83,12 @@ export default function BottomNav() {
 
       <nav
         data-print-hide
-        className="lg:hidden"
+        className="grid lg:hidden"
         style={{
           position: "fixed",
           insetInline: 0,
           bottom: 0,
           zIndex: 40,
-          display: "grid",
           gridTemplateColumns: "repeat(5,1fr)",
           borderTop: "1px solid var(--color-neutral-900)",
           padding: "6px 6px calc(14px + env(safe-area-inset-bottom))",
