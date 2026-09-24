@@ -1,10 +1,17 @@
 import { useState } from "react";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
 import { api } from "../lib/api";
 import { addReportVitalsToHealthRecord } from "../lib/storage";
 
 const TIME_ORDER = ["Morning", "Afternoon", "Evening", "Night", "As needed"];
+
+function Section({ title, children }) {
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 10, boxShadow: "var(--shadow-sm)" }}>
+      <h3 style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>{title}</h3>
+      {children}
+    </div>
+  );
+}
 
 export default function ReportsPage() {
   const [file, setFile] = useState(null);
@@ -46,133 +53,134 @@ export default function ReportsPage() {
   const flaggedCount = result?.findings?.filter((f) => f.flag).length || 0;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <Card>
-        <h1 className="text-xl font-bold text-ink">My Reports</h1>
-        <p className="mt-1 text-sm text-muted">
-          Upload a prescription or lab report (PDF/TXT), or paste its text, and get a clear medication schedule
-          (what to take, when) and a summary of any values worth discussing with your provider.
-        </p>
-
-        <div className="mt-4">
-          <label htmlFor="reports-file" className="mb-1 block text-sm font-medium text-muted">Upload file (.pdf or .txt)</label>
-          <input
-            id="reports-file"
-            type="file"
-            accept=".pdf,.txt"
-            onChange={(e) => setFile(e.target.files[0] || null)}
-            className="block text-sm text-ink"
-          />
-        </div>
-        <div className="my-4 flex items-center gap-3 text-xs text-faint">
-          <span className="h-px flex-1 bg-border" />
-          or
-          <span className="h-px flex-1 bg-border" />
-        </div>
+    <div style={{ display: "grid", gap: 16, maxWidth: 720 }}>
+      <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
         <div>
-          <label htmlFor="reports-text" className="mb-1 block text-sm font-medium text-muted">Paste the report's text</label>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--color-text)" }}>My Reports</h1>
+          <p style={{ marginTop: 4, fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
+            Upload a prescription or lab report (PDF/TXT), or paste its text, and get a clear medication schedule
+            (what to take, when) and a summary of any values worth discussing with your provider.
+          </p>
+        </div>
+
+        <label
+          htmlFor="reports-file"
+          style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, border: "1px dashed var(--color-neutral-700)", borderRadius: 10, cursor: "pointer", fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}
+        >
+          <i className="ph ph-upload-simple" style={{ fontSize: "1.125rem", color: "var(--color-accent-400)" }} />
+          <span style={{ flex: 1 }}>{file ? file.name : "Upload file (.pdf or .txt)"}</span>
+          <input id="reports-file" type="file" accept=".pdf,.txt" onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: "none" }} />
+        </label>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>
+          <span style={{ height: 1, flex: 1, background: "var(--color-neutral-800)" }} />
+          or
+          <span style={{ height: 1, flex: 1, background: "var(--color-neutral-800)" }} />
+        </div>
+
+        <div className="field">
+          <label htmlFor="reports-text">Paste the report's text</label>
           <textarea
             id="reports-text"
             rows={6}
             placeholder="e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            className="input"
+            style={{ width: "100%" }}
           />
         </div>
 
-        {error && <p className="mt-3 text-sm text-critical">{error}</p>}
-        <Button className="mt-4" onClick={handleAnalyze} disabled={busy}>
+        {error && <p style={{ fontSize: "0.875rem", color: "var(--color-critical)" }}>{error}</p>}
+        <button type="button" onClick={handleAnalyze} disabled={busy} className="btn btn-primary" style={{ justifySelf: "start" }}>
           {busy ? "…" : "Analyze Report"}
-        </Button>
-      </Card>
+        </button>
+      </div>
 
       {result && (
         <>
-          <Card>
-            <h3 className="mb-2 text-sm font-bold text-ink">Summary</h3>
-            <p className="text-sm text-ink">{result.summary}</p>
-          </Card>
+          <Section title="Summary">
+            <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{result.summary}</p>
+          </Section>
 
-          <Card>
-            <h3 className="mb-3 text-sm font-bold text-ink">Medication Schedule</h3>
+          <Section title="Medication Schedule">
             {scheduleTimes.length === 0 ? (
-              <p className="text-sm text-muted">No medication schedule could be determined from this report.</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No medication schedule could be determined from this report.</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
                 {scheduleTimes.map((time) => (
-                  <div key={time} className="rounded-md border border-border p-3.5">
-                    <h4 className="mb-1.5 text-sm font-semibold text-ink">{time}</h4>
-                    <ul className="list-inside list-disc space-y-0.5 text-sm text-muted">
+                  <div key={time} style={{ borderRadius: 10, border: "1px solid var(--color-neutral-800)", padding: 12 }}>
+                    <h4 style={{ marginBottom: 6, fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>{time}</h4>
+                    <ul className="list-inside list-disc space-y-0.5" style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
                       {result.scheduleByTime[time].map((m) => <li key={m}>{m}</li>)}
                     </ul>
                   </div>
                 ))}
               </div>
             )}
-          </Card>
+          </Section>
 
-          <Card>
-            <h3 className="mb-3 text-sm font-bold text-ink">Key Findings</h3>
+          <Section title="Key Findings">
             {!result.findings || result.findings.length === 0 ? (
-              <p className="text-sm text-muted">No lab values were recognized in this report.</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No lab values were recognized in this report.</p>
             ) : (
               <>
-                <div className="mb-3 grid gap-3 sm:grid-cols-3">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
                   {result.findings.map((f) => (
-                    <div key={f.label} className="rounded-md border border-border p-3">
+                    <div key={f.label} style={{ borderRadius: 10, border: "1px solid var(--color-neutral-800)", padding: 12 }}>
                       <p className="eyebrow">{f.label}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">{f.value}</p>
-                      <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${f.flag ? "bg-warning-soft text-warning" : "bg-good-soft text-good"}`}>
+                      <p style={{ marginTop: 4, fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>{f.value}</p>
+                      <span
+                        className="tag"
+                        style={{ marginTop: 4, background: f.flag ? "var(--color-warning-soft)" : "var(--color-good-soft)", color: f.flag ? "var(--color-warning)" : "var(--color-good)" }}
+                      >
                         {f.flag ? "Needs Attention" : "Normal"}
                       </span>
                     </div>
                   ))}
                 </div>
-                <p className="mb-3 text-xs text-faint">
+                <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-600)" }}>
                   {flaggedCount
                     ? `${flaggedCount} item${flaggedCount > 1 ? "s" : ""} to discuss with your provider - see details below.`
                     : "Nothing here shows an obvious flag, but always confirm with your provider."}
                 </p>
-                <div className="space-y-2">
+                <div style={{ display: "grid", gap: 8 }}>
                   {result.findings.map((f) => (
-                    <div key={f.label} className="rounded-md border border-border p-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <div key={f.label} style={{ borderRadius: 10, border: "1px solid var(--color-neutral-800)", padding: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>
                         {f.label}: {f.value}
-                        {f.flag && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">Review</span>}
+                        {f.flag && <span className="tag" style={{ background: "var(--color-warning-soft)", color: "var(--color-warning)" }}>Review</span>}
                       </div>
-                      {f.flag && <p className="mt-1 text-sm text-muted">{f.flag}</p>}
+                      {f.flag && <p style={{ marginTop: 4, fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{f.flag}</p>}
                     </div>
                   ))}
                 </div>
               </>
             )}
-          </Card>
+          </Section>
 
           {confirmLabels.length > 0 && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold text-ink">Add These Values to My Health Record?</h3>
-              <p className="mb-3 text-xs text-muted">These will show up in your Health Trends alongside your assessments. Nothing is added until you confirm.</p>
-              <ul className="mb-3 list-inside list-disc space-y-1 text-sm text-ink">
+            <Section title="Add These Values to My Health Record?">
+              <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>These will show up in your Health Trends alongside your assessments. Nothing is added until you confirm.</p>
+              <ul className="list-inside list-disc space-y-1" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
                 {confirmLabels.map((l) => <li key={l}>{l}</li>)}
               </ul>
-              <Button
+              <button
+                type="button"
                 disabled={confirmed}
-                onClick={() => {
-                  addReportVitalsToHealthRecord(extractedVitals);
-                  setConfirmed(true);
-                }}
+                onClick={() => { addReportVitalsToHealthRecord(extractedVitals); setConfirmed(true); }}
+                className="btn btn-primary"
+                style={{ justifySelf: "start" }}
               >
-                {confirmed ? "✓ Added" : "✓ Add to My Health Record"}
-              </Button>
-              {confirmed && <p className="mt-2 text-xs text-good">Added to your Health Trends.</p>}
-            </Card>
+                <i className="ph ph-check" /> {confirmed ? "Added" : "Add to My Health Record"}
+              </button>
+              {confirmed && <p style={{ fontSize: "0.75rem", color: "var(--color-good)" }}>Added to your Health Trends.</p>}
+            </Section>
           )}
 
-          <Card>
-            <h3 className="mb-2 text-sm font-bold text-ink">Extracted Text (preview)</h3>
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-bg p-3 text-xs text-muted">{result.extractedTextPreview}</pre>
-          </Card>
+          <Section title="Extracted Text (preview)">
+            <pre style={{ overflowX: "auto", whiteSpace: "pre-wrap", borderRadius: 10, background: "var(--color-bg)", padding: 12, fontSize: "0.75rem", color: "var(--color-neutral-400)" }}>{result.extractedTextPreview}</pre>
+          </Section>
         </>
       )}
     </div>

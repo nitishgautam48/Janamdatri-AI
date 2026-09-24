@@ -1,6 +1,4 @@
 import { useState } from "react";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
 import { api } from "../lib/api";
 import { KEYS, scopedGet, scopedSet, scopedRemove } from "../lib/storage";
 
@@ -24,6 +22,24 @@ function loadInitialForm() {
     familyName: extra?.familyName || "",
     familyPhone: extra?.familyPhone || "",
   };
+}
+
+function SegButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "6px 14px", whiteSpace: "nowrap", borderRadius: 8,
+        border: `1px solid ${active ? "var(--color-accent)" : "var(--color-neutral-800)"}`,
+        background: active ? "var(--color-accent-900)" : "transparent",
+        color: active ? "var(--color-accent-200)" : "var(--color-neutral-400)",
+        fontSize: "0.8125rem", cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function ProfilePage() {
@@ -79,192 +95,124 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <Card>
-        <h1 className="text-xl font-bold text-ink">My Pregnancy Profile</h1>
-        <p className="mt-1 text-sm text-muted">
-          Enter this once - it personalizes your Home dashboard, Assessment, Nutrition targets, ANC checklist, and
-          Pregnancy Guide, so you don't have to re-enter your week everywhere.
-        </p>
-
-        <div className="mt-4 flex gap-4 text-sm text-ink">
-          <label className="flex items-center gap-2">
-            <input type="radio" checked={form.mode === "lmp"} onChange={() => set("mode", "lmp")} />
-            By last menstrual period (LMP)
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" checked={form.mode === "week"} onChange={() => set("mode", "week")} />
-            By current week
-          </label>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20, alignItems: "start" }}>
+      <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 16, boxShadow: "var(--shadow-sm)" }}>
+        <div>
+          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--color-text)" }}>About You</h1>
+          <p style={{ marginTop: 4, fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
+            Personalizes your Home dashboard, Assessment, Nutrition targets, ANC checklist, and Pregnancy Guide.
+          </p>
         </div>
 
-        <div className="mt-3">
-          {form.mode === "lmp" ? (
-            <div>
-              <label htmlFor="profile-lmp" className="mb-1 block text-sm font-medium text-muted">Last menstrual period date</label>
-              <input
-                id="profile-lmp"
-                type="date"
-                value={form.lmp}
-                onChange={(e) => set("lmp", e.target.value)}
-                className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-              />
-            </div>
-          ) : (
-            <div>
-              <label htmlFor="profile-week" className="mb-1 block text-sm font-medium text-muted">Current gestational week</label>
-              <input
-                id="profile-week"
-                type="number"
-                min={0}
-                max={42}
-                value={form.week}
-                onChange={(e) => set("week", e.target.value)}
-                className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-              />
-            </div>
-          )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <SegButton active={form.mode === "lmp"} onClick={() => set("mode", "lmp")}>By LMP</SegButton>
+          <SegButton active={form.mode === "week"} onClick={() => set("mode", "week")}>By current week</SegButton>
         </div>
 
-        <div className="mt-5">
-          <p className="mb-1.5 text-sm font-medium text-muted">Is this a previous pregnancy?</p>
-          <div className="flex gap-4 text-sm text-ink">
-            <label className="flex items-center gap-2">
-              <input type="radio" checked={form.previousPregnancy === "yes"} onChange={() => set("previousPregnancy", "yes")} />
-              Yes
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" checked={form.previousPregnancy === "no"} onChange={() => set("previousPregnancy", "no")} />
-              No / first pregnancy
-            </label>
+        {form.mode === "lmp" ? (
+          <div className="field">
+            <label htmlFor="profile-lmp">Last menstrual period date</label>
+            <input id="profile-lmp" type="date" value={form.lmp} onChange={(e) => set("lmp", e.target.value)} className="input" style={{ maxWidth: 220 }} />
+          </div>
+        ) : (
+          <div className="field">
+            <label htmlFor="profile-week">Current gestational week</label>
+            <input id="profile-week" type="number" min={0} max={42} value={form.week} onChange={(e) => set("week", e.target.value)} className="input" style={{ maxWidth: 120 }} />
+          </div>
+        )}
+
+        <div className="field">
+          <label>First pregnancy?</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <SegButton active={form.previousPregnancy === "no"} onClick={() => set("previousPregnancy", "no")}>Yes, first</SegButton>
+            <SegButton active={form.previousPregnancy === "yes"} onClick={() => set("previousPregnancy", "yes")}>No, previous pregnancy</SegButton>
           </div>
         </div>
 
-        <div className="mt-5">
-          <label htmlFor="profile-conditions" className="mb-1 block text-sm font-medium text-muted">Existing medical conditions (optional)</label>
-          <textarea
-            id="profile-conditions"
-            rows={2}
-            placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none"
-            value={form.conditions}
-            onChange={(e) => set("conditions", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
+        <div className="field">
+          <label htmlFor="profile-conditions">Existing medical conditions (optional)</label>
+          <textarea id="profile-conditions" rows={2} placeholder="e.g. thyroid, diabetes, hypertension - leave blank if none" value={form.conditions} onChange={(e) => set("conditions", e.target.value)} className="input" style={{ width: "100%" }} />
         </div>
 
-        <div className="mt-5">
-          <label htmlFor="profile-medications" className="mb-1 block text-sm font-medium text-muted">Current medications / supplements (optional)</label>
-          <textarea
-            id="profile-medications"
-            rows={2}
-            placeholder="e.g. iron-folic acid, calcium, thyroid medication - leave blank if none"
-            value={form.medications}
-            onChange={(e) => set("medications", e.target.value)}
-            className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
+        <div className="field">
+          <label htmlFor="profile-medications">Current medications / supplements (optional)</label>
+          <textarea id="profile-medications" rows={2} placeholder="e.g. iron-folic acid, calcium, thyroid medication - leave blank if none" value={form.medications} onChange={(e) => set("medications", e.target.value)} className="input" style={{ width: "100%" }} />
         </div>
 
-        <div className="mt-5">
-          <label htmlFor="profile-anc-visits" className="mb-1 block text-sm font-medium text-muted">ANC visits completed so far</label>
-          <input
-            id="profile-anc-visits"
-            type="number"
-            min={0}
-            max={12}
-            placeholder="e.g. 3"
-            value={form.ancVisitsCompleted}
-            onChange={(e) => set("ancVisitsCompleted", e.target.value)}
-            className="w-28 rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
-          <p className="mt-1 text-xs text-faint">Helps Today's Care know whether an ANC visit reminder is still relevant.</p>
+        <div className="field">
+          <label htmlFor="profile-anc-visits">ANC visits completed so far</label>
+          <input id="profile-anc-visits" type="number" min={0} max={12} placeholder="e.g. 3" value={form.ancVisitsCompleted} onChange={(e) => set("ancVisitsCompleted", e.target.value)} className="input" style={{ maxWidth: 120 }} />
+          <p style={{ marginTop: 4, fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>Helps Today's Care know whether an ANC visit reminder is still relevant.</p>
         </div>
 
-        <div className="mt-5">
-          <p className="mb-1.5 text-sm font-medium text-muted">Td/TT Vaccination</p>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={form.vaccineDose1} onChange={(e) => set("vaccineDose1", e.target.checked)} />
+        <div className="field">
+          <label>Td/TT Vaccination</label>
+          <label className="flex items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
+            <input type="checkbox" checked={form.vaccineDose1} onChange={(e) => set("vaccineDose1", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
             Dose 1 given
           </label>
-          <label className="mt-1 flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={form.vaccineDose2} onChange={(e) => set("vaccineDose2", e.target.checked)} />
+          <label className="mt-1 flex items-center gap-2" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
+            <input type="checkbox" checked={form.vaccineDose2} onChange={(e) => set("vaccineDose2", e.target.checked)} style={{ accentColor: "var(--color-accent)" }} />
             Dose 2 given
           </label>
         </div>
 
-        <div className="mt-5">
-          <label htmlFor="profile-delivery-date" className="mb-1 block text-sm font-medium text-muted">Delivery date (only if you've already delivered)</label>
-          <input
-            id="profile-delivery-date"
-            type="date"
-            value={form.deliveryDate}
-            onChange={(e) => set("deliveryDate", e.target.value)}
-            className="rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
-          <p className="mt-1 text-xs text-faint">Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.</p>
+        <div className="field">
+          <label htmlFor="profile-delivery-date">Delivery date (only if you've already delivered)</label>
+          <input id="profile-delivery-date" type="date" value={form.deliveryDate} onChange={(e) => set("deliveryDate", e.target.value)} className="input" style={{ maxWidth: 220 }} />
+          <p style={{ marginTop: 4, fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>Setting this switches your Home dashboard and This Week to Postpartum Care instead of pregnancy-week content.</p>
         </div>
+      </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div style={{ display: "grid", gap: 14 }}>
+        <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 14, boxShadow: "var(--shadow-sm)" }}>
           <div>
-            <label htmlFor="profile-asha-name" className="mb-1 block text-sm font-medium text-muted">ASHA worker's name</label>
-            <input
-              id="profile-asha-name"
-              value={form.ashaName}
-              onChange={(e) => set("ashaName", e.target.value)}
-              placeholder="e.g. Sunita Devi"
-              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-            />
+            <h2 style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>Contacts</h2>
+            <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Used by Home, Postpartum, and Helplines to show quick call/WhatsApp actions.</p>
           </div>
-          <div>
-            <label htmlFor="profile-asha-phone" className="mb-1 block text-sm font-medium text-muted">ASHA worker's phone</label>
-            <input
-              id="profile-asha-phone"
-              value={form.ashaPhone}
-              onChange={(e) => set("ashaPhone", e.target.value)}
-              placeholder="e.g. +91 98390 12345"
-              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-family-name" className="mb-1 block text-sm font-medium text-muted">Family contact's name (optional)</label>
-            <input
-              id="profile-family-name"
-              value={form.familyName}
-              onChange={(e) => set("familyName", e.target.value)}
-              placeholder="e.g. Ramesh (husband)"
-              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-            />
-          </div>
-          <div>
-            <label htmlFor="profile-family-phone" className="mb-1 block text-sm font-medium text-muted">Family contact's phone (optional)</label>
-            <input
-              id="profile-family-phone"
-              value={form.familyPhone}
-              onChange={(e) => set("familyPhone", e.target.value)}
-              placeholder="e.g. +91 94150 67890"
-              className="w-full rounded-md border border-border-strong bg-bg px-3.5 py-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
+            <div className="field">
+              <label htmlFor="profile-asha-name">ASHA worker's name</label>
+              <input id="profile-asha-name" value={form.ashaName} onChange={(e) => set("ashaName", e.target.value)} placeholder="e.g. Sunita Devi" className="input" />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-asha-phone">ASHA worker's phone</label>
+              <input id="profile-asha-phone" value={form.ashaPhone} onChange={(e) => set("ashaPhone", e.target.value)} placeholder="e.g. +91 98390 12345" className="input" />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-family-name">Family contact's name (optional)</label>
+              <input id="profile-family-name" value={form.familyName} onChange={(e) => set("familyName", e.target.value)} placeholder="e.g. Ramesh (husband)" className="input" />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-family-phone">Family contact's phone (optional)</label>
+              <input id="profile-family-phone" value={form.familyPhone} onChange={(e) => set("familyPhone", e.target.value)} placeholder="e.g. +91 94150 67890" className="input" />
+            </div>
           </div>
         </div>
 
-        <Button className="mt-6" onClick={handleSave} disabled={busy}>{busy ? "…" : "Save My Profile"}</Button>
-        {note && <p className="mt-2 text-sm text-muted">{note}</p>}
-      </Card>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button type="button" onClick={handleSave} disabled={busy} className="btn btn-primary">
+            <i className="ph ph-check" /> {busy ? "…" : "Save My Profile"}
+          </button>
+          {note && <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{note}</p>}
+        </div>
 
-      {summary && (
-        <Card>
-          <h3 className="mb-2 text-sm font-bold text-ink">Current Profile</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-ink">{summary.week}</span>
-            <span className="text-sm text-muted">weeks · Trimester {summary.trimester}</span>
+        {summary && (
+          <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 6, boxShadow: "var(--shadow-sm)" }}>
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>Current Profile</h3>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-text)" }}>{summary.week}</span>
+              <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>weeks · Trimester {summary.trimester}</span>
+            </div>
+            {summary.estimatedDueDate && <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>Estimated due date: {summary.estimatedDueDate}</p>}
+            <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{form.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy"}</p>
+            {form.conditions && <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Existing conditions: {form.conditions}</p>}
+            {form.medications && <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Medications/supplements: {form.medications}</p>}
+            {form.ancVisitsCompleted !== "" && <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>ANC visits completed: {form.ancVisitsCompleted}</p>}
+            <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>Td/TT: {form.vaccineDose1 ? "Dose 1 ✓" : "Dose 1 pending"}{form.vaccineDose2 ? ", Dose 2 ✓" : ", Dose 2 pending"}</p>
           </div>
-          {summary.estimatedDueDate && <p className="mt-1 text-xs text-faint">Estimated due date: {summary.estimatedDueDate}</p>}
-          <p className="mt-2 text-sm text-ink">{form.previousPregnancy === "yes" ? "Previous pregnancy: Yes" : "Previous pregnancy: No / first pregnancy"}</p>
-          {form.conditions && <p className="text-sm text-ink">Existing conditions: {form.conditions}</p>}
-          {form.medications && <p className="text-sm text-ink">Medications/supplements: {form.medications}</p>}
-          {form.ancVisitsCompleted !== "" && <p className="text-sm text-ink">ANC visits completed: {form.ancVisitsCompleted}</p>}
-          <p className="text-sm text-ink">Td/TT: {form.vaccineDose1 ? "Dose 1 ✓" : "Dose 1 pending"}{form.vaccineDose2 ? ", Dose 2 ✓" : ", Dose 2 pending"}</p>
-        </Card>
-      )}
+        )}
+      </div>
     </div>
   );
 }

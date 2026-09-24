@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { clearScopedLocalData, collectLocalExportData, getToken } from "../lib/storage";
+
+function InfoCard({ title, children }) {
+  return (
+    <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
+      <h3 style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--color-text)" }}>{title}</h3>
+      {children}
+    </div>
+  );
+}
 
 export default function PrivacyPage() {
   const { user, logout } = useAuth();
@@ -96,99 +103,124 @@ export default function PrivacyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <Card>
-        <h1 className="text-xl font-bold text-ink">Privacy &amp; Consent Centre</h1>
-        <p className="mt-1 text-sm text-muted">What Janamdatri AI collects, why, who can see it, and how to export or delete it.</p>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">What data is collected</h3>
-        <ul className="list-inside list-disc space-y-1 text-sm text-ink">
-          <li>Assessment inputs you enter: vitals, symptom text, hemoglobin, and history flags</li>
-          <li>Your Mental Health Check (EPDS) responses and score</li>
-          <li>Your Nutrition Analysis questionnaire responses and results</li>
-          <li>Messages you send to the Instant Help chat</li>
-          <li>Text from any report/prescription you upload or paste (only while being analyzed - see below)</li>
-          <li>Your name and email, only if you create an account</li>
-        </ul>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">Why it's collected</h3>
-        <p className="text-sm text-muted">
-          Solely to compute your risk screening, nutrition, and mental-health results, and - if you choose to
-          create an account - to show your own history and trends back to you across visits. Nothing here is used
-          for advertising, and nothing is sold or shared with third parties.
-        </p>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">Who can access it</h3>
-        <ul className="list-inside list-disc space-y-1.5 text-sm text-ink">
-          <li>Guest mode: your inputs are sent to our server only to compute a result, then the result is saved ONLY in your own browser (localStorage) - we do not keep guest data in our database at all.</li>
-          <li>A logged-in account: your assessments, chat messages, and nutrition checks ARE stored in our database, tied to your account, so you can see them across visits/devices. Only your own account (via your login session) can retrieve them - there is no admin dashboard or third party that can browse other users' data in this application.</li>
-          <li>A report you upload/paste is analyzed and the result is returned to you - the original file/text is not separately stored server-side beyond what's needed to process that one request.</li>
-        </ul>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">AI use disclosure</h3>
-        <p className="text-sm text-muted">
-          Risk scoring uses a machine-learning classifier trained on the public UCI Maternal Health Risk dataset,
-          combined with rule-based logic (danger-sign phrase matching, expert rules) - all of it runs on this
-          application's own server. No external AI provider or third-party LLM API is called, and none of your
-          data is sent anywhere outside this application to generate a result.
-        </p>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">Your controls</h3>
-        <p className="mb-3 text-xs text-muted">These act on the data for however you're currently using the app (guest or your logged-in account).</p>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={handleExport}>⬇ Export My Data (JSON)</Button>
-          <Button variant="ghost" onClick={handleClearLocal}>🗑 Clear My Local Data</Button>
-          {user && <Button variant="danger" onClick={handleDeleteAccount}>⚠ Delete My Account &amp; All Data</Button>}
-        </div>
-        {controlsNote && <p className="mt-2 text-sm text-muted">{controlsNote}</p>}
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-bold text-ink">Share With a Doctor, Health Worker, or Family Member</h3>
-        <p className="mb-3 text-sm text-muted">
-          Generate a one-time code that lets someone you share it with view a read-only summary of your latest
-          result. A doctor or ASHA/ANM can open it on the Provider page for clinical detail (vitals, hemoglobin,
-          nutrition gaps, warning signs); a family member can open the same code on the Caregiver page for a
-          simpler "is she okay" view. Either way, they cannot see any other patient, cannot edit anything, and lose
-          access the moment you revoke or regenerate the code.
-        </p>
-
-        {!user ? (
-          <p className="text-sm text-muted">
-            Sign up or log in to generate a provider share code - guest data lives only on this device, so there's
-            nothing on our server for a provider's code to point to.
-          </p>
-        ) : !shareCodeLoaded ? (
-          <Spinner />
-        ) : (
-          <div>
-            {shareCode ? (
-              <div className="mb-3 flex items-center justify-center rounded-md border border-dashed border-primary bg-primary-soft p-4">
-                <span className="font-mono text-2xl font-extrabold tracking-widest text-primary">{shareCode}</span>
-              </div>
-            ) : (
-              <p className="mb-3 text-sm text-muted">No active share code.</p>
-            )}
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={handleGenerateCode}>🔑 Generate Share Code</Button>
-              {shareCode && <Button variant="danger" onClick={handleRevokeCode}>✕ Revoke Access</Button>}
-            </div>
-            {shareCodeNote && (
-              <p className={`mt-2 text-sm ${shareCodeError ? "font-semibold text-critical" : "text-muted"}`}>{shareCodeNote}</p>
-            )}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20, alignItems: "start" }}>
+      <div style={{ display: "grid", gap: 14 }}>
+        <div style={{ display: "flex", gap: 12, padding: "14px 16px", borderRadius: 14, border: "1px solid var(--color-accent-800)", background: "var(--color-accent-900)" }}>
+          <i className="ph ph-shield-check" style={{ fontSize: "1.5rem", color: "var(--color-accent-300)", flex: "none" }} />
+          <div style={{ fontSize: "0.875rem", lineHeight: 1.5, color: "var(--color-accent-100)" }}>
+            What Janamdatri AI collects, why, who can see it, and how to export or delete it.
           </div>
+        </div>
+
+        <InfoCard title="What data is collected">
+          <ul className="list-inside list-disc space-y-1" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
+            <li>Assessment inputs you enter: vitals, symptom text, hemoglobin, and history flags</li>
+            <li>Your Mental Health Check (EPDS) responses and score</li>
+            <li>Your Nutrition Analysis questionnaire responses and results</li>
+            <li>Messages you send to the Instant Help chat</li>
+            <li>Text from any report/prescription you upload or paste (only while being analyzed - see below)</li>
+            <li>Your name and email, only if you create an account</li>
+          </ul>
+        </InfoCard>
+
+        <InfoCard title="Why it's collected">
+          <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
+            Solely to compute your risk screening, nutrition, and mental-health results, and - if you choose to
+            create an account - to show your own history and trends back to you across visits. Nothing here is used
+            for advertising, and nothing is sold or shared with third parties.
+          </p>
+        </InfoCard>
+
+        <InfoCard title="Who can access it">
+          <ul className="list-inside list-disc space-y-1.5" style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>
+            <li>Guest mode: your inputs are sent to our server only to compute a result, then the result is saved ONLY in your own browser (localStorage) - we do not keep guest data in our database at all.</li>
+            <li>A logged-in account: your assessments, chat messages, and nutrition checks ARE stored in our database, tied to your account, so you can see them across visits/devices. Only your own account (via your login session) can retrieve them - there is no admin dashboard or third party that can browse other users' data in this application.</li>
+            <li>A report you upload/paste is analyzed and the result is returned to you - the original file/text is not separately stored server-side beyond what's needed to process that one request.</li>
+          </ul>
+        </InfoCard>
+
+        <InfoCard title="AI use disclosure">
+          <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
+            Risk scoring uses a machine-learning classifier trained on the public UCI Maternal Health Risk dataset,
+            combined with rule-based logic (danger-sign phrase matching, expert rules) - all of it runs on this
+            application's own server. No external AI provider or third-party LLM API is called, and none of your
+            data is sent anywhere outside this application to generate a result.
+          </p>
+        </InfoCard>
+      </div>
+
+      <div style={{ display: "grid", gap: 14 }}>
+        <InfoCard title="Your data">
+          <p style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>These act on the data for however you're currently using the app (guest or your logged-in account).</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button type="button" onClick={handleExport} className="btn btn-secondary">
+              <i className="ph ph-download-simple" /> Export My Data (JSON)
+            </button>
+            <button type="button" onClick={handleClearLocal} className="btn btn-secondary">
+              <i className="ph ph-trash" /> Clear My Local Data
+            </button>
+          </div>
+          {controlsNote && <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>{controlsNote}</p>}
+        </InfoCard>
+
+        {user && (
+          <InfoCard title="Delete everything">
+            <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
+              Permanently deletes your account and everything tied to it on our server - assessments, chat messages,
+              nutrition checks. This cannot be undone.
+            </p>
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              className="btn btn-secondary"
+              style={{ justifySelf: "start", borderColor: "var(--color-critical)", color: "var(--color-critical)" }}
+            >
+              <i className="ph ph-warning" /> Delete My Account &amp; All Data
+            </button>
+          </InfoCard>
         )}
-      </Card>
+
+        <InfoCard title="Share With a Doctor, Health Worker, or Family Member">
+          <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
+            Generate a one-time code that lets someone you share it with view a read-only summary of your latest
+            result. A doctor or ASHA/ANM can open it on the Provider page for clinical detail; a family member can
+            open the same code on the Caregiver page for a simpler "is she okay" view. Either way, they cannot see
+            any other patient, cannot edit anything, and lose access the moment you revoke or regenerate the code.
+          </p>
+
+          {!user ? (
+            <p style={{ fontSize: "0.8125rem", color: "var(--color-neutral-400)" }}>
+              Sign up or log in to generate a provider share code - guest data lives only on this device, so there's
+              nothing on our server for a provider's code to point to.
+            </p>
+          ) : !shareCodeLoaded ? (
+            <Spinner />
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {shareCode ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px dashed var(--color-accent)", background: "var(--color-accent-900)", padding: 16 }}>
+                  <span style={{ fontFamily: "monospace", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "0.15em", color: "var(--color-accent-200)" }}>{shareCode}</span>
+                </div>
+              ) : (
+                <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No active share code.</p>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" onClick={handleGenerateCode} className="btn btn-secondary">
+                  <i className="ph ph-key" /> Generate Share Code
+                </button>
+                {shareCode && (
+                  <button type="button" onClick={handleRevokeCode} className="btn btn-secondary" style={{ borderColor: "var(--color-critical)", color: "var(--color-critical)" }}>
+                    <i className="ph ph-x" /> Revoke Access
+                  </button>
+                )}
+              </div>
+              {shareCodeNote && (
+                <p style={{ fontSize: "0.8125rem", fontWeight: shareCodeError ? 600 : 400, color: shareCodeError ? "var(--color-critical)" : "var(--color-neutral-400)" }}>{shareCodeNote}</p>
+              )}
+            </div>
+          )}
+        </InfoCard>
+      </div>
     </div>
   );
 }

@@ -1,14 +1,22 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
-import Pill from "../components/ui/Pill";
-import Sparkline from "../components/ui/Sparkline";
 import Spinner from "../components/ui/Spinner";
+import Sparkline from "../components/ui/Sparkline";
 import { useHistory } from "../lib/useHistory";
 import { KEYS, scopedGet, scopedRemove } from "../lib/storage";
 
-const LEVEL_TONE = { Critical: "critical", Severe: "critical", Moderate: "warning", Mild: "good", Minimal: "good" };
+const LEVEL_COLOR = {
+  Critical: "var(--color-critical)", Severe: "var(--color-critical)",
+  Moderate: "var(--color-warning)", Mild: "var(--color-good)", Minimal: "var(--color-good)",
+};
+const LEVEL_TINT = {
+  Critical: "var(--color-critical-soft)", Severe: "var(--color-critical-soft)",
+  Moderate: "var(--color-warning-soft)", Mild: "var(--color-good-soft)", Minimal: "var(--color-good-soft)",
+};
+const LEVEL_ICON = {
+  Critical: "ph-warning", Severe: "ph-warning",
+  Moderate: "ph-warning-circle", Mild: "ph-check-circle", Minimal: "ph-check-circle",
+};
 const LEVEL_ORDER = ["Minimal", "Mild", "Moderate", "Severe", "Critical"];
 
 function firstLastValid(values) {
@@ -23,28 +31,24 @@ function TrendTile({ label, values, color, unit }) {
   const diff = fl.last - fl.first;
   const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
   return (
-    <Card>
-      <div className="mb-1 flex items-center justify-between">
+    <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14, boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <p className="eyebrow">{label}</p>
-        <span className="text-sm text-muted">{arrow}</span>
+        <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{arrow}</span>
       </div>
       <Sparkline values={values} color={color} />
-      <p className="mt-1 text-sm text-ink">{fl.first}{unit} → {fl.last}{unit}</p>
-    </Card>
+      <p style={{ marginTop: 4, fontSize: "0.875rem", color: "var(--color-text)" }}>{fl.first}{unit} → {fl.last}{unit}</p>
+    </div>
   );
 }
 
-// Each note is tagged Improving/Needs Attention/(Stable when there are no
-// notes at all) - the same underlying thresholds as before, just given an
-// explicit category so "What Changed" reads as a triage summary rather
-// than a list of plain sentences.
 function buildTrendSummary(series, chronological) {
   const notes = [];
   const hbFl = firstLastValid(series.hb);
   if (hbFl && Math.abs(hbFl.last - hbFl.first) >= 0.3) {
     const improving = hbFl.last > hbFl.first;
     notes.push({
-      tone: improving ? "good" : "warning",
+      tone: improving ? "var(--color-good)" : "var(--color-warning)",
       label: improving ? "Improving" : "Needs Attention",
       text: improving
         ? `Your hemoglobin has improved across your recent checks (${hbFl.first} → ${hbFl.last} g/dL).`
@@ -55,7 +59,7 @@ function buildTrendSummary(series, chronological) {
   if (sbpFl && Math.abs(sbpFl.last - sbpFl.first) >= 5) {
     const worsening = sbpFl.last > sbpFl.first;
     notes.push({
-      tone: worsening ? "warning" : "good",
+      tone: worsening ? "var(--color-warning)" : "var(--color-good)",
       label: worsening ? "Needs Attention" : "Improving",
       text: worsening
         ? `Your blood pressure has been trending up (${sbpFl.first} → ${sbpFl.last} mmHg systolic) - worth watching closely.`
@@ -64,17 +68,9 @@ function buildTrendSummary(series, chronological) {
   }
   const weightFl = firstLastValid(series.weight);
   if (weightFl && weightFl.last < weightFl.first) {
-    notes.push({
-      tone: "warning",
-      label: "Needs Attention",
-      text: `Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.`,
-    });
+    notes.push({ tone: "var(--color-warning)", label: "Needs Attention", text: `Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.` });
   } else if (weightFl && weightFl.last - weightFl.first >= 2) {
-    notes.push({
-      tone: "warning",
-      label: "Needs Attention",
-      text: `Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.`,
-    });
+    notes.push({ tone: "var(--color-warning)", label: "Needs Attention", text: `Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.` });
   }
   if (chronological.length >= 2) {
     const prev = chronological[chronological.length - 2];
@@ -84,7 +80,7 @@ function buildTrendSummary(series, chronological) {
       const escalatedBy = latest.result?.severity?.escalatedBy;
       const reason = escalatedBy ? ` because of ${escalatedBy.replace(/_/g, " ")}` : "";
       notes.push({
-        tone: increased ? "critical" : "good",
+        tone: increased ? "var(--color-critical)" : "var(--color-good)",
         label: increased ? "Needs Attention" : "Improving",
         text: `Your risk level ${increased ? "increased" : "decreased"} from ${prev.severityLevel} to ${latest.severityLevel}${reason}.`,
       });
@@ -140,35 +136,33 @@ function HealthTrends({ history }) {
   }, [history, reportLog]);
 
   if (!hasData) {
-    return <p className="text-sm text-muted">Not enough data yet - run at least 2 assessments (or confirm values from an uploaded report in My Reports) to see trends here.</p>;
+    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough data yet - run at least 2 assessments (or confirm values from an uploaded report in My Reports) to see trends here.</p>;
   }
   const visibleTiles = tiles.filter((t) => firstLastValid(t.values));
   if (!visibleTiles.length) {
-    return <p className="text-sm text-muted">Not enough repeated vitals/hemoglobin data yet to chart a trend - the risk trend needs at least 2 assessments with vitals or hemoglobin entered.</p>;
+    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough repeated vitals/hemoglobin data yet to chart a trend - the risk trend needs at least 2 assessments with vitals or hemoglobin entered.</p>;
   }
 
   return (
-    <div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div style={{ display: "grid", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
         {visibleTiles.map((t) => <TrendTile key={t.label} {...t} />)}
       </div>
-      <div className="mt-4">
-        <p className="eyebrow mb-2">What Changed</p>
-        <div className="space-y-2">
-          {summaryNotes.length ? (
-            summaryNotes.map((n, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <Pill tone={n.tone} className="mt-0.5 shrink-0 !px-2 !py-0.5 text-[10px]">{n.label}</Pill>
-                <p className="text-sm text-ink">{n.text}</p>
-              </div>
-            ))
-          ) : (
-            <div className="flex items-center gap-2.5">
-              <Pill tone="good" className="!px-2 !py-0.5 text-[10px]">Stable</Pill>
-              <p className="text-sm text-muted">No major changes detected across your recent assessments.</p>
+      <div style={{ display: "grid", gap: 8 }}>
+        <p className="eyebrow">What Changed</p>
+        {summaryNotes.length ? (
+          summaryNotes.map((n, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ flex: "none", marginTop: 2, borderRadius: 99, border: `1px solid ${n.tone}`, color: n.tone, padding: "1px 8px", fontSize: "0.6875rem" }}>{n.label}</span>
+              <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{n.text}</p>
             </div>
-          )}
-        </div>
+          ))
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ borderRadius: 99, border: "1px solid var(--color-good)", color: "var(--color-good)", padding: "1px 8px", fontSize: "0.6875rem" }}>Stable</span>
+            <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No major changes detected across your recent assessments.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -184,45 +178,50 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <div className="flex justify-end">
-        <Link to="/referral" className="text-sm font-semibold text-primary hover:underline">
-          📄 Referral Summary →
+    <div style={{ display: "grid", gap: 20 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Link to="/referral" className="btn btn-primary" style={{ fontSize: "0.8125rem", textDecoration: "none" }}>
+          <i className="ph ph-file-text" /> Referral Summary →
         </Link>
       </div>
 
-      <Card>
-        <h1 className="text-xl font-bold text-ink">Health Trends</h1>
-        <p className="mb-3 text-sm text-muted">How your key numbers and risk level have changed across your assessments.</p>
+      <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
+        <div>
+          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--color-text)" }}>Health Trends</h1>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>How your key numbers and risk level have changed across your assessments.</p>
+        </div>
         {loading ? <Spinner /> : <HealthTrends history={history} />}
-      </Card>
+      </div>
 
-      <Card>
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-ink">Assessment History</h2>
-          <button type="button" onClick={handleClear} className="text-xs font-semibold text-muted hover:text-critical">
+      <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text)" }}>Assessment History</h2>
+          <button type="button" onClick={handleClear} className="btn btn-ghost" style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
             Clear
           </button>
         </div>
-        <p className="mb-3 text-xs text-faint">Stored only in this browser (not sent anywhere).</p>
+        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>Stored only in this browser (not sent anywhere).</p>
 
-        {!loading && history.length === 0 && <p className="text-sm text-muted">No assessments yet.</p>}
+        {!loading && history.length === 0 && <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No assessments yet.</p>}
 
-        <div className="divide-y divide-border">
-          {history.map((entry, i) => {
-            const tone = LEVEL_TONE[entry.severityLevel] || "neutral";
-            return (
-              <div key={i} className="flex items-center justify-between py-3">
-                <div>
-                  <Pill tone={tone}>{entry.severityLevel}</Pill>
-                  <p className="mt-1 text-xs text-faint">{new Date(entry.timestamp).toLocaleString()}</p>
-                </div>
-                <span className="text-sm text-muted">MRI {entry.mri}</span>
+        {history.map((entry, i) => {
+          const color = LEVEL_COLOR[entry.severityLevel] || "var(--color-neutral-400)";
+          const tint = LEVEL_TINT[entry.severityLevel] || "var(--color-neutral-800)";
+          const icon = LEVEL_ICON[entry.severityLevel] || "ph-info";
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: i > 0 ? "1px solid var(--color-neutral-800)" : "none" }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, background: tint, color, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", fontSize: "1.125rem" }}>
+                <i className={`ph ${icon}`} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{entry.severityLevel}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{new Date(entry.timestamp).toLocaleString()}</div>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+              <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>MRI {entry.mri}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
