@@ -54,6 +54,9 @@ export const api = {
 
   helplines: () => request("/helplines"),
 
+  nearbyFacilities: (lat, lon) => request("/gis/nearby-facilities", { method: "POST", body: { lat, lon } }),
+  geocodePlace: (q) => request(`/gis/geocode?q=${encodeURIComponent(q)}`),
+
   async analyzeDocument(formData) {
     const res = await fetch("/documents/analyze", { method: "POST", body: formData });
     const payload = await res.json().catch(() => ({}));

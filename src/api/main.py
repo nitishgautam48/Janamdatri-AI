@@ -26,6 +26,9 @@ Endpoints reflect the layered architecture:
   POST /documents/analyze              - upload/paste a prescription or lab report ->
                                          medication schedule + flagged findings
   GET  /helplines                      - India helplines and scheme references
+  POST /gis/nearby-facilities          - real hospitals/clinics/pharmacies near a lat/lon (server-side
+                                         proxy to OpenStreetMap Overpass, which browsers can't call directly)
+  GET  /gis/geocode                    - free-text place search (server-side proxy to Nominatim)
 """
 
 import json
@@ -37,7 +40,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import auth, document_extractor
+from src import auth, document_extractor, gis
 from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 
@@ -123,6 +126,11 @@ class PregnancyGuideRequest(BaseModel):
 
 class PostpartumGuideRequest(BaseModel):
     deliveryDate: str = Field(..., description="ISO date the baby was delivered, e.g. 2026-01-15")
+
+
+class NearbyFacilitiesRequest(BaseModel):
+    lat: float
+    lon: float
 
 
 class RegisterRequest(BaseModel):
@@ -534,6 +542,33 @@ def helplines():
             "nearestFacility": "Ask your ASHA/ANM worker for the nearest 24x7 PHC or FRU (First Referral Unit)",
         },
     }
+
+
+# ============================================================
+#  NEARBY CARE (GIS) - proxied server-side; see src/gis.py for why
+#  Overpass/Nominatim can't be called directly from the browser.
+# ============================================================
+
+@app.post("/gis/nearby-facilities")
+def nearby_facilities(req: NearbyFacilitiesRequest):
+    try:
+        facilities = gis.fetch_nearby_facilities(req.lat, req.lon)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not reach the map data service. Please try again.") from exc
+    return {"success": True, "data": {"facilities": facilities}}
+
+
+@app.get("/gis/geocode")
+def geocode(q: str):
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="Enter a place to search for.")
+    try:
+        place = gis.geocode_place(q.strip())
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Place search failed. Please try again.") from exc
+    if not place:
+        raise HTTPException(status_code=404, detail=f'Could not find "{q}". Try a nearby town or district name.')
+    return {"success": True, "data": place}
 
 
 # Client-side routing (React Router) means a hard refresh or a direct link

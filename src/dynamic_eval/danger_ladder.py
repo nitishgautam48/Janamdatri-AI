@@ -88,20 +88,59 @@ PHRASES_BY_RUNG = {
 }
 
 
+# The module docstring's own headline example - "severe headache with
+# blurred vision" - is a WHO danger sign as a COMBINATION, but was only
+# ever recognized as that one literal phrase (rung 4). A headache
+# reported separately from its visual/swelling companion sign ("I have a
+# headache" ... "it's severe with blurred vision", the two turns a chat
+# follow-up naturally produces, or simply "headache and my hands are
+# swollen" in one message where the phrases aren't adjacent) matched
+# only rung 1-3 - correct for either symptom alone, but a real
+# understatement of the combination, which is exactly the pre-eclampsia
+# pattern this ladder exists to catch. Checked only when no rung>=4
+# phrase already matched outright.
+_HEADACHE_INDICATORS = [
+    "headache", "head hurts", "head is paining", "head is hurting", "head pain",
+    "pain in my head", "pain in the head", "sar dard", "sar mein dard", "sar me dard", "सिर में दर्द",
+]
+_HYPERTENSIVE_COMPANION_SIGNS = [
+    "blurred vision", "vision is blurry", "seeing spots", "face is swollen", "hands are swollen",
+    "धुंधला दिखना", "चेहरे पर सूजन",
+]
+
+
 def classify(text: str) -> dict:
     if not text:
         return {"rung": 0, "rungLabel": None, "description": None, "matchedPhrase": None}
 
     normalized = normalize(text)
 
+    best = {"rung": 0, "rungLabel": None, "description": None, "matchedPhrase": None}
     for rung in (5, 4, 3, 2, 1):
-        for phrase in PHRASES_BY_RUNG[rung]:
-            if contains_phrase(normalized, phrase):
-                return {
-                    "rung": rung,
-                    "rungLabel": RUNG_INFO[rung]["label"],
-                    "description": RUNG_INFO[rung]["description"],
-                    "matchedPhrase": phrase,
-                }
+        matched_phrase = next((p for p in PHRASES_BY_RUNG[rung] if contains_phrase(normalized, p)), None)
+        if matched_phrase:
+            best = {
+                "rung": rung,
+                "rungLabel": RUNG_INFO[rung]["label"],
+                "description": RUNG_INFO[rung]["description"],
+                "matchedPhrase": matched_phrase,
+            }
+            break
 
-    return {"rung": 0, "rungLabel": None, "description": None, "matchedPhrase": None}
+    # The combination only ever RAISES the result, never lowers it - if a
+    # rung 4/5 phrase already matched outright, that stands as-is. Below
+    # rung 4, though, "hands are swollen" or "blurred vision" alone (each
+    # rung 3) would otherwise win the loop above and return before this is
+    # even considered, so it's checked as a floor on top of whatever the
+    # loop found, not only as a fallback when the loop found nothing.
+    if best["rung"] < 4 and any(contains_phrase(normalized, h) for h in _HEADACHE_INDICATORS) and any(
+        contains_phrase(normalized, c) for c in _HYPERTENSIVE_COMPANION_SIGNS
+    ):
+        return {
+            "rung": 4,
+            "rungLabel": RUNG_INFO[4]["label"],
+            "description": RUNG_INFO[4]["description"],
+            "matchedPhrase": "headache with blurred vision or swelling",
+        }
+
+    return best

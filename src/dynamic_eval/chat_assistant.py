@@ -519,6 +519,12 @@ KEYWORD_HINTS = {
     "exercise_pregnancy": ["yoga"],
     "twins_multiple": ["twins"],
     "hemorrhoids_piles": ["hemorrhoids", "piles"],
+    # "danger sign(s)" is the app's own phrasing everywhere in the UI (the
+    # Home page's "Call 108 right away if" card, the chat widget's own
+    # starter chip "What danger signs should I watch for?") but wasn't
+    # actually recognized - the exact-phrase list only had "warning
+    # signs"/"red flags" wording, so this fell straight to the fallback.
+    "warning_signs_list": ["danger sign", "danger signs"],
 }
 
 
@@ -864,8 +870,38 @@ RULES_BY_CATEGORY = {
     "severe_anemia_rule": ["anemia"],
 }
 
+# A single targeted follow-up for the ambiguous-severity mild-symptom tier
+# (score 0.4-0.85, below the danger-sign threshold) - asked ONCE, on a
+# fresh message only, mirroring _danger_sign_followup's pattern but for
+# symptoms that haven't (yet) matched an actual danger phrase. Without
+# this, "I have a headache" went straight to the generic "go run a full
+# Assessment or contact your ASHA" boilerplate with no attempt to narrow
+# down severity right there in the chat - which is exactly the case a
+# quick answer here (mild vs severe, with/without blurred vision) can
+# often resolve on the spot, or correctly escalate to the danger-sign
+# path when the answer reveals more.
+_MILD_SYMPTOM_FOLLOWUP_BY_CATEGORY = {
+    "hypertensive_disorder": (
+        "How bad is it - mild and comes and goes, or constant and severe? Any blurred vision, or "
+        "swelling in your face or hands along with it?"
+    ),
+    "hemorrhage": (
+        "About how much - light spotting, or enough to soak a pad? Any cramping or clots along with it?"
+    ),
+    "infection": "Do you have a fever with this, or any foul-smelling discharge?",
+    "anemia": (
+        "How many days has this been going on, and do you feel breathless or your heart race even "
+        "with light activity?"
+    ),
+    "fetal_distress": (
+        "When did you last feel the baby move, and does this feel clearly different from their usual pattern?"
+    ),
+    "obstructed_labor": "Are the pains coming at regular, shortening intervals, or is it more constant?",
+    "malnutrition": "How many days has your appetite been low, and are you able to keep water down?",
+}
 
-def _check_symptom_signal(text_for_analysis: str):
+
+def _check_symptom_signal(text_for_analysis: str, allow_mild_followup: bool = False):
     """Runs the same danger-sign-ladder + text-analyzer scoring the main
     flow uses, on whatever text is passed in, and returns a response dict
     if it found a danger sign or a scored symptom - or None if it found
@@ -873,7 +909,12 @@ def _check_symptom_signal(text_for_analysis: str):
     out so the pain-location shortcut below (respond() reconstructing a
     short "in my head" reply into "pain in my head") gets exactly the same
     judgment a message actually typed that way would get, rather than a
-    second, separately-maintained copy of this logic."""
+    second, separately-maintained copy of this logic.
+
+    allow_mild_followup gates whether a mild-tier match asks ONE
+    clarifying question before the final answer, or answers immediately -
+    the caller only passes True on a genuinely fresh message (no prior
+    context_message), so a follow-up is never asked twice in a row."""
     ladder_result = danger_ladder.classify(text_for_analysis)
     text_scores = text_analyzer.analyze(text_for_analysis)["scores"]
     high_category_score = max(text_scores.values()) if text_scores else 0.0
@@ -899,6 +940,20 @@ def _check_symptom_signal(text_for_analysis: str):
         }
 
     if high_category_score >= 0.4:
+        category = max(text_scores, key=text_scores.get)
+        followup_question = _MILD_SYMPTOM_FOLLOWUP_BY_CATEGORY.get(category)
+        if allow_mild_followup and followup_question:
+            label = CATEGORY_LABELS.get(category, category.replace("_", " "))
+            return {
+                "reply": f"That can be related to {label}. {followup_question}",
+                "isEmergency": False,
+                # Carried back as contextMessage on the next turn, same
+                # mechanism as danger_sign_followup - the answer gets
+                # combined with this original message and re-analyzed,
+                # which correctly escalates to the danger-sign path if the
+                # answer reveals a real danger sign.
+                "intent": "mild_symptom_followup",
+            }
         return {"reply": _mild_symptom_reply(text_scores), "isEmergency": False, "intent": "mild_symptom"}
 
     return None
@@ -942,6 +997,18 @@ _PAIN_LOCATION_FOLLOWUP = {
         "attention."
     ),
 }
+
+
+def _severity_rank(signal: dict):
+    """Orders two _check_symptom_signal results so the worse one can be
+    kept: emergency beats non-emergency, and among emergencies a higher
+    danger-ladder rung beats a lower one. None (no match at all) ranks
+    lowest of all."""
+    if not signal:
+        return (-1, -1)
+    if not signal.get("isEmergency"):
+        return (0, 0)
+    return (1, signal.get("dangerLadder", {}).get("rung", 0))
 
 
 def _match_pain_location(normalized_text: str):
@@ -993,8 +1060,29 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
         return {"reply": ACKNOWLEDGMENT_REPLY, "isEmergency": False, "intent": "acknowledgment"}
 
     # Safety first: reuse the same danger-sign detection the assessment
-    # flow uses. A matched danger sign always overrides FAQ matching.
-    signal = _check_symptom_signal(analysis_text)
+    # flow uses. A matched danger sign always overrides FAQ matching. The
+    # mild-symptom follow-up is only offered on a genuinely fresh message
+    # (no context_message yet) - once context_message is set, either this
+    # IS the follow-up's answer (ask once, not twice) or it's context
+    # from a different exchange entirely (e.g. a vague-topic question),
+    # and either way the final answer is what's owed here.
+    #
+    # Checked in BOTH orderings when there's context to combine with:
+    # danger_ladder's phrase matching needs the qualifier and the symptom
+    # noun adjacent ("severe headache"), which a two-turn exchange doesn't
+    # guarantee - "I have a headache" then "it's severe with blurred
+    # vision" concatenates to "...headache. it's severe..." where "severe"
+    # and "headache" never end up next to each other, so the exact-phrase
+    # check misses it even though a single message worded either way
+    # ("severe headache with blurred vision") catches it correctly. Trying
+    # the reverse order too and keeping the worse result closes that gap
+    # without changing single-message behavior at all.
+    allow_mild_followup = context_message is None
+    signal = _check_symptom_signal(analysis_text, allow_mild_followup=allow_mild_followup)
+    if context_message:
+        reversed_signal = _check_symptom_signal(f"{text}. {context_message}", allow_mild_followup=allow_mild_followup)
+        if _severity_rank(reversed_signal) > _severity_rank(signal):
+            signal = reversed_signal
     if signal:
         return signal
 
