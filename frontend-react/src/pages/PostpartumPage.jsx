@@ -3,7 +3,87 @@ import { Link } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { api } from "../lib/api";
-import { KEYS, scopedGet, scopedRemove, scopedSet } from "../lib/storage";
+import { KEYS, scopedGet, scopedRemove, scopedSet, loadPpVisits, togglePpVisit, loadPpVax, togglePpVax } from "../lib/storage";
+
+// India's HBNC (Home Based Newborn Care) schedule - the standard ASHA
+// home-visit days after birth.
+const HOME_VISIT_DAYS = [1, 3, 7, 14, 21, 28, 42];
+
+function HomeVisitChecklist({ deliveryDate }) {
+  const [visits, setVisits] = useState(() => loadPpVisits());
+  const base = new Date(deliveryDate);
+
+  function toggle(day) {
+    setVisits(togglePpVisit(day));
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-neutral-200)" }}>ASHA home visits</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(100px,1fr))", gap: 6 }}>
+        {HOME_VISIT_DAYS.map((day) => {
+          const date = new Date(base);
+          date.setDate(date.getDate() + day);
+          const done = !!visits[day];
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => toggle(day)}
+              style={{
+                border: `1px solid ${done ? "var(--color-good)" : "var(--color-neutral-800)"}`,
+                background: done ? "var(--color-good-soft)" : "var(--color-surface)",
+                borderRadius: 10,
+                padding: "10px 8px",
+                display: "grid",
+                gap: 2,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, color: "var(--color-text)" }}>
+                Day {day}
+                <i className={`ph ${done ? "ph-check-circle" : "ph-circle"}`} style={{ color: done ? "var(--color-good)" : "var(--color-neutral-600)" }} />
+              </span>
+              <span style={{ fontSize: 11, color: "var(--color-neutral-500)" }}>{date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function VaccineChecklist({ schedule }) {
+  const [given, setGiven] = useState(() => loadPpVax());
+
+  function toggle(id) {
+    setGiven(togglePpVax(id));
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 1, background: "var(--color-neutral-900)", borderRadius: 12, overflow: "hidden" }}>
+      {schedule.map((v) => {
+        const done = !!given[v.visit];
+        return (
+          <button
+            key={v.visit}
+            type="button"
+            onClick={() => toggle(v.visit)}
+            style={{ background: "#1b1d2a", padding: "10px 14px", display: "flex", gap: 12, alignItems: "center", border: 0, cursor: "pointer", textAlign: "left", width: "100%" }}
+          >
+            <i className={`ph ${done ? "ph-check-circle" : "ph-circle"}`} style={{ color: done ? "var(--color-good)" : "var(--color-neutral-600)", fontSize: 18, flex: "none" }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, color: "var(--color-text)" }}>{v.visit}</div>
+              <div style={{ fontSize: 12, color: "var(--color-neutral-500)" }}>{v.vaccines}</div>
+            </div>
+            {done && <span style={{ fontSize: 11, color: "var(--color-good)" }}>Given</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // India's Universal Immunization Programme (UIP) - a public government
 // schedule, the same category of static informational content as the
@@ -118,6 +198,10 @@ export default function PostpartumPage() {
           </Card>
 
           <Card>
+            <HomeVisitChecklist deliveryDate={guide.deliveryDate} />
+          </Card>
+
+          <Card>
             <h3 className="mb-3 text-sm font-bold text-ink">Postnatal Check-up (PNC) Schedule</h3>
             <div className="space-y-3">
               {guide.pncSchedule.map((visit) => (
@@ -140,17 +224,10 @@ export default function PostpartumPage() {
           <Card>
             <h3 className="mb-1 text-sm font-bold text-ink">Newborn Vaccination Schedule (India UIP)</h3>
             <p className="mb-3 text-xs text-muted">
-              India's Universal Immunization Programme - free at any government health facility. Confirm exact timing
-              and any additional/regional vaccines with your ASHA/ANM or provider.
+              Tap a row to mark it given. India's Universal Immunization Programme - free at any government health
+              facility. Confirm exact timing and any additional/regional vaccines with your ASHA/ANM or provider.
             </p>
-            <div className="space-y-2">
-              {NEWBORN_VACCINATION_SCHEDULE.map((v) => (
-                <div key={v.visit} className="rounded-md border border-border p-3">
-                  <p className="text-sm font-semibold text-ink">{v.visit}</p>
-                  <p className="mt-0.5 text-sm text-muted">{v.vaccines}</p>
-                </div>
-              ))}
-            </div>
+            <VaccineChecklist schedule={NEWBORN_VACCINATION_SCHEDULE} />
           </Card>
         </>
       )}
