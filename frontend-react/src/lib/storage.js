@@ -92,6 +92,21 @@ export function appendHistoryEntry(result) {
   scopedSet(KEYS.HISTORY, history.slice(0, MAX_HISTORY));
 }
 
+// A filled-in Assessment is real, sometimes urgent, work someone just did -
+// losing it to a dropped connection (the exact situation this app's rural/
+// ASHA-linked use case makes common, not an edge case) would mean redoing a
+// form that can run to six steps. Saved here the moment a submit fails for
+// being offline, and cleared as soon as it submits successfully.
+export function savePendingAssessment(payload) {
+  scopedSet(KEYS.PENDING_ASSESSMENT, { payload, savedAt: new Date().toISOString() });
+}
+export function loadPendingAssessment() {
+  return scopedGet(KEYS.PENDING_ASSESSMENT);
+}
+export function clearPendingAssessment() {
+  scopedRemove(KEYS.PENDING_ASSESSMENT);
+}
+
 export function lastKnownHemoglobin() {
   const history = scopedGet(KEYS.HISTORY) || [];
   for (const entry of history) {
@@ -277,6 +292,7 @@ export const KEYS = {
   PHQ2_LOG: "janamdatri_phq2_log",
   PP_VISITS: "janamdatri_pp_visits",
   PP_VAX: "janamdatri_pp_vaccines",
+  PENDING_ASSESSMENT: "janamdatri_pending_assessment",
 };
 
 // Fetal kick counter (Pregnancy Guide) - a simple day-by-day log of

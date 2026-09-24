@@ -2,11 +2,25 @@ import { authHeaders, clearSession, getToken } from "./storage";
 
 async function request(path, { method = "GET", body, auth = false } = {}) {
   const headers = { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) };
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    // fetch() itself throws (rather than resolving with a response) when
+    // there's no network path to the server at all - offline, DNS
+    // failure, the connection dropping mid-request. Tagged distinctly
+    // from a normal HTTP error below so callers (the Assessment submit
+    // path in particular, for rural/poor-connectivity use) can tell "the
+    // server said no" apart from "we couldn't reach it" and react
+    // differently - retry automatically instead of just showing an error.
+    const offlineErr = new Error("You appear to be offline. Please check your connection and try again.");
+    offlineErr.isNetworkError = true;
+    throw offlineErr;
+  }
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
     // A 401 on an authenticated call means the token this browser is

@@ -3,6 +3,7 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import GlobalEmergencyBanner from "./GlobalEmergencyBanner";
+import OfflineBanner from "./OfflineBanner";
 import ChatWidget from "../chat/ChatWidget";
 import { useAuth } from "../../context/AuthContext";
 import WelcomeGate from "../auth/WelcomeGate";
@@ -20,6 +21,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
+      <OfflineBanner />
       <TopBar />
       {hasIdentity && <GlobalEmergencyBanner />}
       {hasIdentity || isPublicRoute ? (
