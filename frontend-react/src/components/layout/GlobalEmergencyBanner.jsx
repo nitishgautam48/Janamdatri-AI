@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLang } from "../../context/LangContext";
 import { useHistory } from "../../lib/useHistory";
 import { loadSavedEpds, scopedKey } from "../../lib/storage";
+import { severityLabel } from "../../lib/severity";
 import ReadAloudButton from "../ui/ReadAloudButton";
 import CriticalFollowUp from "../shared/CriticalFollowUp";
 
@@ -50,7 +51,7 @@ export default function GlobalEmergencyBanner() {
 
   if (!hasIdentity || location.pathname === "/" || (!isDanger && !selfHarm) || dismissedFor === dismissKey) return null;
 
-  const bannerText = selfHarm ? t("home.selfHarmAlert") : `${t("home.dangerAlertPrefix")}${latest.severityLevel}${t("home.dangerAlertSuffix")}`;
+  const bannerText = selfHarm ? t("home.selfHarmAlert") : `${t("home.dangerAlertPrefix")}${severityLabel(t, latest.severityLevel)}${t("home.dangerAlertSuffix")}`;
 
   function dismiss() {
     try {

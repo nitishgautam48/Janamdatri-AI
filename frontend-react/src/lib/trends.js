@@ -1,4 +1,5 @@
 import { KEYS, scopedGet } from "./storage";
+import { severityLabel } from "./severity";
 
 // Shared with HomePage (a compact "what changed" hint near the top of the
 // app, where people actually look first) and HistoryPage (the full
@@ -12,6 +13,20 @@ export function firstLastValid(values) {
   return { first: valid[0], last: valid[valid.length - 1] };
 }
 
+// This module is plain JS (no React, no useLang), but its notes are
+// fully frontend-owned copy worth translating - so it returns i18n KEYS
+// and params rather than baked-in English strings, and this helper (used
+// by both HomePage and HistoryPage) does the {placeholder} substitution
+// once a component's own t() is available.
+export function renderTrendNote(t, note) {
+  let text = t(note.textKey);
+  for (const [key, value] of Object.entries(note.params || {})) {
+    const resolved = note.severityParams?.includes(key) ? severityLabel(t, value) : value;
+    text = text.replace(`{${key}}`, resolved);
+  }
+  return { tone: note.tone, label: t(note.labelKey), text };
+}
+
 function buildTrendSummary(series, chronological) {
   const notes = [];
   const hbFl = firstLastValid(series.hb);
@@ -19,10 +34,9 @@ function buildTrendSummary(series, chronological) {
     const improving = hbFl.last > hbFl.first;
     notes.push({
       tone: improving ? "var(--color-good)" : "var(--color-warning)",
-      label: improving ? "Improving" : "Needs Attention",
-      text: improving
-        ? `Your hemoglobin has improved across your recent checks (${hbFl.first} → ${hbFl.last} g/dL).`
-        : `Your hemoglobin has been declining across your recent checks (${hbFl.first} → ${hbFl.last} g/dL) - worth mentioning at your next visit.`,
+      labelKey: improving ? "trends.improving" : "trends.needsAttention",
+      textKey: improving ? "trends.hbImproving" : "trends.hbDeclining",
+      params: { first: hbFl.first, last: hbFl.last },
     });
   }
   const sbpFl = firstLastValid(series.sbp);
@@ -30,17 +44,22 @@ function buildTrendSummary(series, chronological) {
     const worsening = sbpFl.last > sbpFl.first;
     notes.push({
       tone: worsening ? "var(--color-warning)" : "var(--color-good)",
-      label: worsening ? "Needs Attention" : "Improving",
-      text: worsening
-        ? `Your blood pressure has been trending up (${sbpFl.first} → ${sbpFl.last} mmHg systolic) - worth watching closely.`
-        : `Your blood pressure has improved (${sbpFl.first} → ${sbpFl.last} mmHg systolic).`,
+      labelKey: worsening ? "trends.needsAttention" : "trends.improving",
+      textKey: worsening ? "trends.bpWorsening" : "trends.bpImproving",
+      params: { first: sbpFl.first, last: sbpFl.last },
     });
   }
   const weightFl = firstLastValid(series.weight);
   if (weightFl && weightFl.last < weightFl.first) {
-    notes.push({ tone: "var(--color-warning)", label: "Needs Attention", text: `Your weight has decreased across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth mentioning at your next visit.` });
+    notes.push({
+      tone: "var(--color-warning)", labelKey: "trends.needsAttention", textKey: "trends.weightDecreased",
+      params: { first: weightFl.first, last: weightFl.last },
+    });
   } else if (weightFl && weightFl.last - weightFl.first >= 2) {
-    notes.push({ tone: "var(--color-warning)", label: "Needs Attention", text: `Your weight has risen quickly across your recent checks (${weightFl.first} → ${weightFl.last} kg) - worth watching for fluid retention.` });
+    notes.push({
+      tone: "var(--color-warning)", labelKey: "trends.needsAttention", textKey: "trends.weightRapidGain",
+      params: { first: weightFl.first, last: weightFl.last },
+    });
   }
   if (chronological.length >= 2) {
     const prev = chronological[chronological.length - 2];
@@ -48,11 +67,15 @@ function buildTrendSummary(series, chronological) {
     if (prev.severityLevel !== latest.severityLevel) {
       const increased = LEVEL_ORDER.indexOf(latest.severityLevel) > LEVEL_ORDER.indexOf(prev.severityLevel);
       const escalatedBy = latest.result?.severity?.escalatedBy;
-      const reason = escalatedBy ? ` because of ${escalatedBy.replace(/_/g, " ")}` : "";
+      const hasReason = !!escalatedBy;
       notes.push({
         tone: increased ? "var(--color-critical)" : "var(--color-good)",
-        label: increased ? "Needs Attention" : "Improving",
-        text: `Your risk level ${increased ? "increased" : "decreased"} from ${prev.severityLevel} to ${latest.severityLevel}${reason}.`,
+        labelKey: increased ? "trends.needsAttention" : "trends.improving",
+        textKey: increased
+          ? (hasReason ? "trends.riskIncreasedReason" : "trends.riskIncreasedNoReason")
+          : (hasReason ? "trends.riskDecreasedReason" : "trends.riskDecreasedNoReason"),
+        params: { prev: prev.severityLevel, latest: latest.severityLevel, escalatedBy: hasReason ? escalatedBy.replace(/_/g, " ") : "" },
+        severityParams: ["prev", "latest"],
       });
     }
   }
@@ -98,10 +121,10 @@ export function computeHealthTrends(history) {
 
   return {
     tiles: [
-      { label: "Risk Score (MRI)", values: series.mri, color: "#ef6f93", unit: "" },
-      { label: "Blood Sugar", values: series.bs, color: "#f5b942", unit: " mmol/L" },
-      { label: "Hemoglobin", values: series.hb, color: "#4ade80", unit: " g/dL" },
-      { label: "Weight", values: series.weight, color: "#c99a4a", unit: " kg" },
+      { labelKey: "trends.tileRiskScore", values: series.mri, color: "#ef6f93", unit: "" },
+      { labelKey: "trends.tileBloodSugar", values: series.bs, color: "#f5b942", unit: " mmol/L" },
+      { labelKey: "trends.tileHemoglobin", values: series.hb, color: "#4ade80", unit: " g/dL" },
+      { labelKey: "trends.tileWeight", values: series.weight, color: "#c99a4a", unit: " kg" },
     ],
     bpPoints,
     summaryNotes: buildTrendSummary(series, chronological),

@@ -11,7 +11,8 @@ import {
   loadTodayCareState, saveTodayCareState,
 } from "../lib/storage";
 import { buildTodayCareTasks } from "../lib/todayCare";
-import { computeHealthTrends } from "../lib/trends";
+import { computeHealthTrends, renderTrendNote } from "../lib/trends";
+import { severityLabel } from "../lib/severity";
 
 const TIPS_EN = [
   "Take your iron/folic acid tablet at the same time every day — it's easier to remember with a meal.",
@@ -157,8 +158,9 @@ export default function HomePage() {
   const trendNote = useMemo(() => {
     const { summaryNotes } = computeHealthTrends(history);
     if (!summaryNotes.length) return null;
-    return summaryNotes.find((n) => n.label === "Needs Attention") || summaryNotes[0];
-  }, [history]);
+    const note = summaryNotes.find((n) => n.labelKey === "trends.needsAttention") || summaryNotes[0];
+    return renderTrendNote(t, note);
+  }, [history, t]);
 
   const hour = new Date().getHours();
   const greetingKey = hour < 12 ? "home.greetingMorning" : hour < 17 ? "home.greetingAfternoon" : "home.greetingEvening";
@@ -200,7 +202,7 @@ export default function HomePage() {
           <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text)" }}>
             {selfHarm
               ? t("home.selfHarmAlert")
-              : `${t("home.dangerAlertPrefix")}${latest.severityLevel}${t("home.dangerAlertSuffix")}`}
+              : `${t("home.dangerAlertPrefix")}${severityLabel(t, latest.severityLevel)}${t("home.dangerAlertSuffix")}`}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
             <a href="tel:108" className="btn" style={{ background: "var(--color-critical)", color: "#fff", borderColor: "var(--color-critical)" }}>
@@ -301,7 +303,7 @@ export default function HomePage() {
               {bucket && (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 99, background: RISK_COLORS[bucket].tint, color: RISK_COLORS[bucket].text, fontSize: "0.75rem", whiteSpace: "nowrap" }}>
                   <i className={`ph ${RISK_COLORS[bucket].icon}`} />
-                  {latest.severityLevel}
+                  {severityLabel(t, latest.severityLevel)}
                 </span>
               )}
               <span style={{ flex: 1, minWidth: 0 }}>{t("home.lastCheckLabel")} {new Date(latest.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>

@@ -4,7 +4,9 @@ import Spinner from "../components/ui/Spinner";
 import Sparkline from "../components/ui/Sparkline";
 import { useHistory } from "../lib/useHistory";
 import { KEYS, scopedRemove } from "../lib/storage";
-import { computeHealthTrends, firstLastValid } from "../lib/trends";
+import { computeHealthTrends, firstLastValid, renderTrendNote } from "../lib/trends";
+import { severityLabel } from "../lib/severity";
+import { useLang } from "../context/LangContext";
 
 const LEVEL_COLOR = {
   Critical: "var(--color-critical)", Severe: "var(--color-critical)",
@@ -18,7 +20,8 @@ const LEVEL_ICON = {
   Critical: "ph-warning", Severe: "ph-warning",
   Moderate: "ph-warning-circle", Mild: "ph-check-circle", Minimal: "ph-check-circle",
 };
-function TrendTile({ label, values, color, unit }) {
+function TrendTile({ labelKey, values, color, unit }) {
+  const { t } = useLang();
   const fl = firstLastValid(values);
   if (!fl) return null;
   const diff = fl.last - fl.first;
@@ -26,7 +29,7 @@ function TrendTile({ label, values, color, unit }) {
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-        <p className="eyebrow">{label}</p>
+        <p className="eyebrow">{t(labelKey)}</p>
         <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{arrow}</span>
       </div>
       <Sparkline values={values} color={color} />
@@ -46,12 +49,13 @@ function bpPct(v) {
 }
 
 function BpBarChart({ points }) {
+  const { t } = useLang();
   if (!points.length) return null;
   const thresholdBottom = bpPct(BP_THRESHOLD);
   return (
     <div style={{ background: "var(--color-surface)", borderRadius: 12, padding: 14, display: "grid", gap: 10, boxShadow: "var(--shadow-sm)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <p className="eyebrow">Blood pressure trend</p>
+        <p className="eyebrow">{t("trends.bpTrendTitle")}</p>
         <div style={{ fontSize: "0.6875rem", color: "var(--color-neutral-500)", display: "flex", gap: 6, alignItems: "center" }}>
           <span style={{ width: 14, borderTop: "1px dashed var(--color-critical)" }} />
           {BP_THRESHOLD}
@@ -81,26 +85,29 @@ function BpBarChart({ points }) {
 }
 
 function HealthTrends({ history }) {
+  const { t } = useLang();
   const { tiles, bpPoints, summaryNotes, hasData } = useMemo(() => computeHealthTrends(history), [history]);
 
   if (!hasData) {
-    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough data yet - run at least 2 assessments (or confirm values from an uploaded report in My Reports) to see trends here.</p>;
+    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("trends.notEnoughData")}</p>;
   }
-  const visibleTiles = tiles.filter((t) => firstLastValid(t.values));
+  const visibleTiles = tiles.filter((tile) => firstLastValid(tile.values));
   if (!visibleTiles.length && bpPoints.length < 2) {
-    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>Not enough repeated vitals/hemoglobin data yet to chart a trend - the risk trend needs at least 2 assessments with vitals or hemoglobin entered.</p>;
+    return <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("trends.notEnoughVitals")}</p>;
   }
+
+  const notes = summaryNotes.map((n) => renderTrendNote(t, n));
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
       {bpPoints.length >= 2 && <BpBarChart points={bpPoints} />}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
-        {visibleTiles.map((t) => <TrendTile key={t.label} {...t} />)}
+        {visibleTiles.map((tile) => <TrendTile key={tile.labelKey} {...tile} />)}
       </div>
       <div style={{ display: "grid", gap: 8 }}>
-        <p className="eyebrow">What Changed</p>
-        {summaryNotes.length ? (
-          summaryNotes.map((n, i) => (
+        <p className="eyebrow">{t("trends.whatChanged")}</p>
+        {notes.length ? (
+          notes.map((n, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <span style={{ flex: "none", marginTop: 2, borderRadius: 99, border: `1px solid ${n.tone}`, color: n.tone, padding: "1px 8px", fontSize: "0.6875rem" }}>{n.label}</span>
               <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{n.text}</p>
@@ -108,8 +115,8 @@ function HealthTrends({ history }) {
           ))
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ borderRadius: 99, border: "1px solid var(--color-good)", color: "var(--color-good)", padding: "1px 8px", fontSize: "0.6875rem" }}>Stable</span>
-            <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No major changes detected across your recent assessments.</p>
+            <span style={{ borderRadius: 99, border: "1px solid var(--color-good)", color: "var(--color-good)", padding: "1px 8px", fontSize: "0.6875rem" }}>{t("trends.stable")}</span>
+            <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("trends.noMajorChanges")}</p>
           </div>
         )}
       </div>
@@ -118,10 +125,11 @@ function HealthTrends({ history }) {
 }
 
 export default function HistoryPage() {
+  const { t } = useLang();
   const { history, loading, refetch } = useHistory();
 
   function handleClear() {
-    if (!window.confirm("Clear your local assessment history on this device?")) return;
+    if (!window.confirm(t("history.clearConfirm"))) return;
     scopedRemove(KEYS.HISTORY);
     refetch();
   }
@@ -130,28 +138,28 @@ export default function HistoryPage() {
     <div style={{ display: "grid", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <Link to="/referral" className="btn btn-primary" style={{ fontSize: "0.8125rem", textDecoration: "none" }}>
-          <i className="ph ph-file-text" /> Referral Summary →
+          <i className="ph ph-file-text" /> {t("history.referralSummary")}
         </Link>
       </div>
 
       <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 12, boxShadow: "var(--shadow-sm)" }}>
         <div>
-          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--color-text)" }}>Health Trends</h1>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>How your key numbers and risk level have changed across your assessments.</p>
+          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--color-text)" }}>{t("history.healthTrends")}</h1>
+          <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("history.healthTrendsDesc")}</p>
         </div>
         {loading ? <Spinner /> : <HealthTrends history={history} />}
       </div>
 
       <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text)" }}>Assessment History</h2>
+          <h2 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--color-text)" }}>{t("history.assessmentHistory")}</h2>
           <button type="button" onClick={handleClear} className="btn btn-ghost" style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>
-            Clear
+            {t("history.clear")}
           </button>
         </div>
-        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>Stored only in this browser (not sent anywhere).</p>
+        <p style={{ fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>{t("history.storedLocally")}</p>
 
-        {!loading && history.length === 0 && <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>No assessments yet.</p>}
+        {!loading && history.length === 0 && <p style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("history.noAssessments")}</p>}
 
         {history.map((entry, i) => {
           const color = LEVEL_COLOR[entry.severityLevel] || "var(--color-neutral-400)";
@@ -163,10 +171,10 @@ export default function HistoryPage() {
                 <i className={`ph ${icon}`} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{entry.severityLevel}</div>
+                <div style={{ fontSize: "0.9375rem", color: "var(--color-text)" }}>{severityLabel(t, entry.severityLevel)}</div>
                 <div style={{ fontSize: "0.75rem", color: "var(--color-neutral-500)" }}>{new Date(entry.timestamp).toLocaleString()}</div>
               </div>
-              <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>MRI {entry.mri}</span>
+              <span style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>{t("history.mriLabel")} {entry.mri}</span>
             </div>
           );
         })}

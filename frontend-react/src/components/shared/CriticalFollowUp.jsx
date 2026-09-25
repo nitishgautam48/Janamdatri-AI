@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLang } from "../../context/LangContext";
 import { loadCriticalFollowup, acknowledgeCriticalFollowup } from "../../lib/storage";
+import { severityLabel } from "../../lib/severity";
 
 // Shared between HomePage (its full inline card) and GlobalEmergencyBanner
 // (a compact strip on every OTHER page) so a Critical/Severe result's
@@ -37,8 +38,8 @@ export default function CriticalFollowUp({ assessmentTimestamp, severityLevel, c
 
   const questionText = alreadyAnswered && !record.soughtCare
     ? (longWait
-        ? <>{t("home.followupUrgentLongPrefix")}{severityLevel}{t("home.followupUrgentLongSuffix")}</>
-        : <>{t("home.followupUrgentPrefix")}{severityLevel}{t("home.followupUrgentSuffix")}</>)
+        ? <>{t("home.followupUrgentLongPrefix")}{severityLabel(t, severityLevel)}{t("home.followupUrgentLongSuffix")}</>
+        : <>{t("home.followupUrgentPrefix")}{severityLabel(t, severityLevel)}{t("home.followupUrgentSuffix")}</>)
     : t("home.followupQuestion");
 
   if (compact) {

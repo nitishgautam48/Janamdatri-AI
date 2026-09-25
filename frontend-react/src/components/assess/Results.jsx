@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import ReadAloudButton from "../ui/ReadAloudButton";
 import { useLang } from "../../context/LangContext";
+import { severityLabel } from "../../lib/severity";
 
 const LEVEL_COLOR = {
   Critical: "var(--color-critical)", Severe: "var(--color-critical)",
@@ -92,7 +93,7 @@ export default function Results({ data, onReset }) {
           </span>
           <div>
             <p className="eyebrow" style={{ marginBottom: 4 }}>{t("results.overallRisk")}</p>
-            <div style={{ fontSize: "1.875rem", fontWeight: 500, color: "var(--color-text)", lineHeight: 1.1 }}>{severity.level}</div>
+            <div style={{ fontSize: "1.875rem", fontWeight: 500, color: "var(--color-text)", lineHeight: 1.1 }}>{severityLabel(t, severity.level)}</div>
             <div style={{ fontSize: "0.875rem", color: "var(--color-neutral-400)" }}>
               {t("results.mriLabel")} {mri}
               {severity.escalatedBy ? ` · ${t("results.escalatedBy")} ${severity.escalatedBy.replace(/_/g, " ")}` : ""}
