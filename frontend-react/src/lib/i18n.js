@@ -487,8 +487,8 @@ export const translations = {
 
     "reports.uploadFirstError": "Upload a file or paste the report's text first.",
     "reports.title": "My Reports",
-    "reports.subtitle": "Upload a prescription or lab report (PDF/TXT), or paste its text, and get a clear medication schedule (what to take, when) and a summary of any values worth discussing with your provider.",
-    "reports.uploadFile": "Upload file (.pdf or .txt)",
+    "reports.subtitle": "Upload a prescription or lab report - a PDF, a photo, or plain text - or paste its text, and get a clear medication schedule (what to take, when) and a summary of any values worth discussing with your provider.",
+    "reports.uploadFile": "Upload file or photo (.pdf/.jpg/.png/.txt)",
     "reports.or": "or",
     "reports.pasteText": "Paste the report's text",
     "reports.pastePlaceholder": "e.g. Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
@@ -1098,8 +1098,8 @@ export const translations = {
 
     "reports.uploadFirstError": "पहले एक फ़ाइल अपलोड करें या रिपोर्ट का टेक्स्ट पेस्ट करें।",
     "reports.title": "मेरी रिपोर्ट्स",
-    "reports.subtitle": "प्रिस्क्रिप्शन या लैब रिपोर्ट (PDF/TXT) अपलोड करें, या उसका टेक्स्ट पेस्ट करें, और एक स्पष्ट दवा शेड्यूल (क्या लेना है, कब) और अपने प्रदाता से चर्चा करने लायक वैल्यू का सारांश पाएं।",
-    "reports.uploadFile": "फ़ाइल अपलोड करें (.pdf या .txt)",
+    "reports.subtitle": "प्रिस्क्रिप्शन या लैब रिपोर्ट - PDF, फ़ोटो, या प्लेन टेक्स्ट - अपलोड करें, या उसका टेक्स्ट पेस्ट करें, और एक स्पष्ट दवा शेड्यूल (क्या लेना है, कब) और अपने प्रदाता से चर्चा करने लायक वैल्यू का सारांश पाएं।",
+    "reports.uploadFile": "फ़ाइल या फ़ोटो अपलोड करें (.pdf/.jpg/.png/.txt)",
     "reports.or": "या",
     "reports.pasteText": "रिपोर्ट का टेक्स्ट पेस्ट करें",
     "reports.pastePlaceholder": "जैसे Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",
@@ -1713,8 +1713,8 @@ export const translations = {
 
     "reports.uploadFirstError": "Pehle ek file upload karein ya report ka text paste karein.",
     "reports.title": "My Reports",
-    "reports.subtitle": "Prescription ya lab report (PDF/TXT) upload karein, ya uska text paste karein, aur ek clear medication schedule (kya lena hai, kab) aur apne provider se discuss karne layak values ka summary paayein.",
-    "reports.uploadFile": "File upload karein (.pdf ya .txt)",
+    "reports.subtitle": "Prescription ya lab report - PDF, photo, ya plain text - upload karein, ya uska text paste karein, aur ek clear medication schedule (kya lena hai, kab) aur apne provider se discuss karne layak values ka summary paayein.",
+    "reports.uploadFile": "File ya photo upload karein (.pdf/.jpg/.png/.txt)",
     "reports.or": "ya",
     "reports.pasteText": "Report ka text paste karein",
     "reports.pastePlaceholder": "jaise Tab. Folic Acid 5mg OD morning, Hemoglobin: 9.2 g/dl…",

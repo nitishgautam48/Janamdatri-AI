@@ -162,8 +162,8 @@ GET  /psych-assess/items             the 10 EPDS questions + response options
 POST /psych-assess                    EPDS scoring alone: { responses: [0-3 x10] }
 POST /pregnancy-guide                 { lmp? (ISO date), week? } -> trimester guide
 POST /chat                            { message } -> rule-based instant-help assistant
-POST /documents/analyze               upload (.pdf/.txt) or paste report text ->
-                                      medication schedule + flagged findings
+POST /documents/analyze               upload (.pdf/.txt/.jpg/.png, OCR'd if scanned) or
+                                      paste report text -> medication schedule + flagged findings
 GET  /helplines                       India helplines + government scheme references
 ```
 
@@ -191,8 +191,9 @@ FastAPI:
   **Clinical Impression** card (cross-signal patterns + corroboration
   confidence from `human_intelligence.py`)
 - A **Pregnancy Guide** tab, a **Mental Health Check (EPDS)** tab, a
-  **My Reports** tab (upload or paste a prescription/lab report for a
-  medication schedule + flagged findings), an assessment **History** tab
+  **My Reports** tab (upload a prescription/lab report as a PDF or photo,
+  or paste its text, for a medication schedule + flagged findings — a
+  scanned/photographed page is read via OCR), an assessment **History** tab
   (server-backed when logged in, localStorage otherwise), and a
   **Helplines** page
 - A floating **Instant Help chat** widget on every page, with real-time
@@ -213,6 +214,14 @@ python -m src.ml.train
 
 uvicorn src.api.main:app --reload
 ```
+
+OCR for scanned/photographed reports (`src/document_extractor.py`) needs
+the Tesseract system binary, which isn't a pip package — install it
+separately (`apt-get install tesseract-ocr tesseract-ocr-hin` on
+Debian/Ubuntu, already included in the Dockerfile). Without it, uploads
+of a real digital PDF or a pasted-text report still work exactly as
+before; only OCR-dependent uploads (a scanned page, a photo) fall back
+to the "paste the text yourself" message instead of erroring out.
 
 Then:
 

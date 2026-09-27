@@ -79,7 +79,7 @@ export default function ReportsPage() {
         >
           <i className="ph ph-upload-simple" style={{ fontSize: "1.125rem", color: "var(--color-accent-400)" }} />
           <span style={{ flex: 1 }}>{file ? file.name : t("reports.uploadFile")}</span>
-          <input id="reports-file" type="file" accept=".pdf,.txt" onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: "none" }} />
+          <input id="reports-file" type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp" onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: "none" }} />
         </label>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.6875rem", color: "var(--color-neutral-600)" }}>

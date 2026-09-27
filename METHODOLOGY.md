@@ -198,11 +198,18 @@ drug's reading on comma-separated or run-on single-line prescriptions -
 a real bug caught by testing against exactly that input shape.
 
 Scanned/photographed reports (an image, or a PDF that's just a scanned
-image with no text layer) have no extractable text without OCR, which
-needs a system-level engine this deployment doesn't install. Rather than
-silently returning nothing, extraction fails with a clear message telling
-the person to paste the text by hand instead - honest about the
-limitation rather than pretending to support image uploads.
+image with no text layer) go through OCR (`src/document_extractor.py`,
+via Tesseract in English+Hindi) rather than failing outright: each page
+is rendered to a bitmap with PyMuPDF and read with pytesseract. This
+does reasonably on printed/typed text but poorly on a doctor's cursive
+handwriting - which is exactly what most real Indian prescriptions look
+like - so the frontend always shows the extracted text back to the
+person alongside the medication schedule, precisely so a misread can be
+caught rather than silently trusted. If OCR still can't make out enough
+readable text, or the Tesseract system binary isn't installed on a given
+deployment, extraction fails with a clear message telling the person to
+paste the text by hand instead, the same honest fallback this always
+had.
 
 ## Accounts (`src/auth.py`)
 
@@ -263,5 +270,10 @@ has no idea whether a request came from a logged-in account or a guest.
   common Indian prescription shorthand, not medical interpretation. A drug
   not in `DRUG_KEYWORDS`, or dosing notation it doesn't recognize, won't
   be extracted - always follow the actual prescription over this tool's
-  reading of it. Scanned/photographed reports aren't supported (no OCR) -
-  paste the text directly instead.
+  reading of it. Scanned/photographed reports now go through OCR, but
+  Tesseract's accuracy on handwritten (as opposed to printed/typed) text
+  is genuinely poor - a photo of a handwritten prescription may extract
+  only its printed header reliably, with the handwritten medication list
+  itself garbled. Always check the shown extracted-text preview against
+  the actual document, and paste the text by hand for anything OCR
+  clearly misread.

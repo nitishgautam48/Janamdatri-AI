@@ -8,6 +8,15 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app
 
+# tesseract-ocr(-hin) is the OCR engine src/document_extractor.py shells
+# out to (via pytesseract) for scanned/photographed reports with no PDF
+# text layer - English+Hindi, matching the rest of the app's bilingual
+# text handling. PyMuPDF renders PDF pages to bitmaps for it without
+# needing poppler-utils installed separately.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tesseract-ocr tesseract-ocr-hin \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install deps first so this layer is cached across source-only changes.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
