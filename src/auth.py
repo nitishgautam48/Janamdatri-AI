@@ -8,8 +8,10 @@ Accounts are entirely optional - see the "Continue as Guest" path in the
 frontend. Logging in only adds: a saved profile, and assessments/chat tied
 to the account instead of living solely in the browser's localStorage.
 
-`role` (patient/counsellor/doctor) gates access to the counsellor
-workspace and doctor queue (see src/live_chat.py). Self-registration
+`role` (patient/counsellor/doctor) gates access to the care-team
+workspace (both the counsellor queue and the doctor's forwarded-case
+queue are open to either staff role - see `STAFF_ROLES` in
+src/api/main.py). Self-registration
 accepts any role at signup - there is no verification step confirming a
 "counsellor" or "doctor" signup is an actual vetted staff member. That's
 a real gap for anything beyond a pilot with a known, small team; a

@@ -68,7 +68,13 @@ export const api = {
   nutritionAssess: (body) => request("/nutrition-assess", { method: "POST", body, auth: true }),
   nutritionChecksMine: () => request("/nutrition-checks/mine", { auth: true }),
 
-  chat: (body) => request("/chat", { method: "POST", body: { ...body, guestId: getOrCreateGuestChatId() } }),
+  // auth:true so a logged-in patient's danger-sign escalations (and saved
+  // chat history) are correctly tied to their account instead of always
+  // looking like an anonymous guest - previously missing here, so every
+  // escalation from this endpoint landed in the queue as "Guest" regardless
+  // of login state. Guests still identify via the body's own guestId field
+  // (the /chat endpoint reads that, not the x-guest-id header).
+  chat: (body) => request("/chat", { method: "POST", body: { ...body, guestId: getOrCreateGuestChatId() }, auth: true }),
 
   helplines: () => request("/helplines"),
 
