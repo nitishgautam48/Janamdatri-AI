@@ -956,15 +956,62 @@ async def ws_live(websocket: WebSocket, conv_id: str):
     no auth needed beyond already knowing the conversation id, matching
     the REST /live/{conv_id} endpoints' own guest-friendly access model
     (the id itself is the capability, same as a share code elsewhere in
-    this app)."""
+    this app).
+
+    Also carries the voice-call feature's WebRTC signaling: a received
+    frame is normally just a heartbeat ping (see lib/ws.js) with nothing
+    to do, but a {"type": "webrtc_signal", ...} frame gets relayed
+    verbatim to the OTHER participant in this same conversation (see
+    hub.relay_conv_signal) - this socket already connects exactly the two
+    people a call would be between, so it doubles as the signaling
+    channel rather than standing up a separate one."""
     await hub.conv_connect(conv_id, websocket)
     try:
         while True:
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                continue
+            if isinstance(msg, dict) and msg.get("type") == "webrtc_signal":
+                await hub.relay_conv_signal(conv_id, websocket, msg)
     except WebSocketDisconnect:
         pass
     finally:
         hub.conv_disconnect(conv_id, websocket)
+
+
+# How long a /ws/staff connection can go without a heartbeat ping (the
+# frontend sends one every ~20s - see lib/ws.js) before it's treated as
+# dead. Catches the case a clean disconnect never does: a laptop asleep,
+# a network that died without a TCP close - the socket looks "open" from
+# this server's side forever otherwise, and release_staff_presence()
+# below would never run.
+STAFF_PRESENCE_HEARTBEAT_TIMEOUT = 60
+
+# Once a counsellor/doctor has no open /ws/staff connection at all
+# (whether from a clean disconnect or the heartbeat timeout above), this
+# long to reconnect - a page refresh, a brief network drop - before
+# they're actually treated as gone. Mirrors the explicit-duty-off
+# recovery (release_claimed_by) for the case nobody explicitly toggled
+# anything off.
+STAFF_PRESENCE_GRACE_SECONDS = 45
+
+_staff_presence_timeout_tasks: dict[int, asyncio.Task] = {}
+
+
+async def _release_staff_presence(user_id: int):
+    try:
+        await asyncio.sleep(STAFF_PRESENCE_GRACE_SECONDS)
+    except asyncio.CancelledError:
+        return  # reconnected before the grace period elapsed - nothing to do
+    _staff_presence_timeout_tasks.pop(user_id, None)
+    auth.set_duty(user_id, False)
+    released = live_chat.release_claimed_by(user_id)
+    for conv_id in released:
+        await hub.notify_conv(conv_id)
+    if released:
+        await hub.notify_staff("queue_changed")
 
 
 @app.websocket("/ws/staff")
@@ -972,19 +1019,37 @@ async def ws_staff(websocket: WebSocket, token: Optional[str] = None):
     """Counsellor/doctor shell - one socket per open StaffWorkspace tab,
     covering the queue, forwarded-cases, and duty-change events. A
     browser WebSocket can't set a custom header, so the session token
-    travels as a query param here instead of x-user-token."""
+    travels as a query param here instead of x-user-token.
+
+    Also the presence/heartbeat detector for going off duty implicitly
+    (crash, closed laptop, dead network) rather than only via the
+    explicit "Off duty" toggle - see STAFF_PRESENCE_* above and
+    _release_staff_presence."""
     user = _current_user(token)
     if not user or user["role"] not in STAFF_ROLES:
         await websocket.close(code=4401)
         return
-    await hub.staff_connect(websocket)
+    user_id = user["id"]
+    pending = _staff_presence_timeout_tasks.pop(user_id, None)
+    if pending:
+        pending.cancel()
+    await hub.staff_connect(websocket, user_id)
     try:
         while True:
-            await websocket.receive_text()
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=STAFF_PRESENCE_HEARTBEAT_TIMEOUT)
+            except asyncio.TimeoutError:
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass
+                break
     except WebSocketDisconnect:
         pass
     finally:
-        hub.staff_disconnect(websocket)
+        still_connected = hub.staff_disconnect(websocket, user_id)
+        if not still_connected:
+            _staff_presence_timeout_tasks[user_id] = asyncio.create_task(_release_staff_presence(user_id))
 
 
 # ============================================================

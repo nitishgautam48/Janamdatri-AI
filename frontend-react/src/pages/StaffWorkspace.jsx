@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { severityLabel } from "../lib/severity";
 import { connectWs } from "../lib/ws";
 import { getToken } from "../lib/storage";
+import { createVoiceCall } from "../lib/voice-call";
 
 const SEVERITY_TONE = {
   Critical: { bg: "var(--color-critical-soft)", fg: "var(--color-critical)" },
@@ -518,6 +519,11 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
   const [openDocId, setOpenDocId] = useState(null);
   const [openDocConv, setOpenDocConv] = useState(null);
   const chatRef = useRef(null);
+  // The counsellor actually hearing the patient's voice (see lib/voice-
+  // call.js) - "idle" | "calling" | "ringing" | "connected".
+  const [callState, setCallState] = useState("idle");
+  const voiceCallRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   async function refreshLists() {
     try {
@@ -597,8 +603,24 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     }
     poll();
     const iv = setInterval(poll, CONV_POLL_MS);
-    const disconnectWs = connectWs(`/ws/live/${activeId}`, { onMessage: poll });
-    return () => { cancelled = true; clearInterval(iv); disconnectWs(); };
+    const disconnectWs = connectWs(`/ws/live/${activeId}`, {
+      onMessage: (msg) => {
+        if (msg.type === "webrtc_signal") voiceCallRef.current?.handleSignal(msg);
+        else poll();
+      },
+    });
+    voiceCallRef.current = createVoiceCall({
+      wsSend: disconnectWs.send,
+      onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
+      onStateChange: setCallState,
+    });
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+      disconnectWs();
+      voiceCallRef.current?.hangUp();
+      voiceCallRef.current = null;
+    };
   }, [activeId]);
 
   useEffect(() => {
@@ -805,9 +827,9 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
                     ))}
                   </div>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, rowGap: 8, flexWrap: "wrap", padding: "12px 16px" }}>
                   <span style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-neutral-900)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500 }}>{active.patient_name.charAt(0)}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 160 }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ fontSize: 16, fontWeight: 500 }}>{active.patient_name}</span>
                       <SeverityTag level={active.severity_level} />
@@ -816,10 +838,37 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
                       {active.patient_code}{active.vitals?.week ? ` · ${t("guide.weekLabel")} ${active.vitals.week}` : ""}{active.age ? ` · ${Math.round(active.age)}y` : ""} · {active.lang}
                     </div>
                   </div>
+                  {callState === "idle" && (
+                    <button type="button" onClick={() => voiceCallRef.current?.startCall()} className="btn btn-secondary" style={{ fontSize: 13 }}>
+                      <i className="ph ph-phone-call" /> {t("chat.voiceCall")}
+                    </button>
+                  )}
+                  {callState === "calling" && (
+                    <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="btn btn-secondary" style={{ fontSize: 13, color: "var(--color-primary)" }}>
+                      <i className="ph ph-phone-outgoing animate-pulse" /> {t("chat.callCalling")}
+                    </button>
+                  )}
+                  {callState === "ringing" && (
+                    <>
+                      <button type="button" onClick={() => voiceCallRef.current?.acceptCall()} className="btn btn-primary" style={{ fontSize: 13 }}>
+                        <i className="ph ph-phone-incoming animate-pulse" /> {t("chat.callAccept")}
+                      </button>
+                      <button type="button" onClick={() => voiceCallRef.current?.declineCall()} className="btn btn-secondary" style={{ fontSize: 13, color: "var(--color-critical)" }}>
+                        {t("chat.callDecline")}
+                      </button>
+                    </>
+                  )}
+                  {callState === "connected" && (
+                    <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="btn btn-secondary" style={{ fontSize: 13, color: "var(--color-good)" }}>
+                      <i className="ph ph-phone-call" /> {t("chat.callConnected")} · {t("chat.callHangUp")}
+                    </button>
+                  )}
                   <button type="button" onClick={() => setDialog("handoff")} disabled={!!active.forwarded} className="btn btn-secondary" style={{ fontSize: 13 }}>
                     <i className={`ph ${active.forwarded ? "ph-check" : "ph-stethoscope"}`} /> {active.forwarded ? t("counsellor.loopedIn") : t("counsellor.loopInDoctor")}
                   </button>
                   <button type="button" onClick={() => setDialog("resolve")} className="btn btn-primary" style={{ fontSize: 13 }}><i className="ph ph-check-circle" /> {t("counsellor.resolve")}</button>
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 16px", background: "oklch(0.22 0.03 25)", borderTop: "1px solid oklch(0.3 0.05 25)", borderBottom: "1px solid oklch(0.3 0.05 25)" }}>
                   <span style={{ fontSize: 12, color: "oklch(0.87 0.07 25)" }}>{t("counsellor.emergencyStayOn")}</span>

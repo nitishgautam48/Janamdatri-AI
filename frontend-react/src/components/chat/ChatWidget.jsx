@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { KEYS, scopedGet, scopedSet } from "../../lib/storage";
 import { connectWs } from "../../lib/ws";
 import { startLiveStt } from "../../lib/live-stt";
+import { createVoiceCall } from "../../lib/voice-call";
 
 // Joins whichever of these text fragments are non-empty with a single
 // space - used to compose (already-typed text) + (finalized speech so
@@ -77,6 +78,12 @@ export default function ChatWidget() {
   const baseInputRef = useRef(""); // whatever was already typed before this listening session started
   const finalizedRef = useRef(""); // speech committed as "final" so far this listening session
   const seenLeaveRef = useRef(new Set());
+  // The counsellor actually hearing the patient's voice (see lib/voice-
+  // call.js) - a separate feature from the mic button above, which only
+  // ever turns speech into chat text. "idle" | "calling" | "ringing" | "connected".
+  const [callState, setCallState] = useState("idle");
+  const voiceCallRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -184,8 +191,24 @@ export default function ChatWidget() {
       }
     }
     const iv = setInterval(refetch, LIVE_POLL_MS);
-    const disconnectWs = connectWs(`/ws/live/${liveConv.id}`, { onMessage: refetch });
-    return () => { clearInterval(iv); disconnectWs(); };
+    const disconnectWs = connectWs(`/ws/live/${liveConv.id}`, {
+      onMessage: (msg) => {
+        if (msg.type === "webrtc_signal") voiceCallRef.current?.handleSignal(msg);
+        else refetch();
+      },
+    });
+    voiceCallRef.current = createVoiceCall({
+      wsSend: disconnectWs.send,
+      onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
+      onStateChange: setCallState,
+      onIncomingCall: () => {}, // the "ringing" state alone drives the incoming-call UI below
+    });
+    return () => {
+      clearInterval(iv);
+      disconnectWs();
+      voiceCallRef.current?.hangUp();
+      voiceCallRef.current = null;
+    };
   }, [liveConv?.id, liveConv?.status]);
 
   // Once a live conversation closes, fold its transcript into the
@@ -344,6 +367,40 @@ export default function ChatWidget() {
             </div>
           )}
 
+          {/* Voice call - hearing the counsellor directly, separate from
+              the mic button below (which only ever turns speech into chat
+              text). Only offered once a counsellor has actually joined. */}
+          {liveMode && liveConv.status === "claimed" && callState === "idle" && (
+            <button
+              type="button"
+              onClick={() => voiceCallRef.current?.startCall()}
+              className="flex items-center justify-center gap-1.5 border-b border-border bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20"
+            >
+              <i className="ph ph-phone-call" /> {t("chat.voiceCall")}
+            </button>
+          )}
+          {liveMode && callState === "calling" && (
+            <div className="flex items-center justify-center gap-2 border-b border-border bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
+              <span className="animate-pulse"><i className="ph ph-phone-outgoing" /></span> {t("chat.callCalling")}
+              <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="ml-2 rounded-full bg-critical px-2 py-0.5 text-white">{t("chat.callHangUp")}</button>
+            </div>
+          )}
+          {liveMode && callState === "ringing" && (
+            <div className="flex flex-wrap items-center justify-center gap-2 border-b border-border bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
+              <i className="ph ph-phone-incoming animate-pulse" /> {t("chat.callIncoming")}
+              <button type="button" onClick={() => voiceCallRef.current?.acceptCall()} className="rounded-full bg-primary px-2 py-0.5 text-paper-ink">{t("chat.callAccept")}</button>
+              <button type="button" onClick={() => voiceCallRef.current?.declineCall()} className="rounded-full border border-critical/50 px-2 py-0.5 text-critical">{t("chat.callDecline")}</button>
+            </div>
+          )}
+          {liveMode && callState === "connected" && (
+            <div className="flex items-center justify-center gap-2 border-b border-border bg-good-soft px-3 py-1.5 text-xs font-semibold text-good">
+              <i className="ph ph-phone-call" /> {t("chat.callConnected")}
+              <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="ml-2 rounded-full bg-critical px-2 py-0.5 text-white">{t("chat.callHangUp")}</button>
+            </div>
+          )}
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
+
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {!liveMode && messages.map((m, i) => (
               <div key={i}>
@@ -478,8 +535,10 @@ export default function ChatWidget() {
               <button
                 type="button"
                 onClick={toggleListening}
+                disabled={callState !== "idle"}
+                title={callState !== "idle" ? t("chat.micDisabledDuringCall") : undefined}
                 aria-label={listening ? "Stop voice input" : "Speak your message"}
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base transition-colors ${
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                   listening ? "animate-pulse border-critical bg-critical-soft text-critical" : "border-border-strong text-muted hover:text-ink"
                 }`}
               >
