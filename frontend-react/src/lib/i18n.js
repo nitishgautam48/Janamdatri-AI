@@ -56,6 +56,10 @@ export const translations = {
     "welcome.counsellorLink": "I'm on the care team",
     "welcome.errEmail": "Enter a valid email.",
     "welcome.errPassword": "Password must be 6 or more characters.",
+    "welcome.emailValid": "Looks good.",
+    "welcome.pwHintOk": "6+ characters — good.",
+    "welcome.offline": "You appear to be offline. Check your connection and try again.",
+    "welcome.retry": "Try again",
 
     "home.greetingMorning": "Good morning",
     "home.greetingAfternoon": "Good afternoon",
@@ -827,6 +831,10 @@ export const translations = {
     "welcome.counsellorLink": "मैं केयर टीम में हूँ",
     "welcome.errEmail": "सही ईमेल लिखें।",
     "welcome.errPassword": "पासवर्ड कम से कम 6 अक्षर का हो।",
+    "welcome.emailValid": "ठीक है।",
+    "welcome.pwHintOk": "6+ अक्षर — ठीक है।",
+    "welcome.offline": "लगता है आप ऑफ़लाइन हैं। कनेक्शन जांचें और फिर कोशिश करें।",
+    "welcome.retry": "फिर कोशिश करें",
 
     "home.greetingMorning": "सुप्रभात",
     "home.greetingAfternoon": "नमस्कार",
@@ -1602,6 +1610,10 @@ export const translations = {
     "welcome.counsellorLink": "Main care team mein hoon",
     "welcome.errEmail": "Sahi email likhein.",
     "welcome.errPassword": "Password kam se kam 6 characters ka ho.",
+    "welcome.emailValid": "Theek hai.",
+    "welcome.pwHintOk": "6+ characters — theek hai.",
+    "welcome.offline": "Aap offline lag rahe hain. Connection check karke phir try karein.",
+    "welcome.retry": "Phir try karein",
 
     "home.greetingMorning": "Good morning",
     "home.greetingAfternoon": "Namaste",
