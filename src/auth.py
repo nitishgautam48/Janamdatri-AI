@@ -207,6 +207,24 @@ def set_duty(user_id: int, on_duty: bool):
         conn.close()
 
 
+def count_on_duty(roles) -> int:
+    """How many staff accounts are currently on duty, across the given
+    roles - lets the patient-facing live-chat queue tell "someone will
+    get to this" apart from "no one is even watching this queue right
+    now", instead of showing the same indefinite "waiting" message
+    either way."""
+    conn = _connect()
+    try:
+        placeholders = ",".join("?" for _ in roles)
+        row = conn.execute(
+            f"SELECT COUNT(*) AS n FROM users WHERE on_duty = 1 AND role IN ({placeholders})",
+            tuple(roles),
+        ).fetchone()
+        return row["n"] if row else 0
+    finally:
+        conn.close()
+
+
 def save_assessment(user_id: int, severity_level: str, mri: int, result_json: str):
     conn = _connect()
     try:

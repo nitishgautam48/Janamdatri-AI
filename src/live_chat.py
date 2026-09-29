@@ -286,6 +286,31 @@ def claim(conv_id: str, counsellor_id: int) -> dict:
         conn.close()
 
 
+def cancel(conv_id: str) -> dict:
+    """The patient backing out of an unclaimed request - the counterpart
+    to `resolve()`, but reachable by the patient themselves (not a
+    counsellor) and only while still `waiting`: once a counsellor has
+    claimed it, leaving a live conversation goes through the counsellor's
+    own resolve/handoff flow instead, since a real person is now on the
+    other end and just vanishing on them isn't the same situation."""
+    conn = _connect()
+    try:
+        row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone()
+        if not row:
+            raise LiveChatError("Conversation not found.", 404)
+        if row["status"] != STATUS_WAITING:
+            raise LiveChatError("This request has already been claimed or closed.", 409)
+        now = time.time()
+        conn.execute(
+            "UPDATE conversations SET status = ?, closed_at = ?, outcome = ? WHERE id = ?",
+            (STATUS_CLOSED, now, "cancelled_by_patient", conv_id),
+        )
+        conn.commit()
+        return _row(conn.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone())
+    finally:
+        conn.close()
+
+
 def _require_owner(conn, conv_id, counsellor_id):
     row = conn.execute("SELECT * FROM conversations WHERE id = ?", (conv_id,)).fetchone()
     if not row:

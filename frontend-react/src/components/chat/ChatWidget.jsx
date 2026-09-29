@@ -27,6 +27,12 @@ const SUGGESTED_PROMPTS = [
 // without the browser noticing (a suspended tab, a flaky network).
 const LIVE_POLL_MS = 20000;
 
+// How long a still-"waiting" request sits before the widget stops
+// assuming a claim is imminent and instead nudges toward 108/102 - covers
+// the case where counsellors ARE on duty but all busy, which
+// counsellors_on_duty alone can't distinguish from "about to be claimed".
+const LIVE_WAIT_WARNING_MS = 90000;
+
 // Anchored bottom-right with a top offset and z-30 (TopBar is z-40), so
 // the header can never end up hidden behind it. The bug in the old
 // vanilla-JS widget was a full-viewport panel starting at top:0 that sat
@@ -213,6 +219,28 @@ export default function ChatWidget() {
     }
   }
 
+  // The patient's way back to the assistant when no one's claimed the
+  // request - see live_chat.py's cancel(), only reachable while still
+  // "waiting" (once a counsellor has joined, leaving goes through their
+  // resolve/handoff flow instead, since a real person is now involved).
+  async function cancelLive() {
+    if (!liveConv) return;
+    const convId = liveConv.id;
+    setLiveConv(null);
+    setMessages((m) => {
+      const next = [...m, { sender: "bot", text: t("chat.cancelledMessage") }];
+      scopedSet(KEYS.CHAT_HISTORY, next.slice(-40));
+      return next;
+    });
+    try {
+      await api.liveCancel(convId);
+    } catch {
+      // Already claimed/closed server-side (a counsellor grabbed it right
+      // as this fired) - the widget has already moved on to bot mode
+      // locally, which is the right outcome either way from here.
+    }
+  }
+
   async function send(overrideText) {
     const message = (overrideText ?? input).trim();
     if (!message || sending) return;
@@ -332,11 +360,29 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {liveMode && liveConv.status === "waiting" && (
-              <p className="rounded-xl border border-dashed border-warning/60 bg-warning-soft px-3 py-2 text-xs leading-relaxed text-ink">
-                <i className="ph ph-hourglass-medium" /> {t("chat.waitingForCounsellor")}
-              </p>
-            )}
+            {liveMode && liveConv.status === "waiting" && (() => {
+              const noOneOnDuty = liveConv.counsellors_on_duty === 0;
+              const waitedTooLong = Date.now() - liveConv.created_at * 1000 > LIVE_WAIT_WARNING_MS;
+              const waitingText = noOneOnDuty
+                ? t("chat.noCounsellorOnDuty")
+                : waitedTooLong
+                  ? t("chat.waitingTooLong")
+                  : t("chat.waitingForCounsellor");
+              return (
+                <div className="space-y-2">
+                  <p className="rounded-xl border border-dashed border-warning/60 bg-warning-soft px-3 py-2 text-xs leading-relaxed text-ink">
+                    <i className="ph ph-hourglass-medium" /> {waitingText}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={cancelLive}
+                    className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-muted hover:border-primary hover:text-primary"
+                  >
+                    <i className="ph ph-x-circle" /> {t("chat.cancelWaiting")}
+                  </button>
+                </div>
+              );
+            })()}
 
             {liveMode && liveConv.messages.map((m) => {
               if (m.sender_kind === "system") {

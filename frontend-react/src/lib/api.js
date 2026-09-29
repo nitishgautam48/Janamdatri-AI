@@ -97,6 +97,7 @@ export const api = {
   liveMine: () => request("/live/mine", { auth: true, guestFallback: true }),
   liveGet: (id) => request(`/live/${id}`, { auth: true, guestFallback: true }),
   liveSend: (id, text) => request(`/live/${id}/messages`, { method: "POST", body: { text }, auth: true, guestFallback: true }),
+  liveCancel: (id) => request(`/live/${id}/cancel`, { method: "POST", body: {}, auth: true, guestFallback: true }),
 
   // --- Live counsellor chat: counsellor side ---
   counsellorDuty: (onDuty) => request("/counsellor/duty", { method: "POST", body: { onDuty }, auth: true }),

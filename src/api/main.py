@@ -29,8 +29,10 @@ Endpoints reflect the layered architecture:
   POST /gis/nearby-facilities          - real hospitals/clinics/pharmacies near a lat/lon (server-side
                                          proxy to OpenStreetMap Overpass, which browsers can't call directly)
   GET  /gis/geocode                    - free-text place search (server-side proxy to Nominatim)
-  POST /live/start, GET /live/mine, GET/POST /live/{id}(/messages)
-                                        - patient side of live counsellor chat (x-user-token or x-guest-id)
+  POST /live/start, GET /live/mine, GET/POST /live/{id}(/messages), POST /live/{id}/cancel
+                                        - patient side of live counsellor chat (x-user-token or x-guest-id).
+                                        cancel only works while still 'waiting' - the patient's way back to
+                                        the assistant if no one claims the request (see live_chat.py)
   POST /counsellor/duty, GET /counsellor/queue|mine, POST /counsellor/{id}/claim|messages|resolve|handoff
                                         - counsellor workspace
   GET  /doctor/queue, GET/POST /doctor/{id}(/advice)
@@ -194,6 +196,10 @@ class LiveStartRequest(BaseModel):
 
 class LiveMessageRequest(BaseModel):
     text: str = Field(..., min_length=1)
+    guestId: Optional[str] = None
+
+
+class LiveCancelRequest(BaseModel):
     guestId: Optional[str] = None
 
 
@@ -704,6 +710,17 @@ def _check_conv_access(conv: dict, user: Optional[dict], guest_id: Optional[str]
         raise HTTPException(status_code=403, detail="This conversation belongs to someone else.")
 
 
+def _serialize_conv_for_patient(conv: dict, messages: list) -> dict:
+    """Same as _serialize_conv, plus how many staff are on duty right
+    now - the patient-facing widget uses this to tell "someone's on duty,
+    just hasn't claimed this yet" apart from "no one is watching this
+    queue at all", which the conversation's own status can't say on its
+    own (both look identical: status == 'waiting')."""
+    out = _serialize_conv(conv, messages)
+    out["counsellors_on_duty"] = auth.count_on_duty(STAFF_ROLES)
+    return out
+
+
 @app.post("/live/start")
 async def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
     user, guest_id = _identify_patient(x_user_token, req.guestId or x_guest_id)
@@ -718,7 +735,7 @@ async def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header
         reason_source="requested",
     )
     await hub.notify_staff("queue_changed")
-    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv["id"]))}
+    return {"success": True, "data": _serialize_conv_for_patient(conv, live_chat.list_messages(conv["id"]))}
 
 
 @app.get("/live/mine")
@@ -727,7 +744,7 @@ def live_mine(x_user_token: Optional[str] = Header(None), x_guest_id: Optional[s
     conv = live_chat.get_active_for_patient(patient_user_id=user["id"] if user else None, guest_token=None if user else x_guest_id)
     if not conv:
         return {"success": True, "data": None}
-    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv["id"]))}
+    return {"success": True, "data": _serialize_conv_for_patient(conv, live_chat.list_messages(conv["id"]))}
 
 
 @app.get("/live/{conv_id}")
@@ -735,6 +752,23 @@ def live_get(conv_id: str, x_user_token: Optional[str] = Header(None), x_guest_i
     user = _current_user(x_user_token)
     conv = live_chat.get_conversation(conv_id)
     _check_conv_access(conv, user, x_guest_id)
+    return {"success": True, "data": _serialize_conv_for_patient(conv, live_chat.list_messages(conv_id))}
+
+
+@app.post("/live/{conv_id}/cancel")
+async def live_cancel(conv_id: str, req: LiveCancelRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    """Lets the patient back out of the counsellor queue themselves while
+    still waiting, instead of being stuck in live mode indefinitely with
+    no way back to the assistant if no one claims the request (see the
+    module docstring's point about this being a real gap otherwise)."""
+    user = _current_user(x_user_token)
+    conv = live_chat.get_conversation(conv_id)
+    _check_conv_access(conv, user, req.guestId or x_guest_id)
+    try:
+        conv = live_chat.cancel(conv_id)
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+    await hub.notify_staff("queue_changed")
     return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
 
 
