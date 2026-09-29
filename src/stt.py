@@ -18,7 +18,7 @@ that into a 503, and the frontend falls back to the browser's own
 SpeechRecognition - so voice input keeps working either way, it just isn't
 self-hosted until a model is actually provisioned.
 
-Provisioning a model (not done by this code - see the constraint below):
+Provisioning a model:
   1. pip install vosk  (already in requirements - the library itself has
      no bundled model; models are a separate download)
   2. Download a Hindi model, e.g. vosk-model-small-hi-0.22 (~50 MB) from
@@ -28,12 +28,47 @@ A larger vosk-model-hi (bigger, more accurate) or an AI4Bharat/IndicWav2Vec
 checkpoint (github.com/AI4Bharat/vistaar) can be swapped in the same way -
 this module only needs a directory Vosk's Model() class can load.
 
-Note: this repo's own dev sandbox cannot download the model file itself
-(its network policy allows PyPI/npm but not alphacephei.com or
-huggingface.co), so the actual model was never fetched or accuracy-tested
-here. The integration below is real and exercised end-to-end against the
-"not configured" path; verifying real transcription accuracy needs to
-happen wherever VOSK_MODEL_PATH actually gets set.
+The Dockerfile now does steps 1-3 automatically at build time (see its
+"Self-hosted Hindi speech-to-text model" stage): it downloads
+vosk-model-small-hi-0.22.zip, unzips it to /app/models/vosk-hi, and sets
+VOSK_MODEL_PATH accordingly - so any real deployment built with normal
+internet access ships with self-hosted Hindi STT out of the box. That step
+is best-effort: if the fetch fails (offline build, mirror moved, corporate
+proxy), the image still builds and the app falls back to the browser's own
+SpeechRecognition, same as if VOSK_MODEL_PATH were never set.
+
+Session notes on verifying this (2026-09-29): this repo's own dev sandbox
+cannot reach a Hindi model directly - its network policy allows PyPI/npm/
+GitHub but returns a blocked CONNECT to alphacephei.com, huggingface.co,
+ggml.ggerganov.com, and github.io Pages mirrors (e.g. ccoreilly.github.io's
+vosk-browser demo assets); an AI4Bharat/Vakyansh model bucket on
+storage.googleapis.com was network-reachable but the object itself
+returned Google's own AccessDenied, unrelated to this sandbox's policy. A
+plain (non-LFS) GitHub mirror of the official small models
+(github.com/kercre123/vosk-models) WAS reachable, but only ships en/es/fr/
+de/ru/... - no Hindi - so it doesn't close the gap directly.
+
+That mirror was still useful to prove the pipeline is real rather than
+just gracefully degrading: the small English model was loaded via
+VOSK_MODEL_PATH, /stt/transcribe was fed genuine synthesized speech
+(espeak-ng) end-to-end, and it returned correct or near-correct text for
+short phrases (e.g. "i am feeling very dizzy today" transcribed exactly;
+a couple of phrases had minor word-level errors typical of a "small"
+Vosk model and robotic TTS input, not a code bug). The Dockerfile's own
+fetch-unzip-move shell logic was separately dry-run tested against a real
+model zip (served over a local HTTP server, since the sandbox's Docker
+build itself can't reach even Debian's own apt mirror to prove out the
+full image) and produces a correct Vosk model directory (am/conf/graph/
+ivector) exactly as Vosk's Model() expects, with the failure path cleanly
+leaving VOSK_MODEL_PATH unset-equivalent (no directory) rather than a
+half-extracted one.
+
+Net effect: the STT code path (config detection, ffmpeg conversion, Vosk
+recognition, graceful fallback) is proven correct with a real model and
+real audio. Hindi-specific accuracy has not been measured from inside
+this sandbox, purely because no Hindi model host is reachable from here -
+building this Dockerfile anywhere with normal internet access provisions
+and can then accuracy-test the real Hindi model.
 """
 
 import json
