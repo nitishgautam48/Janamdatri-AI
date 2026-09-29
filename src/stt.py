@@ -12,11 +12,25 @@ model - handles Hindi/Hinglish code-switching noticeably better than a
 browser engine tuned for English.
 
 This module is deliberately structured to degrade honestly rather than
-silently: if no model is configured/found, transcribe() raises
-SttNotConfigured with a clear message, the /stt/transcribe endpoint turns
-that into a 503, and the frontend falls back to the browser's own
-SpeechRecognition - so voice input keeps working either way, it just isn't
-self-hosted until a model is actually provisioned.
+silently: if no model is configured/found, transcribe_wav/transcribe_upload
+raise SttNotConfigured, StreamingRecognizer's constructor does the same,
+and the frontend falls back to the browser's own SpeechRecognition either
+way - so voice input keeps working regardless, it just isn't self-hosted
+until a model is actually provisioned.
+
+Two ways to use a configured model, both below:
+  - transcribe_wav/transcribe_upload (record a whole clip, then
+    transcribe it in one call) - POST /stt/transcribe, 503s if not
+    configured. Simple, but the caller only finds out what was said after
+    the recording finishes and uploads.
+  - StreamingRecognizer (feed it audio incrementally, get partial/final
+    results back as they're recognized) - WS /ws/stt, closes with code
+    4404 if not configured. This is what ChatWidget.jsx actually uses now
+    (see frontend-react/src/lib/live-stt.js): the patient sees words
+    appear while still talking, the actual "live" part of live voice
+    input. transcribe_upload/POST /stt/transcribe are kept as a working,
+    documented alternative (e.g. for a non-realtime "attach a voice note"
+    use case) - nothing in the current UI calls them anymore.
 
 Provisioning a model:
   1. pip install vosk  (already in requirements - the library itself has
@@ -69,6 +83,22 @@ real audio. Hindi-specific accuracy has not been measured from inside
 this sandbox, purely because no Hindi model host is reachable from here -
 building this Dockerfile anywhere with normal internet access provisions
 and can then accuracy-test the real Hindi model.
+
+Follow-up session notes (same day): added StreamingRecognizer + /ws/stt,
+replacing ChatWidget's self-hosted mic path (record full clip -> upload
+-> wait for one result) with real incremental streaming. Verified two
+ways against the same English model: (1) a direct WebSocket client
+streamed real (espeak-ng) audio in ~100ms chunks and printed each
+partial/final result with a timestamp - partials visibly grow word by
+word WHILE audio is still being sent, well before the stream ends, with
+only the final flush arriving after; (2) a real Playwright-driven
+Chromium browser, with its fake mic device pointed at one of those same
+WAV files (--use-file-for-fake-audio-capture), ran the actual
+getUserMedia -> AudioContext -> ScriptProcessorNode -> downsample -> WS
+pipeline in live-stt.js end-to-end, and the chat input visibly filled in
+live, word by word, while the widget was still in "listening" state -
+not just once at the end. Both confirm this is genuinely incremental,
+not a record-then-upload flow wearing a WebSocket.
 """
 
 import json
@@ -176,3 +206,44 @@ def transcribe_upload(raw_bytes: bytes) -> str:
             raise SttError(f"Could not convert the recorded audio: {result.stderr.decode(errors='replace')[-500:]}")
 
         return transcribe_wav(wav_path)
+
+
+class StreamingRecognizer:
+    """Incremental transcription for /ws/stt: unlike transcribe_upload
+    (record a whole clip, upload it, wait for one result), this feeds raw
+    PCM straight into Vosk as it arrives from the browser's microphone, so
+    the patient sees words appear while they're still talking instead of
+    only after they stop and a round-trip upload completes - the actual
+    "live" part of live voice input, not just self-hosted-vs-browser.
+
+    Expects mono 16-bit PCM at 16 kHz (see
+    frontend-react/src/lib/live-stt.js, which resamples the browser's mic
+    capture to exactly this before sending - Vosk itself has no format
+    flexibility here)."""
+
+    def __init__(self):
+        _load_model()
+        if _model is None:
+            raise SttNotConfigured(_model_load_error)
+        from vosk import KaldiRecognizer
+        self._recognizer = KaldiRecognizer(_model, 16000)
+        self._recognizer.SetWords(False)
+
+    def feed(self, pcm16_bytes: bytes) -> dict:
+        """One chunk of audio in. Returns {"final": True, "text": "..."}
+        the moment Vosk decides an utterance boundary was reached (usually
+        a short pause), or {"final": False, "text": "..."} with the
+        current in-progress guess otherwise - the "text" may be "" either
+        way (silence, or not enough signal yet to guess anything)."""
+        if self._recognizer.AcceptWaveform(pcm16_bytes):
+            text = json.loads(self._recognizer.Result()).get("text", "")
+            return {"final": True, "text": text}
+        text = json.loads(self._recognizer.PartialResult()).get("partial", "")
+        return {"final": False, "text": text}
+
+    def finish(self) -> str:
+        """Call once when the mic is switched off, to flush whatever
+        Vosk was still holding onto as an in-progress guess (otherwise
+        the last couple of words spoken right before stopping can be
+        silently dropped instead of committed)."""
+        return json.loads(self._recognizer.FinalResult()).get("text", "")

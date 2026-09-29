@@ -42,9 +42,14 @@ Endpoints reflect the layered architecture:
   WS   /ws/live/{id}, /ws/staff        - push invalidation for the above instead of fixed-interval
                                         polling (see src/ws_manager.py); each frontend poll loop also
                                         keeps a slow backstop interval in case a socket drops silently
-  POST /stt/transcribe                 - self-hosted speech-to-text (see src/stt.py) for the patient
-                                        chat's voice input; 503s (frontend falls back to the browser's
-                                        own SpeechRecognition) until a model is actually provisioned
+  POST /stt/transcribe                 - self-hosted speech-to-text (see src/stt.py), record-then-
+                                        upload path: 503s (frontend falls back to the browser's own
+                                        SpeechRecognition) until a model is actually provisioned
+  WS   /ws/stt                          - self-hosted streaming speech-to-text: partial/final
+                                        transcripts pushed back while the patient is still talking,
+                                        instead of only after a full clip uploads. Closes with code
+                                        4404 if no model is configured, so the frontend falls back
+                                        the same way /stt/transcribe's 503 does.
 """
 
 import json
@@ -992,6 +997,53 @@ async def stt_transcribe(file: UploadFile = File(...)):
     except stt.SttError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"success": True, "data": {"text": text}}
+
+
+# 4404 (not a registered WebSocket close code, in the app-defined 4000-4999
+# range) - lets the frontend tell "no model configured, fall back to the
+# browser recognizer" apart from an ordinary disconnect, without needing a
+# JSON message round-trip first just to say so.
+STT_WS_NOT_CONFIGURED = 4404
+
+
+@app.websocket("/ws/stt")
+async def ws_stt(websocket: WebSocket):
+    """Real-time streaming transcription: the browser sends raw mono
+    16-bit PCM @ 16kHz audio frames (binary) as the patient speaks, and
+    gets partial/final transcripts back as they're recognized - the
+    live-captions experience /stt/transcribe's record-then-upload can't
+    give, since that endpoint only returns anything after the whole clip
+    is captured and uploaded. See stt.StreamingRecognizer and
+    frontend-react/src/lib/live-stt.js.
+
+    No auth: this socket only ever holds a few seconds of in-flight audio
+    that's discarded the moment it's transcribed (nothing is written to
+    disk or a database here), the same trust level as the browser's own
+    on-device SpeechRecognition it's standing in for."""
+    await websocket.accept()
+    try:
+        recognizer = stt.StreamingRecognizer()
+    except stt.SttNotConfigured:
+        await websocket.close(code=STT_WS_NOT_CONFIGURED, reason="No self-hosted STT model configured.")
+        return
+
+    try:
+        while True:
+            frame = await websocket.receive()
+            if frame["type"] == "websocket.disconnect":
+                break
+            data = frame.get("bytes")
+            if data:
+                result = recognizer.feed(data)
+                if result["text"]:
+                    await websocket.send_json(result)
+            elif frame.get("text") == "stop":
+                final_text = recognizer.finish()
+                if final_text:
+                    await websocket.send_json({"final": True, "text": final_text})
+                break
+    except WebSocketDisconnect:
+        pass
 
 
 # ============================================================

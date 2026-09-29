@@ -4,6 +4,15 @@ import { useLang } from "../../context/LangContext";
 import { useAuth } from "../../context/AuthContext";
 import { KEYS, scopedGet, scopedSet } from "../../lib/storage";
 import { connectWs } from "../../lib/ws";
+import { startLiveStt } from "../../lib/live-stt";
+
+// Joins whichever of these text fragments are non-empty with a single
+// space - used to compose (already-typed text) + (finalized speech so
+// far this listening session) + (the current in-progress partial guess)
+// into one live-updating input value.
+function joinParts(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
 
 // Same set the backend uses to decide a reply was a clarifying question or
 // generic fallback rather than a real answer - mirrors the vanilla-JS
@@ -60,8 +69,13 @@ export default function ChatWidget() {
   const roundsRef = useRef(0);
   const scrollRef = useRef(null);
   const recognitionRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  // Holds the Promise returned by startLiveStt (it's async - awaits
+  // getUserMedia) while a self-hosted streaming session is active, so
+  // stopping it can await the same promise rather than racing a ref that
+  // might not be populated yet if the user taps stop very quickly.
+  const liveSttRef = useRef(null);
+  const baseInputRef = useRef(""); // whatever was already typed before this listening session started
+  const finalizedRef = useRef(""); // speech committed as "final" so far this listening session
   const seenLeaveRef = useRef(new Set());
 
   useEffect(() => {
@@ -81,15 +95,15 @@ export default function ChatWidget() {
     return () => recognition.stop();
   }, []);
 
-  // Self-hosted speech-to-text (Vosk, see src/stt.py) keeps a
-  // transcription on this server instead of sending the recording to
-  // Google's speech servers the way the browser's own SpeechRecognition
-  // does - see the Privacy page's AI disclosure. Only switches to it when
-  // the backend confirms a model is actually loaded AND this browser can
-  // record audio at all; otherwise the existing browser recognizer above
-  // keeps working exactly as before.
+  // Self-hosted speech-to-text (Vosk, see src/stt.py) streams the mic to
+  // /ws/stt and keeps transcription on this server instead of sending the
+  // recording to Google's speech servers the way the browser's own
+  // SpeechRecognition does - see the Privacy page's AI disclosure. Only
+  // switches to it when the backend confirms a model is actually loaded
+  // AND this browser can capture audio at all; otherwise the existing
+  // browser recognizer above keeps working exactly as before.
   useEffect(() => {
-    if (!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder)) return;
+    if (!(navigator.mediaDevices?.getUserMedia && (window.AudioContext || window.webkitAudioContext))) return;
     api.sttStatus().then((status) => {
       if (status.configured) {
         setSttMode("self-hosted");
@@ -107,46 +121,40 @@ export default function ChatWidget() {
     if (recognitionRef.current) recognitionRef.current.lang = lang === "en" ? "en-IN" : "hi-IN";
   }, [lang]);
 
-  async function startSelfHostedRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    audioChunksRef.current = [];
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-    recorder.onstop = async () => {
-      stream.getTracks().forEach((track) => track.stop());
-      setListening(false);
-      const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
-      try {
-        const { text } = await api.transcribeAudio(blob);
-        if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
-      } catch {
-        // A model that loaded fine at /stt/status time failing on this one
-        // clip is rare (and never silent-user-facing beyond "nothing got
-        // typed") - not worth a fallback re-recording that would ask the
-        // person to repeat themselves without explanation.
-      }
-    };
-    recorder.start();
-    mediaRecorderRef.current = recorder;
-  }
-
   async function toggleListening() {
     if (listening) {
-      if (sttMode === "self-hosted") mediaRecorderRef.current?.stop();
-      else recognitionRef.current?.stop();
       setListening(false);
+      if (sttMode === "self-hosted") {
+        const controller = await liveSttRef.current;
+        controller?.stop();
+      } else {
+        recognitionRef.current?.stop();
+      }
       return;
     }
     setListening(true);
     if (sttMode === "self-hosted") {
-      try {
-        await startSelfHostedRecording();
-      } catch {
-        // getUserMedia denied/unavailable this time - fall back to the
-        // browser recognizer for the rest of this session.
-        setSttMode("browser");
-        recognitionRef.current?.start();
-      }
+      baseInputRef.current = input;
+      finalizedRef.current = "";
+      liveSttRef.current = startLiveStt({
+        // Partials update the input live, word by word, while still
+        // talking - replaced wholesale each time rather than appended,
+        // since a partial is Vosk's whole current-utterance guess so far,
+        // not an incremental new fragment.
+        onPartial: (text) => setInput(joinParts(baseInputRef.current, finalizedRef.current, text)),
+        onFinal: (text) => {
+          if (text) finalizedRef.current = joinParts(finalizedRef.current, text);
+          setInput(joinParts(baseInputRef.current, finalizedRef.current));
+        },
+        onUnavailable: () => {
+          // No model configured server-side, mic access denied, or the
+          // socket couldn't connect - fall back to the browser recognizer
+          // for the rest of this session, same as the old record-then-
+          // upload path's failure handling did.
+          setSttMode("browser");
+          recognitionRef.current?.start();
+        },
+      });
     } else {
       recognitionRef.current?.start();
     }
