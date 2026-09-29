@@ -29,6 +29,12 @@ Endpoints reflect the layered architecture:
   POST /gis/nearby-facilities          - real hospitals/clinics/pharmacies near a lat/lon (server-side
                                          proxy to OpenStreetMap Overpass, which browsers can't call directly)
   GET  /gis/geocode                    - free-text place search (server-side proxy to Nominatim)
+  POST /live/start, GET /live/mine, GET/POST /live/{id}(/messages)
+                                        - patient side of live counsellor chat (x-user-token or x-guest-id)
+  POST /counsellor/duty, GET /counsellor/queue|mine, POST /counsellor/{id}/claim|messages|resolve|handoff
+                                        - counsellor workspace (role=counsellor)
+  GET  /doctor/queue, GET/POST /doctor/{id}(/advice)
+                                        - doctor's forwarded-case queue (role=doctor)
 """
 
 import json
@@ -40,7 +46,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import auth, document_extractor, gis
+from src import auth, document_extractor, gis, live_chat
 from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 
@@ -61,6 +67,7 @@ app = FastAPI(
 )
 
 auth.init_db()
+live_chat.init_db()
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 app.mount("/assets", StaticFiles(directory=REACT_DIST_DIR / "assets"), name="react-assets")
@@ -144,6 +151,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: Optional[str] = None
+    role: str = Field(default="patient", description="patient, counsellor, or doctor - see auth.py for the caveat on self-serve role signup")
 
 
 class LoginRequest(BaseModel):
@@ -161,10 +169,54 @@ class ChatRequest(BaseModel):
         default=0,
         description="How many consecutive clarifying/fallback replies have already failed to resolve this thread",
     )
+    guestId: Optional[str] = Field(
+        default=None,
+        description="Opaque per-browser id for a guest (no account) - lets a danger-sign escalation reach the "
+        "counsellor queue without requiring login, the same way a guest's assessment works everywhere else.",
+    )
+    lang: Optional[str] = Field(default="en", description="Patient's current UI language (en/hi/hinglish), shown to the counsellor")
+
+
+class LiveStartRequest(BaseModel):
+    reason: Optional[str] = None
+    guestId: Optional[str] = None
+    lang: Optional[str] = "en"
+
+
+class LiveMessageRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    guestId: Optional[str] = None
+
+
+class DutyRequest(BaseModel):
+    onDuty: bool
+
+
+class ResolveRequest(BaseModel):
+    outcome: str = Field(..., description="care | chat | emer | doc")
+    note: Optional[str] = ""
+
+
+class HandoffRequest(BaseModel):
+    note: str = Field(..., min_length=1)
+    urgency: str = Field(default="today", description="hour | today | routine")
+
+
+class DoctorAdviceRequest(BaseModel):
+    advice: str = Field(..., min_length=1)
 
 
 def _current_user(x_user_token: Optional[str]) -> Optional[dict]:
     return auth.get_user_by_token(x_user_token) if x_user_token else None
+
+
+def _require_role(x_user_token: Optional[str], role: str) -> dict:
+    user = _current_user(x_user_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in or session expired.")
+    if user["role"] != role:
+        raise HTTPException(status_code=403, detail=f"This action requires a {role} account.")
+    return user
 
 
 @app.get("/health")
@@ -179,7 +231,7 @@ def health():
 @app.post("/auth/register")
 def register(req: RegisterRequest):
     try:
-        token = auth.register(req.email, req.password, req.name)
+        token = auth.register(req.email, req.password, req.name, req.role)
     except auth.AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     user = auth.get_user_by_token(token)
@@ -497,7 +549,237 @@ def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
         except Exception as exc:
             print(f"Could not persist chat message: {exc}")
 
+    # Additive live-counsellor escalation: the scripted reply above always
+    # fires regardless of any of this - a human joining the conversation is
+    # a bonus the patient never waits on, never a gate in front of 108/102/
+    # KIRAN. Only a real danger signal (or an explicit self-harm flag)
+    # auto-creates a case in the counsellor queue; a merely moderate signal
+    # just offers the option (offerHuman) rather than forcing it.
+    severity = reason = reason_source = None
+    if result.get("intent") == "crisis_self_harm":
+        severity, reason, reason_source = "Critical", "Self-harm flag in chat", "self_harm"
+    elif result.get("isEmergency") and result.get("dangerLadder"):
+        rung = result["dangerLadder"].get("rung", 0)
+        severity = "Critical" if rung >= 5 else "Severe"
+        phrase = result["dangerLadder"].get("matchedPhrase") or "a danger sign"
+        reason, reason_source = f"Danger sign: {phrase}", "danger_sign"
+    elif result.get("intent") in ("mild_symptom", "mild_symptom_followup"):
+        result["offerHuman"] = True
+
+    if severity and (user or req.guestId):
+        try:
+            patient_name = (user["name"] or user["email"].split("@")[0]) if user else "Guest"
+            conv = live_chat.start_or_escalate(
+                patient_user_id=user["id"] if user else None,
+                guest_token=None if user else req.guestId,
+                patient_name=patient_name,
+                lang=req.lang or "en",
+                severity_level=severity,
+                reason=reason,
+                reason_source=reason_source,
+                initial_message=req.message,
+            )
+            result["escalatedToLive"] = True
+            result["liveConversationId"] = conv["id"]
+        except Exception as exc:
+            # Escalating to the live queue must never break the scripted
+            # reply the person is already waiting on.
+            print(f"Could not escalate to live queue: {exc}")
+
     return {"success": True, "data": result}
+
+
+# ============================================================
+#  LIVE COUNSELLOR CHAT
+#
+#  A human-in-the-loop layer on top of the chat above (see
+#  src/live_chat.py for the full design rationale). Patient-side
+#  endpoints identify the caller by x-user-token OR x-guest-id (a
+#  per-browser opaque token the frontend generates for guests, mirroring
+#  how every other guest feature in this app already scopes itself
+#  client-side - except a live transcript has to live server-side to
+#  exist at all, which is a real, deliberate change to this app's
+#  guest-privacy promise; see the Privacy page).
+# ============================================================
+
+
+def _identify_patient(x_user_token: Optional[str], x_guest_id: Optional[str]):
+    user = _current_user(x_user_token)
+    if user:
+        return user, None
+    if x_guest_id:
+        return None, x_guest_id
+    raise HTTPException(status_code=400, detail="Log in, continue as guest, or resend with a guest id.")
+
+
+def _serialize_conv(conv: dict, messages: list = None) -> dict:
+    out = dict(conv)
+    out.pop("context_json", None)
+    if messages is not None:
+        out["messages"] = messages
+    return out
+
+
+def _check_conv_access(conv: dict, user: Optional[dict], guest_id: Optional[str]):
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    owns = (user and conv["patient_user_id"] == user["id"]) or (guest_id and conv["guest_token"] == guest_id)
+    if not owns:
+        raise HTTPException(status_code=403, detail="This conversation belongs to someone else.")
+
+
+@app.post("/live/start")
+def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    user, guest_id = _identify_patient(x_user_token, req.guestId or x_guest_id)
+    patient_name = (user["name"] or user["email"].split("@")[0]) if user else "Guest"
+    conv = live_chat.start_or_escalate(
+        patient_user_id=user["id"] if user else None,
+        guest_token=guest_id,
+        patient_name=patient_name,
+        lang=req.lang or "en",
+        severity_level="Minimal",
+        reason=req.reason or "Asked to talk to a person",
+        reason_source="requested",
+    )
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv["id"]))}
+
+
+@app.get("/live/mine")
+def live_mine(x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    conv = live_chat.get_active_for_patient(patient_user_id=user["id"] if user else None, guest_token=None if user else x_guest_id)
+    if not conv:
+        return {"success": True, "data": None}
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv["id"]))}
+
+
+@app.get("/live/{conv_id}")
+def live_get(conv_id: str, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    conv = live_chat.get_conversation(conv_id)
+    _check_conv_access(conv, user, x_guest_id)
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
+
+
+@app.post("/live/{conv_id}/messages")
+def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    conv = live_chat.get_conversation(conv_id)
+    _check_conv_access(conv, user, req.guestId or x_guest_id)
+    if conv["status"] == live_chat.STATUS_CLOSED:
+        raise HTTPException(status_code=409, detail="This conversation has ended.")
+    live_chat.add_message(conv_id, "patient", req.text)
+    # A message sent before anyone has claimed yet - the same "don't wait
+    # for the chat" reminder the scripted bot itself would give.
+    if conv["status"] == live_chat.STATUS_WAITING:
+        live_chat.add_message(
+            conv_id, "bot",
+            "Thank you. If you're bleeding heavily or feel faint, call 108 now - don't wait for the chat.\n"
+            "खून ज़्यादा हो या चक्कर आए तो अभी 108 पर कॉल करें।",
+        )
+    return {"success": True, "data": {"sent": True}}
+
+
+@app.post("/counsellor/duty")
+def counsellor_duty(req: DutyRequest, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    auth.set_duty(user["id"], req.onDuty)
+    return {"success": True, "data": {"onDuty": req.onDuty}}
+
+
+@app.get("/counsellor/queue")
+def counsellor_queue(x_user_token: Optional[str] = Header(None)):
+    _require_role(x_user_token, "counsellor")
+    return {"success": True, "data": {"queue": [_serialize_conv(c) for c in live_chat.list_queue()]}}
+
+
+@app.get("/counsellor/mine")
+def counsellor_mine(x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    mine = live_chat.list_mine(user["id"])
+    return {
+        "success": True,
+        "data": {
+            "conversations": [_serialize_conv(c) for c in mine],
+            "resolvedToday": live_chat.count_resolved_today(user["id"]),
+        },
+    }
+
+
+@app.get("/counsellor/{conv_id}")
+def counsellor_conversation(conv_id: str, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    conv = live_chat.get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    if conv["status"] != live_chat.STATUS_WAITING and conv["counsellor_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="This case belongs to a different counsellor.")
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
+
+
+@app.post("/counsellor/{conv_id}/claim")
+def counsellor_claim(conv_id: str, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    try:
+        conv = live_chat.claim(conv_id, user["id"])
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
+
+
+@app.post("/counsellor/{conv_id}/messages")
+def counsellor_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    try:
+        live_chat.counsellor_send(conv_id, user["id"], req.text)
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"success": True, "data": {"sent": True}}
+
+
+@app.post("/counsellor/{conv_id}/resolve")
+def counsellor_resolve(conv_id: str, req: ResolveRequest, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    try:
+        live_chat.resolve(conv_id, user["id"], req.outcome, req.note or "")
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"success": True, "data": {"resolved": True}}
+
+
+@app.post("/counsellor/{conv_id}/handoff")
+def counsellor_handoff(conv_id: str, req: HandoffRequest, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "counsellor")
+    try:
+        live_chat.handoff_to_doctor(conv_id, user["id"], req.note, req.urgency)
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"success": True, "data": {"forwarded": True}}
+
+
+@app.get("/doctor/queue")
+def doctor_queue(reviewed: bool = False, x_user_token: Optional[str] = Header(None)):
+    _require_role(x_user_token, "doctor")
+    return {"success": True, "data": {"cases": [_serialize_conv(c) for c in live_chat.list_doctor_queue(reviewed)]}}
+
+
+@app.get("/doctor/{conv_id}")
+def doctor_conversation(conv_id: str, x_user_token: Optional[str] = Header(None)):
+    _require_role(x_user_token, "doctor")
+    conv = live_chat.get_conversation(conv_id)
+    if not conv or not conv["forwarded"]:
+        raise HTTPException(status_code=404, detail="This case hasn't been forwarded to a doctor.")
+    return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
+
+
+@app.post("/doctor/{conv_id}/advice")
+def doctor_advice(conv_id: str, req: DoctorAdviceRequest, x_user_token: Optional[str] = Header(None)):
+    user = _require_role(x_user_token, "doctor")
+    try:
+        live_chat.submit_doctor_advice(conv_id, user["id"], req.advice)
+    except live_chat.LiveChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"success": True, "data": {"submitted": True}}
 
 
 # ============================================================

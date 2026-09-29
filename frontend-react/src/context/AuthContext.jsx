@@ -27,14 +27,16 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     setGuestState(false);
     setIdentityKey((k) => k + 1);
+    return data.user;
   }, []);
 
-  const register = useCallback(async (email, password, name) => {
-    const data = await api.register(email, password, name);
+  const register = useCallback(async (email, password, name, role) => {
+    const data = await api.register(email, password, name, role);
     setSession(data.token, data.user);
     setUser(data.user);
     setGuestState(false);
     setIdentityKey((k) => k + 1);
+    return data.user;
   }, []);
 
   const continueAsGuest = useCallback(() => {
@@ -68,6 +70,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     guest,
+    role: user?.role || null,
     isAuthed: !!user,
     hasIdentity: !!user || guest,
     identityKey,

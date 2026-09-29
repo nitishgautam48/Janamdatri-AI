@@ -1,7 +1,11 @@
-import { authHeaders, clearSession, getToken } from "./storage";
+import { authHeaders, clearSession, getOrCreateGuestChatId, getToken } from "./storage";
 
-async function request(path, { method = "GET", body, auth = false } = {}) {
+async function request(path, { method = "GET", body, auth = false, guestFallback = false } = {}) {
   const headers = { "Content-Type": "application/json", ...(auth ? authHeaders() : {}) };
+  // A live-chat call identifies the caller by x-user-token when logged
+  // in, or x-guest-id otherwise - never both, and never neither, since
+  // the backend needs exactly one way to know whose conversation this is.
+  if (guestFallback && !headers["x-user-token"]) headers["x-guest-id"] = getOrCreateGuestChatId();
   let res;
   try {
     res = await fetch(path, {
@@ -41,7 +45,7 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
 }
 
 export const api = {
-  register: (email, password, name) => request("/auth/register", { method: "POST", body: { email, password, name } }),
+  register: (email, password, name, role) => request("/auth/register", { method: "POST", body: { email, password, name, role } }),
   login: (email, password) => request("/auth/login", { method: "POST", body: { email, password } }),
   me: () => request("/auth/me", { auth: true }),
   deleteAccount: () => request("/auth/account", { method: "DELETE", auth: true }),
@@ -64,9 +68,30 @@ export const api = {
   nutritionAssess: (body) => request("/nutrition-assess", { method: "POST", body, auth: true }),
   nutritionChecksMine: () => request("/nutrition-checks/mine", { auth: true }),
 
-  chat: (body) => request("/chat", { method: "POST", body }),
+  chat: (body) => request("/chat", { method: "POST", body: { ...body, guestId: getOrCreateGuestChatId() } }),
 
   helplines: () => request("/helplines"),
+
+  // --- Live counsellor chat: patient side ---
+  liveStart: (body) => request("/live/start", { method: "POST", body: body || {}, auth: true, guestFallback: true }),
+  liveMine: () => request("/live/mine", { auth: true, guestFallback: true }),
+  liveGet: (id) => request(`/live/${id}`, { auth: true, guestFallback: true }),
+  liveSend: (id, text) => request(`/live/${id}/messages`, { method: "POST", body: { text }, auth: true, guestFallback: true }),
+
+  // --- Live counsellor chat: counsellor side ---
+  counsellorDuty: (onDuty) => request("/counsellor/duty", { method: "POST", body: { onDuty }, auth: true }),
+  counsellorQueue: () => request("/counsellor/queue", { auth: true }),
+  counsellorMine: () => request("/counsellor/mine", { auth: true }),
+  counsellorConversation: (id) => request(`/counsellor/${id}`, { auth: true }),
+  counsellorClaim: (id) => request(`/counsellor/${id}/claim`, { method: "POST", auth: true }),
+  counsellorSend: (id, text) => request(`/counsellor/${id}/messages`, { method: "POST", body: { text }, auth: true }),
+  counsellorResolve: (id, outcome, note) => request(`/counsellor/${id}/resolve`, { method: "POST", body: { outcome, note }, auth: true }),
+  counsellorHandoff: (id, note, urgency) => request(`/counsellor/${id}/handoff`, { method: "POST", body: { note, urgency }, auth: true }),
+
+  // --- Forwarded-case queue: doctor side ---
+  doctorQueue: (reviewed) => request(`/doctor/queue?reviewed=${reviewed ? "true" : "false"}`, { auth: true }),
+  doctorConversation: (id) => request(`/doctor/${id}`, { auth: true }),
+  doctorAdvice: (id, advice) => request(`/doctor/${id}/advice`, { method: "POST", body: { advice }, auth: true }),
 
   nearbyFacilities: (lat, lon) => request("/gis/nearby-facilities", { method: "POST", body: { lat, lon } }),
   geocodePlace: (q) => request(`/gis/geocode?q=${encodeURIComponent(q)}`),

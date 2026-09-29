@@ -5,6 +5,7 @@
 const TOKEN_KEY = "janamdatri_token";
 const USER_KEY = "janamdatri_user";
 const GUEST_KEY = "janamdatri_guest";
+const GUEST_CHAT_ID_KEY = "janamdatri_guest_chat_id";
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -40,6 +41,24 @@ export function clearSession() {
 export function authHeaders() {
   const token = getToken();
   return token ? { "x-user-token": token } : {};
+}
+
+// A live counsellor conversation needs SOMETHING stable server-side to
+// hand back to on the next poll, even for a guest - unlike every other
+// guest feature, which stays purely client-side (see live_chat.py's own
+// module docstring for why this is a deliberate, narrow exception to
+// that promise). Generated once per browser, not tied to any account.
+export function getOrCreateGuestChatId() {
+  try {
+    let id = localStorage.getItem(GUEST_CHAT_ID_KEY);
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem(GUEST_CHAT_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return "guest-fallback";
+  }
 }
 
 function identityId() {

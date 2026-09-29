@@ -5,22 +5,47 @@ import { useLang } from "../../context/LangContext";
 import Button from "../ui/Button";
 import Pill from "../ui/Pill";
 
+const LANGS = [
+  { code: "en", key: "lang.en" },
+  { code: "hi", key: "lang.hi" },
+  { code: "hinglish", key: "lang.hinglish" },
+];
+
+const ROLES = [
+  { icon: "ph-stethoscope", labelKey: "welcome.roleProvider", linkKey: "welcome.providerLink", to: "/provider" },
+  { icon: "ph-users-three", labelKey: "welcome.roleCaregiver", linkKey: "welcome.caregiverLink", to: "/caregiver" },
+  { icon: "ph-headset", labelKey: "welcome.roleCounsellor", linkKey: "welcome.counsellorLink", to: "/care-team" },
+];
+
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
 export default function WelcomeGate() {
   const { login, register, continueAsGuest } = useAuth();
-  const { t } = useLang();
+  const { lang, setLangDirect, t } = useLang();
   const navigate = useNavigate();
   const [tab, setTab] = useState("login");
   const [form, setForm] = useState({ email: "", password: "", name: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
+    setFieldError(null);
+    if (!EMAIL_RE.test(form.email)) {
+      setFieldError("email");
+      return;
+    }
+    if (form.password.length < 6) {
+      setFieldError("pw");
+      return;
+    }
     setBusy(true);
     try {
       if (tab === "login") await login(form.email, form.password);
-      else await register(form.email, form.password, form.name || null);
+      else await register(form.email, form.password, form.name || null, "patient");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -31,6 +56,28 @@ export default function WelcomeGate() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg-soft px-4 py-16">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-8 shadow-xl shadow-black/5">
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <div role="radiogroup" aria-label="Language" style={{ display: "flex", border: "1px solid var(--color-border)", borderRadius: 99, overflow: "hidden", padding: 2, gap: 2 }}>
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                role="radio"
+                aria-checked={lang === l.code}
+                onClick={() => setLangDirect(l.code)}
+                style={{
+                  padding: "7px 14px", minHeight: 36, border: 0, borderRadius: 99, cursor: "pointer", fontSize: 13,
+                  background: lang === l.code ? "var(--color-primary-soft)" : "transparent",
+                  color: lang === l.code ? "var(--color-primary)" : "var(--color-muted)",
+                }}
+              >
+                {t(l.key)}
+              </button>
+            ))}
+          </div>
+          <i className="ph ph-translate" style={{ fontSize: 18, color: "var(--color-faint)" }} aria-hidden="true" />
+        </div>
+
         <div className="mb-8 text-center">
           <div className="mb-3 flex justify-center">
             <Pill tone="primary">WELCOME</Pill>
@@ -45,7 +92,7 @@ export default function WelcomeGate() {
             <button
               key={tb}
               type="button"
-              onClick={() => setTab(tb)}
+              onClick={() => { setTab(tb); setFieldError(null); setError(""); }}
               className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
                 tab === tb ? "bg-primary text-paper-ink" : "text-muted hover:text-ink"
               }`}
@@ -57,33 +104,65 @@ export default function WelcomeGate() {
 
         <form onSubmit={onSubmit} className="space-y-3">
           {tab === "signup" && (
-            <input
-              aria-label="Name (optional)"
-              placeholder="Name (optional)"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-            />
+            <div className="field">
+              <label htmlFor="welcome-name">{t("welcome.name")} <span style={{ color: "var(--color-faint)" }}>{t("welcome.optional")}</span></label>
+              <input
+                id="welcome-name"
+                aria-label="Name (optional)"
+                autoComplete="name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                className="w-full rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                style={{ height: 44 }}
+              />
+            </div>
           )}
-          <input
-            type="email"
-            required
-            aria-label="Email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="w-full rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
-          <input
-            type="password"
-            required
-            aria-label="Password"
-            minLength={tab === "signup" ? 6 : undefined}
-            placeholder={tab === "signup" ? "Password (min 6 characters)" : "Password"}
-            value={form.password}
-            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-            className="w-full rounded-md border border-border-strong bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-          />
+          <div className="field">
+            <label htmlFor="welcome-email">{t("welcome.email")}</label>
+            <input
+              id="welcome-email"
+              type="email"
+              required
+              autoComplete="email"
+              aria-label="Email"
+              placeholder="name@example.com"
+              value={form.email}
+              onChange={(e) => { setForm((f) => ({ ...f, email: e.target.value })); setFieldError(null); }}
+              className="w-full rounded-md border bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/25"
+              style={{ height: 44, borderColor: fieldError === "email" ? "var(--color-critical)" : "var(--color-border-strong)" }}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="welcome-password">{t("welcome.password")}</label>
+            <div style={{ position: "relative" }}>
+              <input
+                id="welcome-password"
+                type={showPw ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                aria-label="Password"
+                minLength={tab === "signup" ? 6 : undefined}
+                placeholder={tab === "signup" ? "Password (min 6 characters)" : "Password"}
+                value={form.password}
+                onChange={(e) => { setForm((f) => ({ ...f, password: e.target.value })); setFieldError(null); }}
+                className="w-full rounded-md border bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/25"
+                style={{ height: 44, width: "100%", paddingRight: 44, borderColor: fieldError === "pw" ? "var(--color-critical)" : "var(--color-border-strong)" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={t("welcome.showPassword")}
+                style={{ position: "absolute", right: 2, top: 2, width: 40, height: 40, border: 0, background: "none", cursor: "pointer", color: "var(--color-muted)" }}
+              >
+                <i className={`ph ${showPw ? "ph-eye-slash" : "ph-eye"}`} style={{ fontSize: 18 }} />
+              </button>
+            </div>
+          </div>
+          {fieldError && (
+            <p style={{ fontSize: 13, color: "var(--color-critical)", display: "flex", gap: 6, alignItems: "center" }}>
+              <i className="ph ph-warning-circle" />{fieldError === "email" ? t("welcome.errEmail") : t("welcome.errPassword")}
+            </p>
+          )}
           {error && <p className="text-sm text-critical">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? "…" : tab === "login" ? t("welcome.login") : t("welcome.signup")}
@@ -92,7 +171,7 @@ export default function WelcomeGate() {
 
         <div className="my-6 flex items-center gap-3 text-xs text-faint">
           <span className="h-px flex-1 bg-border" />
-          or
+          {t("welcome.or")}
           <span className="h-px flex-1 bg-border" />
         </div>
 
@@ -101,20 +180,34 @@ export default function WelcomeGate() {
         </Button>
         <p className="mt-3 text-center text-xs leading-relaxed text-faint">{t("welcome.guestNote")}</p>
 
-        <button
-          type="button"
-          onClick={() => navigate("/provider")}
-          className="mt-5 w-full text-center text-xs font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-        >
-          👩‍⚕️ {t("welcome.providerLink")}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/caregiver")}
-          className="mt-2 w-full text-center text-xs font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-        >
-          👪 I'm a family member with a share code →
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", borderRadius: 8, background: "rgba(233,233,237,0.03)", boxShadow: "0 0 0 1px rgba(233,233,237,0.08)", marginTop: 16 }}>
+          <i className="ph ph-shield-check" style={{ fontSize: 18, color: "var(--color-muted)", marginTop: 1 }} />
+          <div style={{ flex: 1, fontSize: 13, lineHeight: 1.45, color: "var(--color-muted)" }}>
+            {t("welcome.safety")} <a href="tel:108" style={{ color: "oklch(0.85 0.08 25)", whiteSpace: "nowrap" }}>{t("welcome.call108")}</a>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 8, paddingTop: 16 }}>
+          <div style={{ fontSize: 12, color: "var(--color-faint)" }}>{t("welcome.notPatient")}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 6 }}>
+            {ROLES.map((r) => (
+              <button
+                key={r.to}
+                type="button"
+                title={t(r.linkKey)}
+                onClick={() => navigate(r.to)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", minHeight: 44,
+                  borderRadius: 8, border: "1px solid var(--color-border)", background: "none", cursor: "pointer",
+                  textAlign: "left", fontSize: 13, color: "var(--color-neutral-300, var(--color-ink))",
+                }}
+              >
+                <i className={`ph ${r.icon}`} style={{ fontSize: 17, color: "var(--color-primary)", flex: "none" }} />
+                <span style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>{t(r.labelKey)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

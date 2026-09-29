@@ -20,6 +20,14 @@ const SUGGESTED_PROMPTS = [
   "I've been feeling low lately",
 ];
 
+// How often to poll a live conversation for new messages/status while
+// this widget is open - a deliberate polling tradeoff (not a websocket)
+// matching ProviderPage's own precedent elsewhere in this app: close
+// enough to "live" for a triage/support chat without new push
+// infrastructure. See src/live_chat.py's module docstring for the fuller
+// design rationale.
+const LIVE_POLL_MS = 3000;
+
 // Anchored bottom-right with a top offset and z-30 (TopBar is z-40), so
 // the header can never end up hidden behind it. The bug in the old
 // vanilla-JS widget was a full-viewport panel starting at top:0 that sat
@@ -34,17 +42,13 @@ export default function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [liveConv, setLiveConv] = useState(null);
   const contextRef = useRef("");
   const roundsRef = useRef(0);
   const scrollRef = useRef(null);
   const recognitionRef = useRef(null);
+  const seenLeaveRef = useRef(new Set());
 
-  // Voice input via the browser's own Speech Recognition (no backend/API
-  // change needed) - a first step toward the voice/Hinglish support the
-  // product spec calls for later. Recognition language follows the
-  // current UI language (hi-IN for Hindi) for better accuracy; the mic
-  // button only renders where the browser actually supports this API
-  // (notably absent in Firefox), so it degrades to text-only there.
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -85,18 +89,77 @@ export default function ChatWidget() {
     setMessages(saved && saved.length ? saved : [GREETING]);
     contextRef.current = "";
     roundsRef.current = 0;
+    api.liveMine().then((conv) => setLiveConv(conv)).catch(() => {});
   }, [identityKey]);
+
+  // Poll the active live conversation while one exists - the closest
+  // thing to "live" this widget does, short of a websocket.
+  useEffect(() => {
+    if (!liveConv || liveConv.status === "closed") return;
+    const iv = setInterval(async () => {
+      try {
+        const fresh = await api.liveGet(liveConv.id);
+        setLiveConv(fresh);
+      } catch {
+        /* transient poll failure - next tick tries again */
+      }
+    }, LIVE_POLL_MS);
+    return () => clearInterval(iv);
+  }, [liveConv?.id, liveConv?.status]);
+
+  // Once a live conversation closes, fold its transcript into the
+  // widget's own local history (so the record isn't lost) and drop back
+  // to bot-only mode for whatever the patient types next.
+  useEffect(() => {
+    if (!liveConv || liveConv.status !== "closed" || seenLeaveRef.current.has(liveConv.id)) return;
+    seenLeaveRef.current.add(liveConv.id);
+    setMessages((m) => {
+      const next = [...m, { sender: "bot", text: t("chat.chatEnded") }];
+      scopedSet(KEYS.CHAT_HISTORY, next.slice(-40));
+      return next;
+    });
+    setLiveConv(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveConv?.status]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, open]);
+  }, [messages, liveConv?.messages?.length, open]);
+
+  async function startLive(reason) {
+    try {
+      const conv = await api.liveStart({ reason, lang });
+      setLiveConv(conv);
+    } catch {
+      setMessages((m) => [...m, { sender: "bot", text: "Couldn't reach a counsellor right now - please call 108/102 if this is urgent." }]);
+    }
+  }
+
+  async function sendLive(text) {
+    if (!liveConv) return;
+    try {
+      await api.liveSend(liveConv.id, text);
+      const fresh = await api.liveGet(liveConv.id);
+      setLiveConv(fresh);
+    } catch {
+      /* the next poll will resync; a single failed send isn't fatal here */
+    }
+  }
 
   async function send(overrideText) {
     const message = (overrideText ?? input).trim();
     if (!message || sending) return;
+    setInput("");
+
+    if (liveConv && liveConv.status !== "closed") {
+      setSending(true);
+      await sendLive(message);
+      setSending(false);
+      return;
+    }
+
     const withUser = [...messages, { sender: "user", text: message }];
     setMessages(withUser);
-    setInput("");
     setSending(true);
     try {
       const data = await api.chat({
@@ -104,7 +167,7 @@ export default function ChatWidget() {
         contextMessage: contextRef.current || undefined,
         unresolvedRounds: roundsRef.current,
       });
-      const withReply = [...withUser, { sender: "bot", text: data.reply, isEmergency: data.isEmergency, relatedPrompts: data.relatedPrompts }];
+      const withReply = [...withUser, { sender: "bot", text: data.reply, isEmergency: data.isEmergency, relatedPrompts: data.relatedPrompts, offerHuman: data.offerHuman }];
       setMessages(withReply);
       scopedSet(KEYS.CHAT_HISTORY, withReply.slice(-40));
       if (UNRESOLVED_INTENTS.has(data.intent)) {
@@ -114,12 +177,18 @@ export default function ChatWidget() {
         contextRef.current = "";
         roundsRef.current = 0;
       }
+      if (data.escalatedToLive && data.liveConversationId) {
+        const conv = await api.liveGet(data.liveConversationId).catch(() => null);
+        if (conv) setLiveConv(conv);
+      }
     } catch {
       setMessages((m) => [...m, { sender: "bot", text: "Sorry, something went wrong reaching the assistant. Please try again." }]);
     } finally {
       setSending(false);
     }
   }
+
+  const liveMode = !!liveConv && liveConv.status !== "closed";
 
   return (
     <>
@@ -142,13 +211,27 @@ export default function ChatWidget() {
           className="fixed bottom-24 right-5 z-30 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl shadow-black/50 lg:bottom-5">
           <div className="flex items-center justify-between border-b border-border bg-bg-soft px-4 py-3">
             <span className="text-sm font-semibold text-ink">✨ {t("chat.title")}</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-muted hover:text-ink">
-              ✕
-            </button>
+            <div className="flex items-center gap-3">
+              {!liveMode && (
+                <button type="button" onClick={() => startLive("Asked to talk to a person")} className="text-xs font-semibold text-primary hover:underline">
+                  <i className="ph ph-headset" /> {t("chat.talkToSomeone")}
+                </button>
+              )}
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-muted hover:text-ink">✕</button>
+            </div>
           </div>
 
+          {liveMode && (
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-critical/30 bg-critical-soft px-3 py-1.5 text-xs text-critical">
+              <span className="flex-1">{t("chat.emergencyStrip")}</span>
+              <a href="tel:108" className="rounded-full bg-critical px-2 py-0.5 font-bold text-white">108</a>
+              <a href="tel:102" className="rounded-full border border-critical/50 px-2 py-0.5">102</a>
+              <a href="tel:18005990019" className="rounded-full border border-critical/50 px-2 py-0.5">KIRAN</a>
+            </div>
+          )}
+
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {messages.map((m, i) => (
+            {!liveMode && messages.map((m, i) => (
               <div key={i}>
                 <div className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
                   <p
@@ -163,19 +246,17 @@ export default function ChatWidget() {
                     {m.text}
                   </p>
                 </div>
-                {/* Related follow-up chips only on the most recent bot reply -
-                    what makes this feel like an ongoing conversation rather
-                    than a one-shot Q&A, without cluttering the whole thread
-                    with stale suggestions from earlier turns. */}
+                {i === messages.length - 1 && m.sender === "bot" && !sending && m.offerHuman && (
+                  <div className="mt-2">
+                    <button type="button" onClick={() => startLive("Asked for a person after a symptom question")} className="rounded-full border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary-soft">
+                      <i className="ph ph-headset" /> {t("chat.talkToSomeone")}
+                    </button>
+                  </div>
+                )}
                 {i === messages.length - 1 && m.sender === "bot" && !sending && m.relatedPrompts?.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {m.relatedPrompts.map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => send(p)}
-                        className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary"
-                      >
+                      <button key={p} type="button" onClick={() => send(p)} className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary">
                         {p}
                       </button>
                     ))}
@@ -183,6 +264,44 @@ export default function ChatWidget() {
                 )}
               </div>
             ))}
+
+            {liveMode && liveConv.status === "waiting" && (
+              <p className="rounded-xl border border-dashed border-warning/60 bg-warning-soft px-3 py-2 text-xs leading-relaxed text-ink">
+                <i className="ph ph-hourglass-medium" /> {t("chat.waitingForCounsellor")}
+              </p>
+            )}
+
+            {liveMode && liveConv.messages.map((m) => {
+              if (m.sender_kind === "system") {
+                if (m.system_kind === "join") {
+                  return (
+                    <div key={m.id} className="rounded-2xl border border-primary bg-primary-soft p-3 text-sm text-ink">
+                      <div className="mb-1 flex items-center gap-2 font-semibold text-primary"><i className="ph ph-user-check" /> {t("chat.connectedWith")}</div>
+                    </div>
+                  );
+                }
+                if (m.system_kind === "fwd") {
+                  return <p key={m.id} className="text-center text-xs text-muted">{t("chat.forwardedToDoctor")}</p>;
+                }
+                return null;
+              }
+              const mine = m.sender_kind === "patient";
+              const isBot = m.sender_kind === "bot";
+              const isCounsellor = m.sender_kind === "counsellor";
+              return (
+                <div key={m.id}>
+                  {isCounsellor && <div className="mb-0.5 text-[11px] font-medium text-primary">{t("chat.counsellorLabel")}</div>}
+                  <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                    <p className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                      mine ? "bg-primary text-paper-ink" : isCounsellor ? "bg-surface-hover text-ink ring-1 ring-primary/40" : isBot ? "border border-dashed border-border-strong text-muted" : "bg-surface-hover text-ink"
+                    }`}>
+                      {m.text}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+
             {sending && (
               <p className="flex items-center gap-1 text-xs text-muted" aria-live="polite">
                 <span className="animate-pulse">●</span>
@@ -191,15 +310,10 @@ export default function ChatWidget() {
               </p>
             )}
 
-            {messages.length === 1 && !sending && (
+            {!liveMode && messages.length === 1 && !sending && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {SUGGESTED_PROMPTS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => send(p)}
-                    className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary"
-                  >
+                  <button key={p} type="button" onClick={() => send(p)} className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary">
                     {p}
                   </button>
                 ))}
@@ -226,9 +340,6 @@ export default function ChatWidget() {
                 type="button"
                 onClick={toggleListening}
                 aria-label={listening ? "Stop voice input" : "Speak your message"}
-                // 44px (h-11 w-11), not 36px - the minimum comfortable touch
-                // target, and this is a corner widget people often tap
-                // one-handed.
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base transition-colors ${
                   listening ? "animate-pulse border-critical bg-critical-soft text-critical" : "border-border-strong text-muted hover:text-ink"
                 }`}

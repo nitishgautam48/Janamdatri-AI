@@ -136,6 +136,7 @@ export default function PrivacyPage() {
             <li>{t("privacy.access1")}</li>
             <li>{t("privacy.access2")}</li>
             <li>{t("privacy.access3")}</li>
+            <li>{t("privacy.access4")}</li>
           </ul>
         </InfoCard>
 

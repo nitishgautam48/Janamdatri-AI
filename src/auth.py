@@ -7,6 +7,14 @@ stored server-side, sent back by the client as `x-user-token`.
 Accounts are entirely optional - see the "Continue as Guest" path in the
 frontend. Logging in only adds: a saved profile, and assessments/chat tied
 to the account instead of living solely in the browser's localStorage.
+
+`role` (patient/counsellor/doctor) gates access to the counsellor
+workspace and doctor queue (see src/live_chat.py). Self-registration
+accepts any role at signup - there is no verification step confirming a
+"counsellor" or "doctor" signup is an actual vetted staff member. That's
+a real gap for anything beyond a pilot with a known, small team; a
+production deployment needs an invite/approval step before this role
+grants access to live patient conversations.
 """
 
 import hashlib
@@ -35,6 +43,9 @@ def _connect():
     return conn
 
 
+VALID_ROLES = ("patient", "counsellor", "doctor")
+
+
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = _connect()
@@ -44,7 +55,9 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             name TEXT,
             password_hash TEXT NOT NULL,
-            created_at REAL NOT NULL
+            created_at REAL NOT NULL,
+            role TEXT NOT NULL DEFAULT 'patient',
+            on_duty INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS sessions (
             token TEXT PRIMARY KEY,
@@ -79,6 +92,20 @@ def init_db():
             revoked INTEGER NOT NULL DEFAULT 0
         );
     """)
+    # Migration for a users table created before role/on_duty existed -
+    # CREATE TABLE IF NOT EXISTS above is a no-op against an existing
+    # table, so an already-deployed database needs these columns added
+    # explicitly. SQLite has no "ADD COLUMN IF NOT EXISTS", so this just
+    # swallows the "duplicate column" error on a database that already
+    # has them.
+    for stmt in (
+        "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'patient'",
+        "ALTER TABLE users ADD COLUMN on_duty INTEGER NOT NULL DEFAULT 0",
+    ):
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -104,11 +131,13 @@ class AuthError(Exception):
         self.status_code = status_code
 
 
-def register(email: str, password: str, name: str = None) -> str:
+def register(email: str, password: str, name: str = None, role: str = "patient") -> str:
     if not email or "@" not in email:
         raise AuthError("A valid email is required.")
     if not password or len(password) < 6:
         raise AuthError("Password must be at least 6 characters.")
+    if role not in VALID_ROLES:
+        raise AuthError("Invalid role.")
 
     conn = _connect()
     try:
@@ -118,8 +147,8 @@ def register(email: str, password: str, name: str = None) -> str:
 
         password_hash = _hash_password(password)
         cursor = conn.execute(
-            "INSERT INTO users (email, name, password_hash, created_at) VALUES (?, ?, ?, ?)",
-            (email.lower(), name, password_hash, time.time()),
+            "INSERT INTO users (email, name, password_hash, created_at, role) VALUES (?, ?, ?, ?, ?)",
+            (email.lower(), name, password_hash, time.time(), role),
         )
         user_id = cursor.lastrowid
         token = secrets.token_hex(32)
@@ -157,12 +186,21 @@ def get_user_by_token(token: str) -> dict:
     conn = _connect()
     try:
         row = conn.execute(
-            """SELECT users.id, users.email, users.name, users.created_at
+            """SELECT users.id, users.email, users.name, users.created_at, users.role, users.on_duty
                FROM sessions JOIN users ON sessions.user_id = users.id
                WHERE sessions.token = ?""",
             (token,),
         ).fetchone()
         return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def set_duty(user_id: int, on_duty: bool):
+    conn = _connect()
+    try:
+        conn.execute("UPDATE users SET on_duty = ? WHERE id = ?", (1 if on_duty else 0, user_id))
+        conn.commit()
     finally:
         conn.close()
 

@@ -148,6 +148,46 @@ after a redeploy, even though nothing in the auth code is broken. Fix:
 attach a persistent disk (e.g. mounted at `/data`) and set
 `JANAMDATRI_DATA_DIR=/data` so the database survives redeploys.
 
+### 4. Live counsellor chat — `src/live_chat.py`
+
+A human-in-the-loop layer on top of the Instant Help chat's existing
+danger-sign detection. When `/chat` fires its scripted emergency reply
+(a WHO danger sign or a self-harm flag), the same request **additionally
+and unconditionally** creates a case in the counsellor queue - the
+scripted 108/102/KIRAN reply always fires either way; a counsellor
+joining is a bonus the patient never waits on, never a gate in front of
+the existing safety net. A merely moderate symptom score just offers a
+"Talk to someone" button instead of auto-escalating.
+
+Two new roles (`counsellor`, `doctor`) sign in at `/care-team` (a real
+account, unlike `/provider`/`/caregiver`'s share-code model) and land on
+`/counsellor` or `/doctor`. A counsellor claims a waiting case, chats
+live with the patient (polling every ~3-4s - see the note below on why
+that's a websocket, not this), and can forward it to a doctor with a
+transcript + handoff note; the doctor's written-back advice appears in
+the counsellor's chat as a system message.
+
+**Real, stated gaps, not fixed in this pass:**
+- **No credentialing.** Self-registering as `counsellor` or `doctor`
+  has no vetting step - see `src/auth.py`'s own docstring. Fine for a
+  small known pilot team; unsafe to open to the public as-is.
+- **Polling, not a websocket.** `LIVE_POLL_MS`/`QUEUE_POLL_MS` in the
+  frontend re-fetch every few seconds rather than pushing - the same
+  tradeoff `ProviderPage.jsx` already makes elsewhere in this app, kept
+  deliberately simple rather than adding new real-time infrastructure.
+  A live conversation is therefore a few seconds less "live" than a
+  true socket would be.
+- **Breaks the guest-data promise, on purpose, for this one feature.**
+  Every other guest feature stays entirely client-side; a live human
+  transcript has to be stored server-side to exist at all. See the
+  module docstring in `src/live_chat.py` and the Privacy page.
+- **Counsellor/doctor UI is English-only**, matching the existing
+  Provider/Caregiver precedent - a real gap, not newly introduced here.
+- No push notification reaches a counsellor whose tab isn't open, no
+  on-call scheduling, and the same ephemeral-disk risk as the rest of
+  `src/auth.py` applies to live conversations too, only worse (losing a
+  mid-crisis chat on redeploy is a bigger loss than losing a login).
+
 ## API — `src/api/main.py`
 
 ```
@@ -165,6 +205,12 @@ POST /chat                            { message } -> rule-based instant-help ass
 POST /documents/analyze               upload (.pdf/.txt/.jpg/.png, OCR'd if scanned) or
                                       paste report text -> medication schedule + flagged findings
 GET  /helplines                       India helplines + government scheme references
+POST /live/start, GET /live/mine, GET/POST /live/{id}(/messages)
+                                      patient side of live counsellor chat (x-user-token or x-guest-id)
+POST /counsellor/duty, GET /counsellor/queue|mine, POST /counsellor/{id}/claim|messages|resolve|handoff
+                                      counsellor workspace (role=counsellor)
+GET  /doctor/queue, GET/POST /doctor/{id}(/advice)
+                                      doctor's forwarded-case queue (role=doctor)
 ```
 
 `POST /assess` requires at least one of `text`, `vitals`, `hemoglobin`, or
