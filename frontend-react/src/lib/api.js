@@ -97,7 +97,24 @@ export const api = {
   liveMine: () => request("/live/mine", { auth: true, guestFallback: true }),
   liveGet: (id) => request(`/live/${id}`, { auth: true, guestFallback: true }),
   liveSend: (id, text) => request(`/live/${id}/messages`, { method: "POST", body: { text }, auth: true, guestFallback: true }),
+  liveSendVoiceNote: (id, voiceNoteId, text) => request(`/live/${id}/messages`, { method: "POST", body: { text, voiceNoteId }, auth: true, guestFallback: true }),
   liveCancel: (id) => request(`/live/${id}/cancel`, { method: "POST", body: {}, auth: true, guestFallback: true }),
+
+  // Voice notes (record -> preview -> send-or-discard, see src/live_chat.py).
+  // Not routed through request() - a multipart upload needs the browser
+  // to set its own Content-Type with the boundary, same reason
+  // transcribeAudio isn't either.
+  liveVoiceNoteUpload: async (convId, blob) => {
+    const form = new FormData();
+    form.append("file", blob, "voice-note.webm");
+    const headers = authHeaders();
+    if (!headers["x-user-token"]) headers["x-guest-id"] = getOrCreateGuestChatId();
+    const res = await fetch(`/live/${convId}/voice-note`, { method: "POST", headers, body: form });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.detail || "Could not upload the voice note.");
+    return payload.data;
+  },
+  liveVoiceNoteDiscard: (convId, noteId) => request(`/live/${convId}/voice-note/${noteId}`, { method: "DELETE", auth: true, guestFallback: true }),
 
   // --- Live counsellor chat: counsellor side ---
   counsellorDuty: (onDuty) => request("/counsellor/duty", { method: "POST", body: { onDuty }, auth: true }),

@@ -270,7 +270,7 @@ function ContextRail({ conv }) {
   );
 }
 
-function Bubble({ m }) {
+function Bubble({ m, convId }) {
   const { t } = useLang();
   if (m.sender_kind === "system") {
     const map = {
@@ -289,12 +289,23 @@ function Bubble({ m }) {
       <div style={{ maxWidth: "80%", display: "grid", gap: 3, justifyItems: mine ? "end" : "start" }}>
         <span style={{ fontSize: 11, color: "var(--color-faint)" }}>{label} · {new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
         <div style={{
-          padding: "9px 12px", borderRadius: 12, fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap", overflowWrap: "anywhere",
+          padding: "9px 12px", borderRadius: 12, fontSize: 14, lineHeight: 1.45, overflowWrap: "anywhere",
           background: mine ? "var(--color-primary-soft)" : isDoc ? "var(--color-primary-soft)" : m.sender_kind === "bot" ? "transparent" : "var(--color-surface-hover)",
           border: m.sender_kind === "bot" ? "1px dashed var(--color-border-strong)" : "1px solid transparent",
           color: "var(--color-ink)",
         }}>
-          {m.text}
+          {m.message_kind === "voice" ? (
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
+                <i className="ph ph-microphone" /> {t("chat.voiceNoteLabel")}
+              </div>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <audio controls src={`/live/${convId}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 260 }} />
+              <div style={{ whiteSpace: "pre-wrap" }}>{m.text || t("chat.voiceNoteNoTranscript")}</div>
+            </div>
+          ) : (
+            <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+          )}
         </div>
       </div>
     </div>
@@ -879,7 +890,7 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
                   <button type="button" onClick={() => sendText(SEND_NUMBERS_TEXT)} className="btn btn-ghost" style={{ fontSize: 12, padding: "3px 8px", color: "oklch(0.87 0.07 25)" }}><i className="ph ph-paper-plane-tilt" /> {t("counsellor.sendNumbers")}</button>
                 </div>
                 <div ref={chatRef} style={{ flex: 1, minHeight: 220, overflowY: "auto", padding: 16, display: "grid", gap: 12, alignContent: "start" }}>
-                  {active.messages.map((m) => <Bubble key={m.id} m={m} />)}
+                  {active.messages.map((m) => <Bubble key={m.id} m={m} convId={activeId} />)}
                 </div>
                 <div style={{ borderTop: "1px solid var(--color-neutral-900)", padding: "10px 16px 14px", display: "grid", gap: 8 }}>
                   <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>

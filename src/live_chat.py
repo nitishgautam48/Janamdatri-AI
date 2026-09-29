@@ -96,6 +96,16 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_conv_status ON conversations(status);
         CREATE INDEX IF NOT EXISTS idx_conv_msgs_conv ON conv_messages(conversation_id);
     """)
+    # Migration for a conv_messages table created before voice notes
+    # existed - see VOICE_NOTES_DIR / add_message's message_kind param.
+    for stmt in (
+        "ALTER TABLE conv_messages ADD COLUMN message_kind TEXT NOT NULL DEFAULT 'text'",
+        "ALTER TABLE conv_messages ADD COLUMN audio_note_id TEXT",
+    ):
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -205,17 +215,45 @@ def list_messages(conv_id: str) -> list:
         conn.close()
 
 
-def add_message(conv_id: str, sender_kind: str, text: str, sender_id: int = None, system_kind: str = None):
+def add_message(conv_id: str, sender_kind: str, text: str, sender_id: int = None, system_kind: str = None,
+                 message_kind: str = "text", audio_note_id: str = None):
     conn = _connect()
     try:
         conn.execute(
-            "INSERT INTO conv_messages (conversation_id, sender_kind, sender_id, text, system_kind, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (conv_id, sender_kind, sender_id, text, system_kind, time.time()),
+            "INSERT INTO conv_messages (conversation_id, sender_kind, sender_id, text, system_kind, "
+            "message_kind, audio_note_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (conv_id, sender_kind, sender_id, text, system_kind, message_kind, audio_note_id, time.time()),
         )
         conn.commit()
     finally:
         conn.close()
+
+
+# Voice notes (see POST/GET/DELETE /live/{id}/voice-note in src/api/main.py)
+# are saved to disk, not the database - only the note id + transcript live
+# in conv_messages (audio_note_id). Under JANAMDATRI_DATA_DIR alongside
+# app.db, same persistent-disk story the rest of this app's storage has
+# (see auth.py's own note on that).
+VOICE_NOTES_DIR = Path(DB_PATH).parent / "voice-notes"
+
+
+def voice_note_path(conv_id: str, note_id: str) -> Path:
+    """The on-disk location for one voice note's converted WAV. Filenames
+    are server-generated random ids (uuid4 hex), so this doubles as the
+    access check for GET /live/{id}/voice-note/{note_id} - knowing both
+    ids is already effectively a capability, the same trust model
+    /ws/live/{conv_id} itself already uses (see its own docstring)."""
+    return VOICE_NOTES_DIR / conv_id / f"{note_id}.wav"
+
+
+def discard_voice_note(conv_id: str, note_id: str):
+    """Deletes a staged voice note that was uploaded/transcribed but never
+    sent as a message (the patient hit Discard in the preview). A tab
+    closed mid-preview without hitting Discard leaves the file orphaned -
+    a known, accepted limitation at this scale rather than building a
+    cleanup job for it."""
+    path = voice_note_path(conv_id, note_id)
+    path.unlink(missing_ok=True)
 
 
 def list_queue() -> list:

@@ -35,6 +35,11 @@ Endpoints reflect the layered architecture:
                                         - patient side of live counsellor chat (x-user-token or x-guest-id).
                                         cancel only works while still 'waiting' - the patient's way back to
                                         the assistant if no one claims the request (see live_chat.py)
+  POST /live/{id}/voice-note, DELETE .../voice-note/{noteId}, GET .../voice-note/{noteId}
+                                        - voice notes: record, preview (hear it back + see/edit the
+                                        transcript), then either send it as a message (POST .../messages
+                                        with voiceNoteId) or discard it. The audio itself is kept, not just
+                                        the transcript - see stt.save_and_transcribe.
   POST /counsellor/duty, GET /counsellor/queue|mine, POST /counsellor/{id}/claim|messages|resolve|handoff
                                         - counsellor workspace
   GET  /doctor/queue, GET/POST /doctor/{id}(/advice)
@@ -56,6 +61,7 @@ Endpoints reflect the layered architecture:
 
 import asyncio
 import json
+import uuid
 from pathlib import Path
 from typing import List, Optional
 
@@ -204,8 +210,13 @@ class LiveStartRequest(BaseModel):
 
 
 class LiveMessageRequest(BaseModel):
-    text: str = Field(..., min_length=1)
+    # No min_length: a voice note whose transcription failed/wasn't
+    # configured still needs to send with empty text (the audio is the
+    # message) - the "must have text or a voice note" check lives in the
+    # endpoint itself, where both fields are visible together.
+    text: str = ""
     guestId: Optional[str] = None
+    voiceNoteId: Optional[str] = Field(default=None, description="From POST /live/{id}/voice-note - attaches that staged recording to this message")
 
 
 class LiveCancelRequest(BaseModel):
@@ -788,7 +799,14 @@ async def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optiona
     _check_conv_access(conv, user, req.guestId or x_guest_id)
     if conv["status"] == live_chat.STATUS_CLOSED:
         raise HTTPException(status_code=409, detail="This conversation has ended.")
-    live_chat.add_message(conv_id, "patient", req.text)
+    if not req.text.strip() and not req.voiceNoteId:
+        raise HTTPException(status_code=400, detail="Message can't be empty.")
+    if req.voiceNoteId:
+        if not live_chat.voice_note_path(conv_id, req.voiceNoteId).is_file():
+            raise HTTPException(status_code=404, detail="This voice note wasn't found - it may have already been sent or discarded.")
+        live_chat.add_message(conv_id, "patient", req.text, message_kind="voice", audio_note_id=req.voiceNoteId)
+    else:
+        live_chat.add_message(conv_id, "patient", req.text)
     # A message sent before anyone has claimed yet - the same "don't wait
     # for the chat" reminder the scripted bot itself would give.
     if conv["status"] == live_chat.STATUS_WAITING:
@@ -799,6 +817,59 @@ async def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optiona
         )
     await hub.notify_conv(conv_id)
     return {"success": True, "data": {"sent": True}}
+
+
+@app.post("/live/{conv_id}/voice-note")
+async def live_voice_note_upload(conv_id: str, file: UploadFile = File(...), x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    """Records+transcribes a voice note, staging it (saved to disk, not
+    yet a message) so the patient can preview - hear it back, see/edit
+    the transcript - before it actually sends. POST /live/{id}/messages
+    with the returned noteId turns this into a real message; DELETE
+    .../voice-note/{noteId} discards it if they change their mind."""
+    user = _current_user(x_user_token)
+    conv = live_chat.get_conversation(conv_id)
+    _check_conv_access(conv, user, x_guest_id)
+    if conv["status"] == live_chat.STATUS_CLOSED:
+        raise HTTPException(status_code=409, detail="This conversation has ended.")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty audio upload.")
+    note_id = uuid.uuid4().hex
+    dest = live_chat.voice_note_path(conv_id, note_id)
+    try:
+        text, transcribed = stt.save_and_transcribe(raw, str(dest))
+    except stt.SttError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "data": {
+        "noteId": note_id, "text": text, "transcribed": transcribed,
+        "audioUrl": f"/live/{conv_id}/voice-note/{note_id}",
+    }}
+
+
+@app.delete("/live/{conv_id}/voice-note/{note_id}")
+async def live_voice_note_discard(conv_id: str, note_id: str, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+    user = _current_user(x_user_token)
+    conv = live_chat.get_conversation(conv_id)
+    _check_conv_access(conv, user, x_guest_id)
+    live_chat.discard_voice_note(conv_id, note_id)
+    return {"success": True, "data": {"discarded": True}}
+
+
+@app.get("/live/{conv_id}/voice-note/{note_id}")
+def live_voice_note_get(conv_id: str, note_id: str):
+    """No auth beyond knowing conv_id + note_id (both server-generated,
+    high-entropy ids) - the same "the id itself is the capability" model
+    /ws/live/{conv_id} already uses. A real per-request auth check isn't
+    workable here anyway: a plain <audio src="..."> tag is what plays
+    this back, and a browser won't attach an x-user-token header to
+    that request."""
+    conv = live_chat.get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    path = live_chat.voice_note_path(conv_id, note_id)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Voice note not found.")
+    return FileResponse(str(path), media_type="audio/wav")
 
 
 @app.post("/counsellor/duty")

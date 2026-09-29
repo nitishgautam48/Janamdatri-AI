@@ -177,35 +177,70 @@ def transcribe_wav(wav_path: str) -> str:
         wf.close()
 
 
-def transcribe_upload(raw_bytes: bytes) -> str:
-    """Converts whatever the browser's MediaRecorder produced (webm/opus,
-    ogg, m4a, ...) to the mono 16 kHz PCM WAV Vosk needs, via ffmpeg, then
-    transcribes it. Raises SttNotConfigured (no model) or SttError
-    (ffmpeg missing/failed, or an unreadable/empty clip)."""
-    _load_model()
-    if _model is None:
-        raise SttNotConfigured(_model_load_error)
-
-    with tempfile.TemporaryDirectory() as tmp:
-        src_path = os.path.join(tmp, "input")
-        wav_path = os.path.join(tmp, "audio.wav")
-        with open(src_path, "wb") as f:
-            f.write(raw_bytes)
-
+def _convert_to_wav(raw_bytes: bytes, wav_path: str):
+    """Runs whatever the browser's MediaRecorder produced (webm/opus, ogg,
+    m4a, ...) through ffmpeg into the mono 16 kHz PCM WAV Vosk needs -
+    which also happens to be a format any browser's <audio> tag can play
+    back directly, so this is shared by both a transient transcription
+    (transcribe_upload, the wav is discarded after) and a voice note that
+    needs to keep the audio around permanently (save_and_transcribe)."""
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_src:
+        tmp_src.write(raw_bytes)
+        src_path = tmp_src.name
+    try:
         try:
             result = subprocess.run(
                 ["ffmpeg", "-y", "-i", src_path, "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", wav_path],
                 capture_output=True, timeout=30,
             )
         except FileNotFoundError as exc:
-            raise SttError("ffmpeg is not installed on this server - required to convert recorded audio for Vosk.") from exc
+            raise SttError("ffmpeg is not installed on this server - required to convert recorded audio.") from exc
         except subprocess.TimeoutExpired as exc:
             raise SttError("Audio conversion timed out.") from exc
+    finally:
+        os.unlink(src_path)
 
-        if result.returncode != 0 or not os.path.exists(wav_path):
-            raise SttError(f"Could not convert the recorded audio: {result.stderr.decode(errors='replace')[-500:]}")
+    if result.returncode != 0 or not os.path.exists(wav_path):
+        raise SttError(f"Could not convert the recorded audio: {result.stderr.decode(errors='replace')[-500:]}")
 
+
+def transcribe_upload(raw_bytes: bytes) -> str:
+    """Converts whatever the browser's MediaRecorder produced to WAV via
+    ffmpeg, then transcribes it and discards the WAV. Raises
+    SttNotConfigured (no model) or SttError (ffmpeg missing/failed, or an
+    unreadable/empty clip)."""
+    _load_model()
+    if _model is None:
+        raise SttNotConfigured(_model_load_error)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        wav_path = os.path.join(tmp, "audio.wav")
+        _convert_to_wav(raw_bytes, wav_path)
         return transcribe_wav(wav_path)
+
+
+def save_and_transcribe(raw_bytes: bytes, wav_dest_path: str) -> tuple[str, bool]:
+    """For voice notes (see src/live_chat.py, POST /live/{id}/voice-note):
+    unlike transcribe_upload, the converted WAV is kept permanently at
+    wav_dest_path instead of discarded - the recording itself, not just
+    its transcript, IS the message, the same way a WhatsApp voice note
+    keeps the audio rather than replacing it with text. A patient's
+    actual voice (panic, breathlessness, a shaking tone) carries real
+    information a transcript alone would throw away.
+
+    Returns (text, transcribed). If no model is configured, the audio is
+    still converted and saved - a voice note doesn't need a transcript to
+    be useful - and this returns ("", False) rather than raising, so the
+    caller can label it "not transcribed" instead of silently showing
+    empty text with no explanation. Raises SttError only if the audio
+    itself couldn't be converted at all (nothing to save either way)."""
+    os.makedirs(os.path.dirname(wav_dest_path), exist_ok=True)
+    _convert_to_wav(raw_bytes, wav_dest_path)
+    try:
+        text = transcribe_wav(wav_dest_path)
+        return text, True
+    except SttNotConfigured:
+        return "", False
 
 
 class StreamingRecognizer:

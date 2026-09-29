@@ -84,6 +84,14 @@ export default function ChatWidget() {
   const [callState, setCallState] = useState("idle");
   const voiceCallRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  // Voice notes (live counsellor chat only - see toggleListening below):
+  // record a clip, preview it (play it back, see/edit the transcript),
+  // then either send it as a message or discard it. Separate from the
+  // dictate-into-the-textbox flow above, which only makes sense when
+  // there's no counsellor yet reading what gets sent.
+  const [voiceNotePreview, setVoiceNotePreview] = useState(null); // { noteId, text, transcribed, audioUrl } | null
+  const voiceNoteRecorderRef = useRef(null);
+  const voiceNoteConsentGivenRef = useRef(false);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -128,7 +136,81 @@ export default function ChatWidget() {
     if (recognitionRef.current) recognitionRef.current.lang = lang === "en" ? "en-IN" : "hi-IN";
   }, [lang]);
 
+  async function startVoiceNoteRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    const chunks = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach((track) => track.stop());
+      setListening(false);
+      if (!liveConv) return;
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      try {
+        const note = await api.liveVoiceNoteUpload(liveConv.id, blob);
+        setVoiceNotePreview(note);
+      } catch {
+        // Upload/conversion genuinely failed (not just "no transcript" -
+        // save_and_transcribe already handles that case by saving the
+        // audio anyway) - nothing to preview, she can just try again.
+      }
+    };
+    recorder.start();
+    voiceNoteRecorderRef.current = recorder;
+  }
+
+  async function sendVoiceNote() {
+    if (!voiceNotePreview || !liveConv) return;
+    const { noteId, text } = voiceNotePreview;
+    setVoiceNotePreview(null);
+    try {
+      await api.liveSendVoiceNote(liveConv.id, noteId, text);
+      setLiveConv(await api.liveGet(liveConv.id));
+    } catch {
+      /* the next poll/WS push resyncs */
+    }
+  }
+
+  async function discardVoiceNote() {
+    if (!voiceNotePreview || !liveConv) return;
+    const { noteId } = voiceNotePreview;
+    setVoiceNotePreview(null);
+    try {
+      await api.liveVoiceNoteDiscard(liveConv.id, noteId);
+    } catch {
+      /* orphaned staged file - harmless, cleaned up eventually */
+    }
+  }
+
   async function toggleListening() {
+    const inLiveChat = liveConv && liveConv.status !== "closed";
+
+    if (inLiveChat) {
+      if (listening) {
+        voiceNoteRecorderRef.current?.stop(); // onstop clears `listening`
+        return;
+      }
+      if (!voiceNoteConsentGivenRef.current) {
+        // A real gate, not a passive notice: recording and sending her
+        // actual voice to a counsellor is a bigger step than typing text
+        // (see PrivacyPage's privacy.access4 for the same reasoning
+        // applied to live chat generally) - she has to actively agree
+        // before the mic ever opens, not just be told after the fact.
+        if (!window.confirm(t("chat.voiceNoteConsent"))) return;
+        voiceNoteConsentGivenRef.current = true;
+      }
+      setListening(true);
+      try {
+        await startVoiceNoteRecording();
+      } catch {
+        setListening(false);
+        // Mic denied/unavailable - unlike dictation, there's no browser-
+        // native fallback for "record a voice note," so this just fails
+        // quietly and she can type instead.
+      }
+      return;
+    }
+
     if (listening) {
       setListening(false);
       if (sttMode === "self-hosted") {
@@ -223,6 +305,7 @@ export default function ChatWidget() {
       return next;
     });
     setLiveConv(null);
+    setVoiceNotePreview(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveConv?.status]);
 
@@ -484,15 +567,25 @@ export default function ChatWidget() {
               const mine = m.sender_kind === "patient";
               const isBot = m.sender_kind === "bot";
               const isCounsellor = m.sender_kind === "counsellor";
+              const isVoice = m.message_kind === "voice";
               return (
                 <div key={m.id}>
                   {isCounsellor && <div className="mb-0.5 text-[11px] font-medium text-primary">{t("chat.counsellorLabel")}</div>}
                   <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                    <p className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                       mine ? "bg-primary text-paper-ink" : isCounsellor ? "bg-surface-hover text-ink ring-1 ring-primary/40" : isBot ? "border border-dashed border-border-strong text-muted" : "bg-surface-hover text-ink"
                     }`}>
-                      {m.text}
-                    </p>
+                      {isVoice ? (
+                        <div className="grid gap-1.5">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold opacity-80"><i className="ph ph-microphone" /> {t("chat.voiceNoteLabel")}</div>
+                          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                          <audio controls src={`/live/${liveConv.id}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 220 }} />
+                          <p className="whitespace-pre-wrap text-sm">{m.text || t("chat.voiceNoteNoTranscript")}</p>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{m.text}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -517,6 +610,32 @@ export default function ChatWidget() {
             )}
           </div>
 
+          {voiceNotePreview && (
+            <div className="grid gap-2 border-t border-border bg-bg-soft px-4 py-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-primary"><i className="ph ph-microphone" /> {t("chat.voiceNotePreviewLabel")}</div>
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+              <audio controls autoPlay={false} src={voiceNotePreview.audioUrl} className="h-8 w-full" />
+              {voiceNotePreview.transcribed ? (
+                <textarea
+                  value={voiceNotePreview.text}
+                  onChange={(e) => setVoiceNotePreview((p) => ({ ...p, text: e.target.value }))}
+                  rows={2}
+                  className="w-full rounded-md border border-border-strong bg-bg px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
+                />
+              ) : (
+                <p className="text-xs italic text-faint">{t("chat.voiceNoteNoTranscript")}</p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={discardVoiceNote} aria-label={t("chat.voiceNoteDiscard")} className="rounded-full border border-border-strong px-3 py-1.5 text-xs font-semibold text-muted hover:text-ink">
+                  {t("chat.voiceNoteDiscard")}
+                </button>
+                <button type="button" onClick={sendVoiceNote} aria-label={t("chat.voiceNoteSendAriaLabel")} className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-paper-ink">
+                  {t("chat.voiceNoteSend")}
+                </button>
+              </div>
+            </div>
+          )}
+
           <form
             className="flex items-center gap-2 border-t border-border p-3"
             onSubmit={(e) => {
@@ -535,7 +654,7 @@ export default function ChatWidget() {
               <button
                 type="button"
                 onClick={toggleListening}
-                disabled={callState !== "idle"}
+                disabled={callState !== "idle" || !!voiceNotePreview}
                 title={callState !== "idle" ? t("chat.micDisabledDuringCall") : undefined}
                 aria-label={listening ? "Stop voice input" : "Speak your message"}
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-base transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
