@@ -11,12 +11,16 @@ to the account instead of living solely in the browser's localStorage.
 `role` (patient/counsellor/doctor) gates access to the care-team
 workspace (both the counsellor queue and the doctor's forwarded-case
 queue are open to either staff role - see `STAFF_ROLES` in
-src/api/main.py). Self-registration
-accepts any role at signup - there is no verification step confirming a
-"counsellor" or "doctor" signup is an actual vetted staff member. That's
-a real gap for anything beyond a pilot with a known, small team; a
-production deployment needs an invite/approval step before this role
-grants access to live patient conversations.
+src/api/main.py). Patient self-registration is open to anyone; a
+counsellor/doctor signup additionally requires a valid, unused,
+role-matching invite code (see create_invite_code / the invite_codes
+table) - simplest possible vetting: whoever administers the deployment
+mints a code out-of-band (e.g. `python -m scripts.create_invite_code
+counsellor`) and hands it to an actual staff member before they can
+register. Still no identity verification beyond that - the code proves
+"someone the operator trusts gave them this," not who they are - but
+it closes the "anyone can self-register as staff and see real patient
+conversations" gap that used to exist here.
 """
 
 import hashlib
@@ -93,6 +97,13 @@ def init_db():
             created_at REAL NOT NULL,
             revoked INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS invite_codes (
+            code TEXT PRIMARY KEY,
+            role TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            used_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            used_at REAL
+        );
     """)
     # Migration for a users table created before role/on_duty existed -
     # CREATE TABLE IF NOT EXISTS above is a no-op against an existing
@@ -133,13 +144,65 @@ class AuthError(Exception):
         self.status_code = status_code
 
 
-def register(email: str, password: str, name: str = None, role: str = "patient") -> str:
+# Roles that need an invite code to self-register - see the module
+# docstring. Patients stay open (the app's whole point is being reachable
+# without a gatekeeper); staff roles reach real patient conversations, so
+# they don't.
+INVITE_REQUIRED_ROLES = ("counsellor", "doctor")
+
+
+def create_invite_code(role: str) -> str:
+    """Mints a new one-time invite code for the given staff role. Meant
+    to be run by whoever administers the deployment (see
+    scripts/create_invite_code.py) - there's no in-app admin role or UI
+    for this, deliberately: it's a shell command someone with server
+    access runs before handing a code to an actual staff member, not a
+    feature exposed to any account."""
+    if role not in INVITE_REQUIRED_ROLES:
+        raise ValueError(f"Invite codes are only for {INVITE_REQUIRED_ROLES}, got {role!r}.")
+    code = secrets.token_hex(4).upper()
+    conn = _connect()
+    try:
+        conn.execute(
+            "INSERT INTO invite_codes (code, role, created_at) VALUES (?, ?, ?)",
+            (code, role, time.time()),
+        )
+        conn.commit()
+        return code
+    finally:
+        conn.close()
+
+
+def _consume_invite_code(conn, code: str, role: str, user_id: int):
+    """Validates and marks a code used, in the same connection/transaction
+    as the registration it's gating - so two people racing to redeem the
+    same code can't both succeed (SQLite serializes writes on one
+    connection; the second UPDATE's rowcount comes back 0 and this
+    raises, rolling back that registration attempt's insert too)."""
+    row = conn.execute("SELECT * FROM invite_codes WHERE code = ?", ((code or "").strip().upper(),)).fetchone()
+    if not row:
+        raise AuthError("Invalid invite code.")
+    if row["used_by"] is not None:
+        raise AuthError("This invite code has already been used.")
+    if row["role"] != role:
+        raise AuthError(f"This invite code is for a {row['role']} account, not {role}.")
+    cursor = conn.execute(
+        "UPDATE invite_codes SET used_by = ?, used_at = ? WHERE code = ? AND used_by IS NULL",
+        (user_id, time.time(), row["code"]),
+    )
+    if cursor.rowcount == 0:
+        raise AuthError("This invite code has already been used.")
+
+
+def register(email: str, password: str, name: str = None, role: str = "patient", invite_code: str = None) -> str:
     if not email or "@" not in email:
         raise AuthError("A valid email is required.")
     if not password or len(password) < 6:
         raise AuthError("Password must be at least 6 characters.")
     if role not in VALID_ROLES:
         raise AuthError("Invalid role.")
+    if role in INVITE_REQUIRED_ROLES and not (invite_code or "").strip():
+        raise AuthError(f"A {role} account needs an invite code from your program administrator.")
 
     conn = _connect()
     try:
@@ -153,6 +216,8 @@ def register(email: str, password: str, name: str = None, role: str = "patient")
             (email.lower(), name, password_hash, time.time(), role),
         )
         user_id = cursor.lastrowid
+        if role in INVITE_REQUIRED_ROLES:
+            _consume_invite_code(conn, invite_code, role, user_id)
         token = secrets.token_hex(32)
         conn.execute(
             "INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",

@@ -2,7 +2,9 @@
 Janamdatri-AI - Maternal Risk Triage API.
 
 Endpoints reflect the layered architecture:
-  POST /auth/register, /auth/login  - optional accounts (bearer token via x-user-token)
+  POST /auth/register, /auth/login  - optional accounts (bearer token via x-user-token).
+                                        counsellor/doctor registration additionally needs a valid
+                                        inviteCode (see src/auth.py, scripts/create_invite_code.py)
   GET  /auth/me                      - current user profile
   DELETE /auth/account                - permanently delete the account and all its data
   POST/GET/DELETE /auth/share-code    - generate/read/revoke a provider share code (one active at a time)
@@ -169,6 +171,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: Optional[str] = None
     role: str = Field(default="patient", description="patient, counsellor, or doctor - see auth.py for the caveat on self-serve role signup")
+    inviteCode: Optional[str] = Field(default=None, description="required for counsellor/doctor - see auth.INVITE_REQUIRED_ROLES")
 
 
 class LoginRequest(BaseModel):
@@ -259,7 +262,7 @@ def health():
 @app.post("/auth/register")
 def register(req: RegisterRequest):
     try:
-        token = auth.register(req.email, req.password, req.name, req.role)
+        token = auth.register(req.email, req.password, req.name, req.role, invite_code=req.inviteCode)
     except auth.AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     user = auth.get_user_by_token(token)

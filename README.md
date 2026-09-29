@@ -168,21 +168,22 @@ transcript + handoff note; the doctor's written-back advice appears in
 the counsellor's chat as a system message.
 
 **Real, stated gaps, not fixed in this pass:**
-- **No credentialing.** Self-registering as `counsellor` or `doctor`
-  has no vetting step - see `src/auth.py`'s own docstring. Fine for a
-  small known pilot team; unsafe to open to the public as-is.
-- **Polling, not a websocket.** `LIVE_POLL_MS`/`QUEUE_POLL_MS` in the
-  frontend re-fetch every few seconds rather than pushing - the same
-  tradeoff `ProviderPage.jsx` already makes elsewhere in this app, kept
-  deliberately simple rather than adding new real-time infrastructure.
-  A live conversation is therefore a few seconds less "live" than a
-  true socket would be.
+- **Invite-code gated, not identity-verified.** Self-registering as
+  `counsellor` or `doctor` now requires a valid, unused, role-matching
+  invite code (`scripts/create_invite_code.py`, `src/auth.py`'s
+  `INVITE_REQUIRED_ROLES`) - simplest possible vetting, closing the
+  "anyone can register as staff" gap this note used to describe. It
+  proves "someone who administers the deployment gave them this," not
+  who they actually are; a real deployment beyond a small known team
+  still wants a proper identity/credential check in front of this.
+- Live conversations push over WebSocket (`/ws/live/{id}`, `/ws/staff`,
+  see `src/ws_manager.py`), with a slow backstop poll only for the rare
+  case a socket drops without the browser noticing.
 - **Breaks the guest-data promise, on purpose, for this one feature.**
   Every other guest feature stays entirely client-side; a live human
   transcript has to be stored server-side to exist at all. See the
-  module docstring in `src/live_chat.py` and the Privacy page.
-- **Counsellor/doctor UI is English-only**, matching the existing
-  Provider/Caregiver precedent - a real gap, not newly introduced here.
+  module docstring in `src/live_chat.py` and the Privacy page
+  (`privacy.access4`), which discloses this explicitly.
 - No push notification reaches a counsellor whose tab isn't open, no
   on-call scheduling, and the same ephemeral-disk risk as the rest of
   `src/auth.py` applies to live conversations too, only worse (losing a

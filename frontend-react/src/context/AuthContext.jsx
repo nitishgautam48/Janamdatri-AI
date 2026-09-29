@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
-  const register = useCallback(async (email, password, name, role) => {
-    const data = await api.register(email, password, name, role);
+  const register = useCallback(async (email, password, name, role, inviteCode) => {
+    const data = await api.register(email, password, name, role, inviteCode);
     setSession(data.token, data.user);
     setUser(data.user);
     setGuestState(false);

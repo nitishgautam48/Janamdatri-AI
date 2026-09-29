@@ -8,17 +8,20 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 // Counsellor/doctor sign-in - a real account (unlike /provider and
 // /caregiver, which use a patient's share code as the sole credential).
-// Self-registration here has NO vetting step confirming the signer-upper
-// is an actual trained staff member - see src/auth.py's own docstring.
-// Fine for a small known pilot team; a real deployment needs an
-// invite/approval flow in front of this before it's safe to open up.
+// Self-registration here requires a valid invite code (see src/auth.py's
+// INVITE_REQUIRED_ROLES, scripts/create_invite_code.py) - whoever
+// administers the deployment mints one out-of-band and hands it to an
+// actual staff member before they can register. Still no identity
+// verification beyond that, but it closes the "anyone can self-register
+// as staff and see real patient conversations" gap that used to exist
+// here with zero gate at all.
 export default function CareTeamGate() {
   const { t } = useLang();
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState("login");
   const [role, setRole] = useState("counsellor");
-  const [form, setForm] = useState({ email: "", password: "", name: "" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", inviteCode: "" });
   const [fieldError, setFieldError] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,9 +32,12 @@ export default function CareTeamGate() {
     setFieldError(null);
     if (!EMAIL_RE.test(form.email)) return setFieldError("email");
     if (form.password.length < 6) return setFieldError("pw");
+    if (tab === "signup" && !form.inviteCode.trim()) return setFieldError("invite");
     setBusy(true);
     try {
-      const user = tab === "login" ? await login(form.email, form.password) : await register(form.email, form.password, form.name || null, role);
+      const user = tab === "login"
+        ? await login(form.email, form.password)
+        : await register(form.email, form.password, form.name || null, role, form.inviteCode.trim());
       navigate(user.role === "doctor" ? "/doctor" : "/counsellor");
     } catch (err) {
       setError(err.message);
@@ -89,7 +95,22 @@ export default function CareTeamGate() {
             className="w-full rounded-md border bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/25"
             style={{ borderColor: fieldError === "pw" ? "var(--color-critical)" : "var(--color-border-strong)" }}
           />
-          {fieldError && <p className="text-sm text-critical">{fieldError === "email" ? t("careTeam.emailInvalid") : t("careTeam.passwordTooShort")}</p>}
+          {tab === "signup" && (
+            <div>
+              <input
+                aria-label={t("careTeam.inviteCodeFieldLabel")} placeholder={t("careTeam.inviteCodeFieldLabel")} value={form.inviteCode}
+                onChange={(e) => { setForm((f) => ({ ...f, inviteCode: e.target.value })); setFieldError(null); }}
+                className="w-full rounded-md border bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/25"
+                style={{ borderColor: fieldError === "invite" ? "var(--color-critical)" : "var(--color-border-strong)" }}
+              />
+              <p className="mt-1 text-xs text-muted">{t("careTeam.inviteCodeHelp")}</p>
+            </div>
+          )}
+          {fieldError && (
+            <p className="text-sm text-critical">
+              {fieldError === "email" ? t("careTeam.emailInvalid") : fieldError === "pw" ? t("careTeam.passwordTooShort") : t("careTeam.inviteCodeRequired")}
+            </p>
+          )}
           {error && <p className="text-sm text-critical">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">{busy ? "…" : tab === "login" ? t("careTeam.logIn") : t("careTeam.signUp")}</Button>
         </form>

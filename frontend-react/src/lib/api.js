@@ -45,7 +45,7 @@ async function request(path, { method = "GET", body, auth = false, guestFallback
 }
 
 export const api = {
-  register: (email, password, name, role) => request("/auth/register", { method: "POST", body: { email, password, name, role } }),
+  register: (email, password, name, role, inviteCode) => request("/auth/register", { method: "POST", body: { email, password, name, role, inviteCode } }),
   login: (email, password) => request("/auth/login", { method: "POST", body: { email, password } }),
   me: () => request("/auth/me", { auth: true }),
   deleteAccount: () => request("/auth/account", { method: "DELETE", auth: true }),
