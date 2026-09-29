@@ -78,6 +78,20 @@ export const api = {
 
   helplines: () => request("/helplines"),
 
+  // --- Self-hosted speech-to-text (see src/stt.py) ---
+  sttStatus: () => request("/stt/status"),
+  transcribeAudio: async (blob) => {
+    const form = new FormData();
+    form.append("file", blob, "voice.webm");
+    // Not routed through request() - that helper always JSON-encodes the
+    // body, and a multipart upload needs the browser to set its own
+    // Content-Type (with the multipart boundary) instead.
+    const res = await fetch("/stt/transcribe", { method: "POST", body: form });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.detail || `Transcription failed (${res.status}).`);
+    return payload.data;
+  },
+
   // --- Live counsellor chat: patient side ---
   liveStart: (body) => request("/live/start", { method: "POST", body: body || {}, auth: true, guestFallback: true }),
   liveMine: () => request("/live/mine", { auth: true, guestFallback: true }),

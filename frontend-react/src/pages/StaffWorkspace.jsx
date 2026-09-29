@@ -4,6 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LangContext";
 import { api } from "../lib/api";
 import { severityLabel } from "../lib/severity";
+import { connectWs } from "../lib/ws";
+import { getToken } from "../lib/storage";
 
 const SEVERITY_TONE = {
   Critical: { bg: "var(--color-critical-soft)", fg: "var(--color-critical)" },
@@ -38,9 +40,13 @@ const QUICK_REPLIES = [
 const HANDOFF_SUGGESTIONS = ["Needs review tonight.", "Can she travel tomorrow instead?", "Medication question."];
 const SEND_NUMBERS_TEXT = "Emergency numbers: 108 (free ambulance), 102 (hospital gaadi), KIRAN 1800-599-0019 (mann ki baat, 24 ghante).";
 
-const QUEUE_POLL_MS = 4000;
-const CONV_POLL_MS = 3000;
-const DOC_POLL_MS = 6000;
+// The queue, active conversation, and forwarded-cases list all now update
+// over WebSocket (/ws/staff and /ws/live/{id}, see src/ws_manager.py) the
+// instant something changes - these are just a slow backstop poll in case
+// a socket drops without the browser noticing.
+const QUEUE_POLL_MS = 20000;
+const CONV_POLL_MS = 20000;
+const DOC_POLL_MS = 20000;
 
 function waitLabel(ms) {
   const sec = Math.max(0, Math.floor(ms / 1000));
@@ -541,6 +547,34 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // One /ws/staff socket for the whole shell, open regardless of which
+  // section is showing - a "queue_changed" push means someone escalated,
+  // claimed, or resolved a case; "doc_changed" means a case was forwarded
+  // or a doctor answered. sectionRef/docFilterRef exist because this
+  // effect's own closure is set up once on mount and would otherwise keep
+  // seeing whichever section/filter was active at that moment.
+  const sectionRef = useRef(section);
+  const docFilterRef = useRef(docFilter);
+  useEffect(() => { sectionRef.current = section; }, [section]);
+  useEffect(() => { docFilterRef.current = docFilter; }, [docFilter]);
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    const disconnect = connectWs(`/ws/staff?token=${encodeURIComponent(token)}`, {
+      onMessage: (msg) => {
+        if (msg.type === "queue_changed") refreshLists();
+        if (msg.type === "doc_changed") {
+          refreshLists();
+          if (sectionRef.current === "docq") {
+            api.doctorQueue(docFilterRef.current === "reviewed").then((d) => setDocCases(d.cases)).catch(() => {});
+          }
+        }
+      },
+    });
+    return disconnect;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (section !== "docq") return;
     refreshDocCases();
@@ -562,7 +596,8 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     }
     poll();
     const iv = setInterval(poll, CONV_POLL_MS);
-    return () => { cancelled = true; clearInterval(iv); };
+    const disconnectWs = connectWs(`/ws/live/${activeId}`, { onMessage: poll });
+    return () => { cancelled = true; clearInterval(iv); disconnectWs(); };
   }, [activeId]);
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import { api } from "../../lib/api";
 import { useLang } from "../../context/LangContext";
 import { useAuth } from "../../context/AuthContext";
 import { KEYS, scopedGet, scopedSet } from "../../lib/storage";
+import { connectWs } from "../../lib/ws";
 
 // Same set the backend uses to decide a reply was a clarifying question or
 // generic fallback rather than a real answer - mirrors the vanilla-JS
@@ -20,13 +21,11 @@ const SUGGESTED_PROMPTS = [
   "I've been feeling low lately",
 ];
 
-// How often to poll a live conversation for new messages/status while
-// this widget is open - a deliberate polling tradeoff (not a websocket)
-// matching ProviderPage's own precedent elsewhere in this app: close
-// enough to "live" for a triage/support chat without new push
-// infrastructure. See src/live_chat.py's module docstring for the fuller
-// design rationale.
-const LIVE_POLL_MS = 3000;
+// A live conversation now updates over WebSocket (/ws/live/{id}, see
+// src/ws_manager.py) the instant a new message/status change arrives, so
+// this is only a slow backstop poll for the rare case a socket drops
+// without the browser noticing (a suspended tab, a flaky network).
+const LIVE_POLL_MS = 20000;
 
 // Anchored bottom-right with a top offset and z-30 (TopBar is z-40), so
 // the header can never end up hidden behind it. The bug in the old
@@ -42,11 +41,21 @@ export default function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  // Decided once at mount (see the effect below) rather than per press: a
+  // self-hosted attempt that fails only discovers that AFTER recording and
+  // uploading a clip, which would mean silently re-listening for the same
+  // thing a second time with no way to explain why. "browser" is the safe
+  // starting point every existing install already works with; it only
+  // flips to "self-hosted" once /stt/status confirms a model is actually
+  // configured there.
+  const [sttMode, setSttMode] = useState("browser");
   const [liveConv, setLiveConv] = useState(null);
   const contextRef = useRef("");
   const roundsRef = useRef(0);
   const scrollRef = useRef(null);
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const seenLeaveRef = useRef(new Set());
 
   useEffect(() => {
@@ -66,19 +75,74 @@ export default function ChatWidget() {
     return () => recognition.stop();
   }, []);
 
+  // Self-hosted speech-to-text (Vosk, see src/stt.py) keeps a
+  // transcription on this server instead of sending the recording to
+  // Google's speech servers the way the browser's own SpeechRecognition
+  // does - see the Privacy page's AI disclosure. Only switches to it when
+  // the backend confirms a model is actually loaded AND this browser can
+  // record audio at all; otherwise the existing browser recognizer above
+  // keeps working exactly as before.
   useEffect(() => {
-    if (recognitionRef.current) recognitionRef.current.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    if (!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder)) return;
+    api.sttStatus().then((status) => {
+      if (status.configured) {
+        setSttMode("self-hosted");
+        setVoiceSupported(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // hinglish speech is phonetically Hindi with English words mixed in, not
+    // English with an accent - hi-IN handles that code-switching far better
+    // than en-IN. Only pure English mode should ask for en-IN. (Previously
+    // this fell through to en-IN for hinglish too, silently mis-recognizing
+    // most of what a Hinglish-speaking patient actually says.)
+    if (recognitionRef.current) recognitionRef.current.lang = lang === "en" ? "en-IN" : "hi-IN";
   }, [lang]);
 
-  function toggleListening() {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-    if (listening) {
-      recognition.stop();
+  async function startSelfHostedRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    audioChunksRef.current = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach((track) => track.stop());
       setListening(false);
+      const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+      try {
+        const { text } = await api.transcribeAudio(blob);
+        if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
+      } catch {
+        // A model that loaded fine at /stt/status time failing on this one
+        // clip is rare (and never silent-user-facing beyond "nothing got
+        // typed") - not worth a fallback re-recording that would ask the
+        // person to repeat themselves without explanation.
+      }
+    };
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+  }
+
+  async function toggleListening() {
+    if (listening) {
+      if (sttMode === "self-hosted") mediaRecorderRef.current?.stop();
+      else recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    setListening(true);
+    if (sttMode === "self-hosted") {
+      try {
+        await startSelfHostedRecording();
+      } catch {
+        // getUserMedia denied/unavailable this time - fall back to the
+        // browser recognizer for the rest of this session.
+        setSttMode("browser");
+        recognitionRef.current?.start();
+      }
     } else {
-      setListening(true);
-      recognition.start();
+      recognitionRef.current?.start();
     }
   }
 
@@ -92,19 +156,22 @@ export default function ChatWidget() {
     api.liveMine().then((conv) => setLiveConv(conv)).catch(() => {});
   }, [identityKey]);
 
-  // Poll the active live conversation while one exists - the closest
-  // thing to "live" this widget does, short of a websocket.
+  // Refetch the active live conversation the instant something changes
+  // (WebSocket push), plus a slow backstop poll in case a socket drops
+  // silently. Both call the same api.liveGet the old fixed-interval poll
+  // used, so there's one code path either way.
   useEffect(() => {
     if (!liveConv || liveConv.status === "closed") return;
-    const iv = setInterval(async () => {
+    async function refetch() {
       try {
-        const fresh = await api.liveGet(liveConv.id);
-        setLiveConv(fresh);
+        setLiveConv(await api.liveGet(liveConv.id));
       } catch {
-        /* transient poll failure - next tick tries again */
+        /* transient failure - next tick/push tries again */
       }
-    }, LIVE_POLL_MS);
-    return () => clearInterval(iv);
+    }
+    const iv = setInterval(refetch, LIVE_POLL_MS);
+    const disconnectWs = connectWs(`/ws/live/${liveConv.id}`, { onMessage: refetch });
+    return () => { clearInterval(iv); disconnectWs(); };
   }, [liveConv?.id, liveConv?.status]);
 
   // Once a live conversation closes, fold its transcript into the

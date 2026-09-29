@@ -13,8 +13,10 @@ WORKDIR /app
 # text layer - English+Hindi, matching the rest of the app's bilingual
 # text handling. PyMuPDF renders PDF pages to bitmaps for it without
 # needing poppler-utils installed separately.
+# ffmpeg is what src/stt.py shells out to, converting a browser's
+# recorded webm/opus voice clip to the mono 16-bit PCM WAV Vosk needs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      tesseract-ocr tesseract-ocr-hin \
+      tesseract-ocr tesseract-ocr-hin ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install deps first so this layer is cached across source-only changes.

@@ -37,20 +37,27 @@ Endpoints reflect the layered architecture:
                                         - doctor's forwarded-case queue
                                         (both sections open to any counsellor-or-doctor account -
                                         see STAFF_ROLES / _require_staff)
+  WS   /ws/live/{id}, /ws/staff        - push invalidation for the above instead of fixed-interval
+                                        polling (see src/ws_manager.py); each frontend poll loop also
+                                        keeps a slow backstop interval in case a socket drops silently
+  POST /stt/transcribe                 - self-hosted speech-to-text (see src/stt.py) for the patient
+                                        chat's voice input; 503s (frontend falls back to the browser's
+                                        own SpeechRecognition) until a model is actually provisioned
 """
 
 import json
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import auth, document_extractor, gis, live_chat
+from src import auth, document_extractor, gis, live_chat, stt
 from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
+from src.ws_manager import hub
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 # The deployed frontend as of this cutover - a Vite+React rewrite of
@@ -549,7 +556,7 @@ def nutrition_checks_mine(x_user_token: Optional[str] = Header(None)):
 # ============================================================
 
 @app.post("/chat")
-def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
+async def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
     result = chat_assistant.respond(req.message, context_message=req.contextMessage, unresolved_rounds=req.unresolvedRounds)
 
     user = _current_user(x_user_token)
@@ -592,6 +599,7 @@ def chat(req: ChatRequest, x_user_token: Optional[str] = Header(None)):
             )
             result["escalatedToLive"] = True
             result["liveConversationId"] = conv["id"]
+            await hub.notify_staff("queue_changed")
         except Exception as exc:
             # Escalating to the live queue must never break the scripted
             # reply the person is already waiting on.
@@ -697,7 +705,7 @@ def _check_conv_access(conv: dict, user: Optional[dict], guest_id: Optional[str]
 
 
 @app.post("/live/start")
-def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+async def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
     user, guest_id = _identify_patient(x_user_token, req.guestId or x_guest_id)
     patient_name = (user["name"] or user["email"].split("@")[0]) if user else "Guest"
     conv = live_chat.start_or_escalate(
@@ -709,6 +717,7 @@ def live_start(req: LiveStartRequest, x_user_token: Optional[str] = Header(None)
         reason=req.reason or "Asked to talk to a person",
         reason_source="requested",
     )
+    await hub.notify_staff("queue_changed")
     return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv["id"]))}
 
 
@@ -730,7 +739,7 @@ def live_get(conv_id: str, x_user_token: Optional[str] = Header(None), x_guest_i
 
 
 @app.post("/live/{conv_id}/messages")
-def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
+async def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None), x_guest_id: Optional[str] = Header(None)):
     user = _current_user(x_user_token)
     conv = live_chat.get_conversation(conv_id)
     _check_conv_access(conv, user, req.guestId or x_guest_id)
@@ -745,6 +754,7 @@ def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str]
             "Thank you. If you're bleeding heavily or feel faint, call 108 now - don't wait for the chat.\n"
             "खून ज़्यादा हो या चक्कर आए तो अभी 108 पर कॉल करें।",
         )
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": {"sent": True}}
 
 
@@ -786,42 +796,49 @@ def counsellor_conversation(conv_id: str, x_user_token: Optional[str] = Header(N
 
 
 @app.post("/counsellor/{conv_id}/claim")
-def counsellor_claim(conv_id: str, x_user_token: Optional[str] = Header(None)):
+async def counsellor_claim(conv_id: str, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     try:
         conv = live_chat.claim(conv_id, user["id"])
     except live_chat.LiveChatError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await hub.notify_staff("queue_changed")
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": _serialize_conv(conv, live_chat.list_messages(conv_id))}
 
 
 @app.post("/counsellor/{conv_id}/messages")
-def counsellor_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None)):
+async def counsellor_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     try:
         live_chat.counsellor_send(conv_id, user["id"], req.text)
     except live_chat.LiveChatError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": {"sent": True}}
 
 
 @app.post("/counsellor/{conv_id}/resolve")
-def counsellor_resolve(conv_id: str, req: ResolveRequest, x_user_token: Optional[str] = Header(None)):
+async def counsellor_resolve(conv_id: str, req: ResolveRequest, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     try:
         live_chat.resolve(conv_id, user["id"], req.outcome, req.note or "")
     except live_chat.LiveChatError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await hub.notify_staff("queue_changed")
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": {"resolved": True}}
 
 
 @app.post("/counsellor/{conv_id}/handoff")
-def counsellor_handoff(conv_id: str, req: HandoffRequest, x_user_token: Optional[str] = Header(None)):
+async def counsellor_handoff(conv_id: str, req: HandoffRequest, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     try:
         live_chat.handoff_to_doctor(conv_id, user["id"], req.note, req.urgency)
     except live_chat.LiveChatError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await hub.notify_staff("doc_changed")
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": {"forwarded": True}}
 
 
@@ -857,13 +874,90 @@ def doctor_conversation(conv_id: str, x_user_token: Optional[str] = Header(None)
 
 
 @app.post("/doctor/{conv_id}/advice")
-def doctor_advice(conv_id: str, req: DoctorAdviceRequest, x_user_token: Optional[str] = Header(None)):
+async def doctor_advice(conv_id: str, req: DoctorAdviceRequest, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     try:
         live_chat.submit_doctor_advice(conv_id, user["id"], req.advice)
     except live_chat.LiveChatError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    await hub.notify_staff("doc_changed")
+    await hub.notify_conv(conv_id)
     return {"success": True, "data": {"submitted": True}}
+
+
+# ============================================================
+#  REAL-TIME (WebSocket push, replacing the fixed-interval polling the
+#  frontend used everywhere above - see src/ws_manager.py). A socket only
+#  ever receives a small {"type": ...} invalidation event; the page then
+#  re-fetches from the same REST endpoints above, so there is exactly one
+#  place that knows how to serialize a conversation/queue row.
+# ============================================================
+
+
+@app.websocket("/ws/live/{conv_id}")
+async def ws_live(websocket: WebSocket, conv_id: str):
+    """Patient (or a counsellor/doctor viewing that same conversation) -
+    no auth needed beyond already knowing the conversation id, matching
+    the REST /live/{conv_id} endpoints' own guest-friendly access model
+    (the id itself is the capability, same as a share code elsewhere in
+    this app)."""
+    await hub.conv_connect(conv_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        hub.conv_disconnect(conv_id, websocket)
+
+
+@app.websocket("/ws/staff")
+async def ws_staff(websocket: WebSocket, token: Optional[str] = None):
+    """Counsellor/doctor shell - one socket per open StaffWorkspace tab,
+    covering the queue, forwarded-cases, and duty-change events. A
+    browser WebSocket can't set a custom header, so the session token
+    travels as a query param here instead of x-user-token."""
+    user = _current_user(token)
+    if not user or user["role"] not in STAFF_ROLES:
+        await websocket.close(code=4401)
+        return
+    await hub.staff_connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        hub.staff_disconnect(websocket)
+
+
+# ============================================================
+#  SPEECH-TO-TEXT (self-hosted, see src/stt.py)
+# ============================================================
+
+
+@app.get("/stt/status")
+def stt_status():
+    """Checked once when the chat widget mounts, so it can pick
+    self-hosted-vs-browser speech recognition up front instead of
+    recording audio, uploading it, and only THEN discovering no model is
+    configured - which would otherwise mean silently re-listening for the
+    same thing a second time with no way to tell the person why."""
+    return {"success": True, "data": {"configured": stt.is_configured()}}
+
+
+@app.post("/stt/transcribe")
+async def stt_transcribe(file: UploadFile = File(...)):
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty audio upload.")
+    try:
+        text = stt.transcribe_upload(raw)
+    except stt.SttNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except stt.SttError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"success": True, "data": {"text": text}}
 
 
 # ============================================================
