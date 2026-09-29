@@ -9,6 +9,33 @@
 // Uses a ScriptProcessorNode rather than an AudioWorklet - deprecated,
 // but still universally supported and avoids shipping a second JS module
 // file just to downsample audio; revisit if that ever actually breaks.
+
+// Matches src/api/main.py's STT_WS_NOT_CONFIGURED - a close with this
+// code means no model is loaded server-side at all, so retrying would
+// only ever fail the same way again.
+const STT_WS_NOT_CONFIGURED = 4404;
+
+// A transient drop (network blip, proxy hiccup) gets this many reconnect
+// attempts, with a short backoff, before giving up on self-hosted
+// streaming for the rest of this listening session - a still-active mic
+// session shouldn't be abandoned over one bad moment, but it also
+// shouldn't retry forever while the patient sits there mid-sentence.
+const RECONNECT_DELAYS_MS = [300, 800];
+
+// Conservative RMS floor for "this chunk is silence, not just quiet
+// speech" - picked low deliberately so a soft-spoken patient or a noisy
+// room never gets mistaken for silence and dropped; it only catches
+// genuinely dead air (nobody talking, background room tone). Only every
+// 4th confirmed-silent chunk actually gets sent.
+const SILENCE_RMS_THRESHOLD = 0.01;
+const KEEPALIVE_EVERY = 4;
+
+function isSilent(float32) {
+  let sumSquares = 0;
+  for (let i = 0; i < float32.length; i++) sumSquares += float32[i] * float32[i];
+  return Math.sqrt(sumSquares / float32.length) < SILENCE_RMS_THRESHOLD;
+}
+
 export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor || !navigator.mediaDevices?.getUserMedia) {
@@ -24,10 +51,6 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
     return { stop() {} };
   }
 
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const socket = new WebSocket(`${proto}//${window.location.host}/ws/stt`);
-  socket.binaryType = "arraybuffer";
-
   const audioCtx = new AudioContextCtor();
   const source = audioCtx.createMediaStreamSource(stream);
   const processor = audioCtx.createScriptProcessor(4096, 1, 1);
@@ -35,6 +58,8 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
 
   let stopped = false;
   let unavailableFired = false;
+  let socket = null;
+  let reconnectCount = 0;
 
   function cleanupAudio() {
     try { processor.disconnect(); } catch { /* already disconnected */ }
@@ -50,27 +75,70 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
     onUnavailable?.();
   }
 
-  // 4404 (see src/api/main.py's STT_WS_NOT_CONFIGURED) means no model is
-  // configured server-side at all - fall back for the rest of the
-  // session rather than retrying a socket that will only ever refuse the
-  // same way. Any other close/error (network blip, proxy hiccup) also
-  // falls back, since there's no useful retry to do mid-conversation.
-  socket.onclose = () => fireUnavailable();
-  socket.onerror = () => fireUnavailable();
-  socket.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data);
-      if (msg.final) onFinal?.(msg.text);
-      else onPartial?.(msg.text);
-    } catch {
-      /* ignore a malformed frame */
-    }
-  };
+  function openSocket() {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${proto}//${window.location.host}/ws/stt`);
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => { reconnectCount = 0; };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.final) onFinal?.(msg.text);
+        else onPartial?.(msg.text);
+      } catch {
+        /* ignore a malformed frame */
+      }
+    };
+    ws.onclose = (e) => {
+      if (stopped) return;
+      if (e.code === STT_WS_NOT_CONFIGURED) {
+        fireUnavailable();
+        return;
+      }
+      if (reconnectCount < RECONNECT_DELAYS_MS.length) {
+        const delay = RECONNECT_DELAYS_MS[reconnectCount];
+        reconnectCount += 1;
+        setTimeout(() => {
+          if (!stopped) socket = openSocket();
+        }, delay);
+      } else {
+        fireUnavailable();
+      }
+    };
+    ws.onerror = () => ws.close();
+    return ws;
+  }
+
+  socket = openSocket();
+
+  let silentStreak = 0;
 
   processor.onaudioprocess = (e) => {
-    if (socket.readyState !== WebSocket.OPEN) return;
-    const pcm16 = downsampleTo16kMono(e.inputBuffer.getChannelData(0), inputRate);
-    if (pcm16.length) socket.send(pcm16.buffer);
+    // No socket, or one that's mid-reconnect - drop this chunk rather
+    // than buffering it. A reconnect discards Vosk's in-progress
+    // utterance state server-side anyway (a fresh KaldiRecognizer), so
+    // there's nothing meaningful to replay it into once the new socket
+    // opens; the patient just keeps talking and partials resume.
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    const float32 = e.inputBuffer.getChannelData(0);
+    const pcm16 = downsampleTo16kMono(float32, inputRate);
+    if (!pcm16.length) return;
+
+    // Raw PCM16 @ 16kHz is ~1.9MB/minute, sent continuously - real for a
+    // patient on a poor connection, and this app otherwise goes out of
+    // its way for low-bandwidth use. Actual speech is always sent at full
+    // fidelity (accuracy matters more than saving bytes there); only
+    // confirmed silence gets thinned, to one chunk in KEEPALIVE_EVERY,
+    // which cuts most of the bandwidth a normal pause-filled conversation
+    // spends on dead air while still feeding the recognizer enough silent
+    // frames to reach its own end-of-utterance detection.
+    if (isSilent(float32)) {
+      silentStreak += 1;
+      if (silentStreak % KEEPALIVE_EVERY !== 0) return;
+    } else {
+      silentStreak = 0;
+    }
+    socket.send(pcm16.buffer);
   };
 
   source.connect(processor);
@@ -86,12 +154,12 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
     if (stopped) return;
     stopped = true;
     cleanupAudio();
-    if (socket.readyState === WebSocket.OPEN) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send("stop");
       // Give the flushed final result a moment to arrive before closing.
       setTimeout(() => socket.close(), 300);
     } else {
-      socket.close();
+      socket?.close();
     }
   }
 

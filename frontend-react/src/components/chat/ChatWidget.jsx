@@ -231,21 +231,32 @@ export default function ChatWidget() {
   // request - see live_chat.py's cancel(), only reachable while still
   // "waiting" (once a counsellor has joined, leaving goes through their
   // resolve/handoff flow instead, since a real person is now involved).
+  //
+  // Deliberately NOT optimistic: an earlier version cleared local state
+  // before the server confirmed the cancel, so a counsellor claiming the
+  // request in the same instant (cancel then loses the race server-side,
+  // 409) silently dropped the patient back to bot mode while a real
+  // person was now waiting on the other end of a conversation nobody was
+  // watching anymore. Only commit to bot mode once /cancel actually
+  // succeeds; on any failure (already claimed, or just offline) re-sync
+  // with the server's real state instead of guessing.
   async function cancelLive() {
     if (!liveConv) return;
     const convId = liveConv.id;
-    setLiveConv(null);
-    setMessages((m) => {
-      const next = [...m, { sender: "bot", text: t("chat.cancelledMessage") }];
-      scopedSet(KEYS.CHAT_HISTORY, next.slice(-40));
-      return next;
-    });
     try {
       await api.liveCancel(convId);
+      setLiveConv(null);
+      setMessages((m) => {
+        const next = [...m, { sender: "bot", text: t("chat.cancelledMessage") }];
+        scopedSet(KEYS.CHAT_HISTORY, next.slice(-40));
+        return next;
+      });
     } catch {
-      // Already claimed/closed server-side (a counsellor grabbed it right
-      // as this fired) - the widget has already moved on to bot mode
-      // locally, which is the right outcome either way from here.
+      try {
+        setLiveConv(await api.liveGet(convId));
+      } catch {
+        /* also offline - leave state as-is, the next poll/WS push retries */
+      }
     }
   }
 
@@ -403,6 +414,13 @@ export default function ChatWidget() {
                 }
                 if (m.system_kind === "fwd") {
                   return <p key={m.id} className="text-center text-xs text-muted">{t("chat.forwardedToDoctor")}</p>;
+                }
+                if (m.system_kind === "unclaim") {
+                  return (
+                    <p key={m.id} className="rounded-xl border border-dashed border-warning/60 bg-warning-soft px-3 py-2 text-center text-xs leading-relaxed text-ink">
+                      <i className="ph ph-user-minus" /> {t("chat.counsellorSteppedAway")}
+                    </p>
+                  );
                 }
                 return null;
               }

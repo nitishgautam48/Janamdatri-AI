@@ -276,6 +276,7 @@ function Bubble({ m }) {
       esc: t("counsellor.sysEscalated"), join: t("counsellor.sysJoined"),
       leave: `${t("counsellor.sysResolved")}${m.text ? " · " + t(OUTCOMES.find((o) => o.id === m.text)?.labelKey) : ""}`,
       fwd: t("counsellor.sysForwarded"),
+      unclaim: t("counsellor.sysUnclaimed"),
     };
     return <div style={{ textAlign: "center", fontSize: 12, color: "var(--color-faint)", padding: "2px 0" }}>{map[m.system_kind] || m.system_kind}</div>;
   }

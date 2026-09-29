@@ -642,6 +642,7 @@ export const translations = {
     "chat.cancelWaiting": "Cancel and go back to assistant",
     "chat.cancelledMessage": "You've left the counsellor queue. I'm still here for questions, and 108 is always available for emergencies.",
     "chat.connectedWith": "You're now connected with a counsellor, a real person, not the assistant. For emergencies, still call 108 right away.",
+    "chat.counsellorSteppedAway": "Your counsellor has stepped away - you're back in the queue for the next available one. If this is urgent, call 108/102 now.",
     "chat.chatEnded": "The conversation with the counsellor has ended. You're back with the automated assistant, and 108 is always there.",
     "chat.emergencyStrip": "Emergency? Don't wait for the chat.",
     "chat.counsellorLabel": "Counsellor",
@@ -736,6 +737,7 @@ export const translations = {
     "counsellor.sysJoined": "Counsellor joined - patient was told a real person is here",
     "counsellor.sysResolved": "Resolved",
     "counsellor.sysForwarded": "Forwarded to doctor with transcript",
+    "counsellor.sysUnclaimed": "Counsellor went off duty - released back to the queue",
 
     "doctor.headerTitle": "Janamdatri AI · Doctor",
     "doctor.forwardedCasesTitle": "Forwarded cases",
@@ -1421,6 +1423,7 @@ export const translations = {
     "chat.cancelWaiting": "रद्द करें और सहायक के पास वापस जाएँ",
     "chat.cancelledMessage": "आपने काउंसलर की कतार छोड़ दी है। मैं अब भी यहाँ हूँ, और आपात स्थिति के लिए 108 हमेशा उपलब्ध है।",
     "chat.connectedWith": "अब आप एक काउंसलर से जुड़ी हैं, एक असली इंसान, सहायक नहीं। आपात स्थिति में फिर भी तुरंत 108 पर कॉल करें।",
+    "chat.counsellorSteppedAway": "आपकी काउंसलर हट गई हैं - आप अगली उपलब्ध काउंसलर के लिए फिर से कतार में हैं। अगर यह ज़रूरी है, तो अभी 108/102 पर कॉल करें।",
     "chat.chatEnded": "काउंसलर के साथ बातचीत खत्म हुई। अब आप स्वचालित सहायक से बात कर रही हैं, और 108 हमेशा उपलब्ध है।",
     "chat.emergencyStrip": "आपात स्थिति? चैट का इंतज़ार न करें।",
     "chat.counsellorLabel": "काउंसलर",
@@ -1515,6 +1518,7 @@ export const translations = {
     "counsellor.sysJoined": "काउंसलर जुड़े - मरीज़ को बताया गया कि एक असली इंसान यहाँ है",
     "counsellor.sysResolved": "सुलझाया गया",
     "counsellor.sysForwarded": "ट्रांसक्रिप्ट के साथ डॉक्टर को भेजा गया",
+    "counsellor.sysUnclaimed": "काउंसलर ड्यूटी से हट गए - वापस कतार में भेजा गया",
 
     "doctor.headerTitle": "जनमदात्री एआई · डॉक्टर",
     "doctor.forwardedCasesTitle": "भेजे गए मामले",
@@ -2204,6 +2208,7 @@ export const translations = {
     "chat.cancelWaiting": "Cancel karein aur assistant ke paas wapas jaayein",
     "chat.cancelledMessage": "Aapne counsellor queue chhod di hai. Main abhi bhi yahan hoon, aur emergency ke liye 108 hamesha available hai.",
     "chat.connectedWith": "Ab aap ek counsellor se judi hain, ek asli insaan, assistant nahin. Emergency mein phir bhi turant 108 par call karein.",
+    "chat.counsellorSteppedAway": "Aapki counsellor hat gayi hain - aap agli available counsellor ke liye phir se queue mein hain. Agar yeh urgent hai to abhi 108/102 par call karein.",
     "chat.chatEnded": "Counsellor ke saath baatcheet khatam hui. Ab aap automated assistant se baat kar rahi hain, aur 108 hamesha available hai.",
     "chat.emergencyStrip": "Emergency? Chat ka wait mat karein.",
     "chat.counsellorLabel": "Counsellor",
@@ -2298,6 +2303,7 @@ export const translations = {
     "counsellor.sysJoined": "Counsellor jud gaye - patient ko bataya gaya ki ek asli insaan yahan hai",
     "counsellor.sysResolved": "Resolved",
     "counsellor.sysForwarded": "Transcript ke saath doctor ko forward kiya gaya",
+    "counsellor.sysUnclaimed": "Counsellor duty se hat gaye - wapas queue mein bhej diya gaya",
 
     "doctor.headerTitle": "Janamdatri AI · Doctor",
     "doctor.forwardedCasesTitle": "Forwarded cases",

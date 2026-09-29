@@ -286,6 +286,42 @@ def claim(conv_id: str, counsellor_id: int) -> dict:
         conn.close()
 
 
+def release_claimed_by(counsellor_id: int) -> list:
+    """Going off duty releases whatever this counsellor still has claimed,
+    back into the waiting queue for someone else to pick up - the
+    counterpart to cancel() for the case where a real person WAS
+    connected but has now stepped away. Without this, a patient mid-
+    conversation with a counsellor who logs off is simply never told and
+    sits there indefinitely (the same "waiting" bug that on-duty-count
+    fixed for a request that was never claimed, but for the claimed
+    case). Returns the ids of whatever got released, so the caller can
+    push a WS update to each one."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT id FROM conversations WHERE counsellor_id = ? AND status = ?",
+            (counsellor_id, STATUS_CLAIMED),
+        ).fetchall()
+        conv_ids = [r["id"] for r in rows]
+        if conv_ids:
+            now = time.time()
+            placeholders = ",".join("?" for _ in conv_ids)
+            conn.execute(
+                f"UPDATE conversations SET status = ?, counsellor_id = NULL, claimed_at = NULL "
+                f"WHERE id IN ({placeholders})",
+                (STATUS_WAITING, *conv_ids),
+            )
+            conn.executemany(
+                "INSERT INTO conv_messages (conversation_id, sender_kind, text, system_kind, created_at) "
+                "VALUES (?, 'system', '', 'unclaim', ?)",
+                [(cid, now) for cid in conv_ids],
+            )
+            conn.commit()
+        return conv_ids
+    finally:
+        conn.close()
+
+
 def cancel(conv_id: str) -> dict:
     """The patient backing out of an unclaimed request - the counterpart
     to `resolve()`, but reachable by the patient themselves (not a

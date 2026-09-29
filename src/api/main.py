@@ -52,6 +52,7 @@ Endpoints reflect the layered architecture:
                                         the same way /stt/transcribe's 503 does.
 """
 
+import asyncio
 import json
 from pathlib import Path
 from typing import List, Optional
@@ -798,9 +799,22 @@ async def live_send(conv_id: str, req: LiveMessageRequest, x_user_token: Optiona
 
 
 @app.post("/counsellor/duty")
-def counsellor_duty(req: DutyRequest, x_user_token: Optional[str] = Header(None)):
+async def counsellor_duty(req: DutyRequest, x_user_token: Optional[str] = Header(None)):
     user = _require_staff(x_user_token)
     auth.set_duty(user["id"], req.onDuty)
+    if not req.onDuty:
+        # Going off duty releases whatever this counsellor still has
+        # claimed, back to the waiting queue - otherwise a patient
+        # mid-conversation is simply abandoned with no signal at all
+        # (see live_chat.release_claimed_by). Explicit duty-off only;
+        # a crashed tab/lost connection without toggling off first isn't
+        # caught by this - that needs presence/heartbeat detection this
+        # app doesn't have yet.
+        released = live_chat.release_claimed_by(user["id"])
+        for conv_id in released:
+            await hub.notify_conv(conv_id)
+        if released:
+            await hub.notify_staff("queue_changed")
     return {"success": True, "data": {"onDuty": req.onDuty}}
 
 
@@ -1034,11 +1048,17 @@ async def ws_stt(websocket: WebSocket):
                 break
             data = frame.get("bytes")
             if data:
-                result = recognizer.feed(data)
+                # KaldiRecognizer.AcceptWaveform is a blocking, CPU-bound
+                # call - run it off the event loop (asyncio.to_thread)
+                # rather than inline, so one patient's live transcription
+                # doesn't stall every other request this single-process
+                # server is handling (other API calls, other WS
+                # connections) for however long that chunk takes to score.
+                result = await asyncio.to_thread(recognizer.feed, data)
                 if result["text"]:
                     await websocket.send_json(result)
             elif frame.get("text") == "stop":
-                final_text = recognizer.finish()
+                final_text = await asyncio.to_thread(recognizer.finish)
                 if final_text:
                     await websocket.send_json({"final": True, "text": final_text})
                 break
