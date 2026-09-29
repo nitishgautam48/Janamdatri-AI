@@ -662,6 +662,8 @@ export const translations = {
     "chat.voiceNoteDiscard": "Discard",
     "chat.voiceNoteSend": "Send",
     "chat.voiceNoteSendAriaLabel": "Send voice note",
+    "chat.callTranscriptConsent": "This call will be transcribed to text and saved to your record for your counsellor (and a doctor, if looped in) to read later. This only covers what you say - continue?",
+    "chat.callTranscriptLabel": "From the call",
 
     "careTeam.title": "Care Team",
     "careTeam.subtitle": "Sign in as a counsellor or doctor to see live cases and forwarded reviews.",
@@ -1461,6 +1463,8 @@ export const translations = {
     "chat.voiceNoteDiscard": "हटाएं",
     "chat.voiceNoteSend": "भेजें",
     "chat.voiceNoteSendAriaLabel": "वॉइस नोट भेजें",
+    "chat.callTranscriptConsent": "यह कॉल टेक्स्ट में बदलकर आपके रिकॉर्ड में सहेजी जाएगी, ताकि आपकी काउंसलर (और अगर डॉक्टर जुड़ें तो वे भी) बाद में इसे पढ़ सकें। यह केवल आपकी कही बातों को कवर करता है - जारी रखें?",
+    "chat.callTranscriptLabel": "कॉल से",
 
     "careTeam.title": "केयर टीम",
     "careTeam.subtitle": "लाइव मामले और भेजी गई समीक्षाएं देखने के लिए काउंसलर या डॉक्टर के रूप में साइन इन करें।",
@@ -2264,6 +2268,8 @@ export const translations = {
     "chat.voiceNoteDiscard": "Hatayein",
     "chat.voiceNoteSend": "Bhejein",
     "chat.voiceNoteSendAriaLabel": "Voice note bhejein",
+    "chat.callTranscriptConsent": "Yeh call text mein badal kar aapke record mein save hogi, taaki aapki counsellor (aur agar doctor jude to wo bhi) baad mein ise padh saken. Yeh sirf aapki kahi baaton ko cover karta hai - continue karein?",
+    "chat.callTranscriptLabel": "Call se",
 
     "careTeam.title": "Care Team",
     "careTeam.subtitle": "Live cases aur forwarded reviews dekhne ke liye counsellor ya doctor ke roop mein sign in karein.",

@@ -48,7 +48,10 @@ Endpoints reflect the layered architecture:
                                         see STAFF_ROLES / _require_staff)
   WS   /ws/live/{id}, /ws/staff        - push invalidation for the above instead of fixed-interval
                                         polling (see src/ws_manager.py); each frontend poll loop also
-                                        keeps a slow backstop interval in case a socket drops silently
+                                        keeps a slow backstop interval in case a socket drops silently.
+                                        /ws/live/{id} also carries WebRTC call signaling and, once a
+                                        call connects, each side's own streaming transcript of what
+                                        THEY said (message_kind='call') - see the endpoint's docstring
   POST /stt/transcribe                 - self-hosted speech-to-text (see src/stt.py), record-then-
                                         upload path: 503s (frontend falls back to the browser's own
                                         SpeechRecognition) until a model is actually provisioned
@@ -1022,12 +1025,14 @@ async def doctor_advice(conv_id: str, req: DoctorAdviceRequest, x_user_token: Op
 
 
 @app.websocket("/ws/live/{conv_id}")
-async def ws_live(websocket: WebSocket, conv_id: str):
+async def ws_live(websocket: WebSocket, conv_id: str, token: Optional[str] = None):
     """Patient (or a counsellor/doctor viewing that same conversation) -
     no auth needed beyond already knowing the conversation id, matching
     the REST /live/{conv_id} endpoints' own guest-friendly access model
     (the id itself is the capability, same as a share code elsewhere in
-    this app).
+    this app). `token` is optional and only used to attribute
+    call-transcript segments correctly (see below) - everything else
+    this socket does works identically with or without it.
 
     Also carries the voice-call feature's WebRTC signaling: a received
     frame is normally just a heartbeat ping (see lib/ws.js) with nothing
@@ -1035,7 +1040,17 @@ async def ws_live(websocket: WebSocket, conv_id: str):
     verbatim to the OTHER participant in this same conversation (see
     hub.relay_conv_signal) - this socket already connects exactly the two
     people a call would be between, so it doubles as the signaling
-    channel rather than standing up a separate one."""
+    channel rather than standing up a separate one.
+
+    A {"type": "call_transcript_segment", "text": ...} frame (Phase 2 -
+    transcribing the call itself, not just signaling it) is different:
+    it gets PERSISTED as a real conv_messages row (message_kind='call'),
+    not just relayed, since it needs to survive reload and be visible to
+    a doctor later. Who it's attributed to is resolved here server-side
+    from `token` matching this conversation's actual assigned counsellor
+    - not from a client-supplied field - since unlike everything else on
+    this "id is the capability" socket, fabricated content here would
+    read as an authoritative clinical transcript rather than just noise."""
     await hub.conv_connect(conv_id, websocket)
     try:
         while True:
@@ -1044,8 +1059,25 @@ async def ws_live(websocket: WebSocket, conv_id: str):
                 msg = json.loads(raw)
             except ValueError:
                 continue
-            if isinstance(msg, dict) and msg.get("type") == "webrtc_signal":
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("type") == "webrtc_signal":
                 await hub.relay_conv_signal(conv_id, websocket, msg)
+            elif msg.get("type") == "call_transcript_segment":
+                text = (msg.get("text") or "").strip()
+                if not text:
+                    continue
+                staff_user = _current_user(token) if token else None
+                conv_row = live_chat.get_conversation(conv_id)
+                is_assigned_counsellor = (
+                    conv_row and staff_user and staff_user["role"] in STAFF_ROLES
+                    and conv_row["counsellor_id"] == staff_user["id"]
+                )
+                if is_assigned_counsellor:
+                    live_chat.add_message(conv_id, "counsellor", text, sender_id=staff_user["id"], message_kind="call")
+                else:
+                    live_chat.add_message(conv_id, "patient", text, message_kind="call")
+                await hub.notify_conv(conv_id)
     except WebSocketDisconnect:
         pass
     finally:

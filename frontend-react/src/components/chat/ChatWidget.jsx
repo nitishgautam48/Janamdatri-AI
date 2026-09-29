@@ -84,6 +84,15 @@ export default function ChatWidget() {
   const [callState, setCallState] = useState("idle");
   const voiceCallRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  // Transcribing the call itself (Phase 2) - separate from the voice
+  // call's audio (which never touches the server) and from voice notes
+  // above: each side runs its OWN streaming STT on its OWN mic in
+  // parallel with the call, and reports only finished ("final")
+  // segments up as they're recognized, tagged "call" so the transcript
+  // shows where they came from. No server-side audio pipeline needed -
+  // reuses the same self-hosted streaming path live-stt.js already has.
+  const callSttRef = useRef(null);
+  const callConsentGivenRef = useRef(false);
   // Voice notes (live counsellor chat only - see toggleListening below):
   // record a clip, preview it (play it back, see/edit the transcript),
   // then either send it as a message or discard it. Separate from the
@@ -279,10 +288,45 @@ export default function ChatWidget() {
         else refetch();
       },
     });
+
+    // Starts THIS side's own streaming STT the moment the call actually
+    // connects, reporting only finished segments to the server (see
+    // above). A real consent prompt, not a passive notice - hearing her
+    // actual voice is one thing, but turning the whole call into a
+    // permanent text record is a bigger step, and each side consents for
+    // their OWN speech only (declining just means that side's turns
+    // aren't transcribed; the call itself is unaffected either way).
+    async function startCallTranscription() {
+      if (!callConsentGivenRef.current) {
+        if (!window.confirm(t("chat.callTranscriptConsent"))) return;
+        callConsentGivenRef.current = true;
+      }
+      callSttRef.current = startLiveStt({
+        onFinal: (text) => {
+          if (text.trim()) disconnectWs.send({ type: "call_transcript_segment", text: text.trim() });
+        },
+        onUnavailable: () => {
+          // No self-hosted model, mic denied, or the socket couldn't
+          // connect - this side's speech just won't be transcribed;
+          // nothing to fall back to for a silent background recorder
+          // the way there is for the dictate-into-a-box mic.
+        },
+      });
+    }
+    async function stopCallTranscription() {
+      const controller = await callSttRef.current;
+      controller?.stop();
+      callSttRef.current = null;
+    }
+
     voiceCallRef.current = createVoiceCall({
       wsSend: disconnectWs.send,
       onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
-      onStateChange: setCallState,
+      onStateChange: (state) => {
+        setCallState(state);
+        if (state === "connected") startCallTranscription();
+        else stopCallTranscription();
+      },
       onIncomingCall: () => {}, // the "ringing" state alone drives the incoming-call UI below
     });
     return () => {
@@ -290,6 +334,7 @@ export default function ChatWidget() {
       disconnectWs();
       voiceCallRef.current?.hangUp();
       voiceCallRef.current = null;
+      stopCallTranscription();
     };
   }, [liveConv?.id, liveConv?.status]);
 
@@ -568,6 +613,7 @@ export default function ChatWidget() {
               const isBot = m.sender_kind === "bot";
               const isCounsellor = m.sender_kind === "counsellor";
               const isVoice = m.message_kind === "voice";
+              const isCallSegment = m.message_kind === "call";
               return (
                 <div key={m.id}>
                   {isCounsellor && <div className="mb-0.5 text-[11px] font-medium text-primary">{t("chat.counsellorLabel")}</div>}
@@ -581,6 +627,11 @@ export default function ChatWidget() {
                           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                           <audio controls src={`/live/${liveConv.id}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 220 }} />
                           <p className="whitespace-pre-wrap text-sm">{m.text || t("chat.voiceNoteNoTranscript")}</p>
+                        </div>
+                      ) : isCallSegment ? (
+                        <div className="grid gap-0.5">
+                          <div className="flex items-center gap-1.5 text-[11px] font-semibold opacity-70"><i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}</div>
+                          <p className="whitespace-pre-wrap">{m.text}</p>
                         </div>
                       ) : (
                         <p className="whitespace-pre-wrap">{m.text}</p>

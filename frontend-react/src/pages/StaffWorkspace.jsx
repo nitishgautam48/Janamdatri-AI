@@ -7,6 +7,7 @@ import { severityLabel } from "../lib/severity";
 import { connectWs } from "../lib/ws";
 import { getToken } from "../lib/storage";
 import { createVoiceCall } from "../lib/voice-call";
+import { startLiveStt } from "../lib/live-stt";
 
 const SEVERITY_TONE = {
   Critical: { bg: "var(--color-critical-soft)", fg: "var(--color-critical)" },
@@ -303,6 +304,13 @@ function Bubble({ m, convId }) {
               <audio controls src={`/live/${convId}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 260 }} />
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text || t("chat.voiceNoteNoTranscript")}</div>
             </div>
+          ) : m.message_kind === "call" ? (
+            <div style={{ display: "grid", gap: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, opacity: 0.7 }}>
+                <i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}
+              </div>
+              <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+            </div>
           ) : (
             <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
           )}
@@ -535,6 +543,12 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
   const [callState, setCallState] = useState("idle");
   const voiceCallRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  // Transcribing the call itself (Phase 2) - see the matching comment in
+  // ChatWidget.jsx. The counsellor's own mic gets streamed to the same
+  // self-hosted STT pipeline in parallel with the call, tagged "call" in
+  // the transcript.
+  const callSttRef = useRef(null);
+  const callConsentGivenRef = useRef(false);
 
   async function refreshLists() {
     try {
@@ -614,16 +628,46 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     }
     poll();
     const iv = setInterval(poll, CONV_POLL_MS);
-    const disconnectWs = connectWs(`/ws/live/${activeId}`, {
+    // token as a query param, not a header - the backend uses it to
+    // attribute any call_transcript_segment on this socket to this real,
+    // authenticated counsellor rather than trusting a client-claimed
+    // "speaker" field (see /ws/live/{conv_id} in src/api/main.py).
+    const disconnectWs = connectWs(`/ws/live/${activeId}?token=${encodeURIComponent(getToken() || "")}`, {
       onMessage: (msg) => {
         if (msg.type === "webrtc_signal") voiceCallRef.current?.handleSignal(msg);
         else poll();
       },
     });
+
+    async function startCallTranscription() {
+      if (!callConsentGivenRef.current) {
+        if (!window.confirm(t("chat.callTranscriptConsent"))) return;
+        callConsentGivenRef.current = true;
+      }
+      callSttRef.current = startLiveStt({
+        onFinal: (text) => {
+          if (text.trim()) disconnectWs.send({ type: "call_transcript_segment", text: text.trim() });
+        },
+        onUnavailable: () => {
+          // No self-hosted model, mic denied, or the socket couldn't
+          // connect - this side's speech just won't be transcribed.
+        },
+      });
+    }
+    async function stopCallTranscription() {
+      const controller = await callSttRef.current;
+      controller?.stop();
+      callSttRef.current = null;
+    }
+
     voiceCallRef.current = createVoiceCall({
       wsSend: disconnectWs.send,
       onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
-      onStateChange: setCallState,
+      onStateChange: (state) => {
+        setCallState(state);
+        if (state === "connected") startCallTranscription();
+        else stopCallTranscription();
+      },
     });
     return () => {
       cancelled = true;
@@ -631,6 +675,7 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
       disconnectWs();
       voiceCallRef.current?.hangUp();
       voiceCallRef.current = null;
+      stopCallTranscription();
     };
   }, [activeId]);
 
