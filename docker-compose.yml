@@ -47,10 +47,20 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - OLLAMA_MODEL=deepseek-r1:7b
     volumes:
-      - ./data:/app/data
+      - app-data:/app/data
     depends_on:
       - ollama
     restart: unless-stopped
 
 volumes:
   ollama-models:
+  # A Docker-managed volume, not a host bind mount (`./data:/app/data`) -
+  # SQLite needs real POSIX file locking, which a Windows-drive bind mount
+  # into a Linux container doesn't support reliably through Docker
+  # Desktop's file sharing, and reliably produces "disk I/O error" at
+  # startup (auth.init_db()'s very first write). A named volume lives on
+  # the Linux VM's own filesystem instead, where SQLite's locking actually
+  # works - at the cost of the data no longer being directly Explorer-
+  # browsable from Windows, same tradeoff as ollama-models above already
+  # makes for the pulled model weights.
+  app-data:
