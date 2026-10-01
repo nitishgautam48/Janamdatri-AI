@@ -35,9 +35,13 @@ its own - asking a follow-up question is far more useful than a flat
 "I didn't understand that."
 """
 
+import logging
+
 from .. import llm_chat
 from . import danger_ladder, expert_system, self_harm_ladder, text_analyzer
 from .phrase_match import contains_phrase, normalize
+
+logger = logging.getLogger("janamdatri.chat_assistant")
 
 FAQ_INTENTS = [
     {
@@ -1115,8 +1119,15 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
         try:
             llm_history = [{"role": "user", "content": context_message}] if context_message else None
             return {"reply": llm_chat.respond(text, history=llm_history), "isEmergency": False, "intent": "llm"}
-        except (llm_chat.LlmNotConfigured, llm_chat.LlmError):
-            pass  # falls through to the scripted layer below, same as if Ollama were never configured
+        except llm_chat.LlmError as exc:
+            # Logged, not silent: "the bot answered, just from the
+            # scripted fallback" and "Ollama is misconfigured/down and
+            # nobody noticed" look identical to a user, but need very
+            # different fixes - this is what tells them apart from
+            # `docker compose logs app` instead of guesswork.
+            logger.warning("llm_chat.respond() failed, falling back to scripted reply: %s", exc)
+        except llm_chat.LlmNotConfigured:
+            pass  # not an error - OLLAMA_HOST/OLLAMA_MODEL simply aren't set, same as before this feature existed
 
     intent = _match_faq(normalized)
     if intent:
