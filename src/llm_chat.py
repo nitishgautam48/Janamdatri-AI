@@ -45,6 +45,11 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL")
 
 REQUEST_TIMEOUT_SECONDS = 45
+# A full call transcript is a lot more tokens to read and respond to than a
+# one-line chat message - same model, same connection, just needs longer
+# before this code decides "not coming back" rather than the chat's own
+# REQUEST_TIMEOUT_SECONDS.
+SUMMARY_TIMEOUT_SECONDS = 120
 
 # Deliberately narrow: general pregnancy/postpartum information only, never
 # a diagnosis or a prescription, and told to hand anything emergency-shaped
@@ -63,6 +68,24 @@ SYSTEM_PROMPT = (
     "answering in chat. Always end with a reminder to confirm anything important with their ANC provider "
     "or ASHA/ANM worker. Reply in the same language/script the user wrote in (English, Hindi, or "
     "Hinglish)."
+)
+
+# For condensing a finished voice-call transcript (src/live_chat.py's
+# accumulating call-transcript row) into something a doctor can actually
+# read, instead of scrolling a full raw back-and-forth - see ws_live's
+# call_transcript_end handling in src/api/main.py for the "Patient:"/
+# "Counsellor:" line format this is fed. Summarizing is lower-risk than
+# the general chat-reply use case above (it's condensing what was already
+# said, not generating new advice), but still told to stick to what's
+# actually in the transcript rather than filling gaps.
+SUMMARY_SYSTEM_PROMPT = (
+    "You are summarizing a transcript of a phone call between a pregnant or postpartum patient and "
+    "her counsellor, for a doctor who will read your summary before the full transcript. The "
+    "transcript lines are labeled 'Patient:' or 'Counsellor:'. Write a short summary (3-6 sentences or "
+    "bullet points) covering: symptoms or concerns the patient described, any measurements/vitals "
+    "mentioned, and any advice or next steps the counsellor gave. Only summarize what is actually in "
+    "the transcript - never add information, a diagnosis, or advice that isn't there. If the "
+    "transcript is too short or unclear to summarize meaningfully, say so plainly instead of guessing."
 )
 
 
@@ -89,20 +112,15 @@ def _strip_think_tags(text: str) -> str:
     return text.strip()
 
 
-def respond(message: str, history: list[dict] | None = None) -> str:
-    """history is [{"role": "user"|"assistant", "content": str}, ...] from
-    earlier turns in the SAME exchange, oldest first - optional, omit for a
-    single-turn reply. Raises LlmNotConfigured if OLLAMA_HOST/OLLAMA_MODEL
-    aren't both set, or LlmError if the server can't be reached, times out,
-    or returns something this code doesn't recognize."""
+def _call_ollama(messages: list[dict], timeout_seconds: int) -> str:
+    """Shared HTTP plumbing for respond() and summarize_call_transcript() -
+    both just assemble a different messages list and want the same
+    request/parse/<think>-stripping/error-wrapping around it. Raises
+    LlmNotConfigured/LlmError exactly as respond() documents."""
     if not is_configured():
         raise LlmNotConfigured(
             "OLLAMA_HOST and/or OLLAMA_MODEL are not set - see src/llm_chat.py's module docstring."
         )
-
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history or [])
-    messages.append({"role": "user", "content": message})
 
     payload = json.dumps({"model": OLLAMA_MODEL, "messages": messages, "stream": False}).encode("utf-8")
     req = urllib.request.Request(
@@ -112,12 +130,12 @@ def respond(message: str, history: list[dict] | None = None) -> str:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.URLError as exc:
         raise LlmError(f"Could not reach Ollama at {OLLAMA_HOST}: {exc}") from exc
     except TimeoutError as exc:
-        raise LlmError(f"Ollama at {OLLAMA_HOST} timed out after {REQUEST_TIMEOUT_SECONDS}s: {exc}") from exc
+        raise LlmError(f"Ollama at {OLLAMA_HOST} timed out after {timeout_seconds}s: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise LlmError(f"Ollama returned an unreadable response: {exc}") from exc
 
@@ -130,3 +148,29 @@ def respond(message: str, history: list[dict] | None = None) -> str:
     if not text:
         raise LlmError("Ollama returned an empty response after stripping <think> tags.")
     return text
+
+
+def respond(message: str, history: list[dict] | None = None) -> str:
+    """history is [{"role": "user"|"assistant", "content": str}, ...] from
+    earlier turns in the SAME exchange, oldest first - optional, omit for a
+    single-turn reply. Raises LlmNotConfigured if OLLAMA_HOST/OLLAMA_MODEL
+    aren't both set, or LlmError if the server can't be reached, times out,
+    or returns something this code doesn't recognize."""
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(history or [])
+    messages.append({"role": "user", "content": message})
+    return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)
+
+
+def summarize_call_transcript(raw_text: str) -> str:
+    """raw_text is the accumulated "Patient: ...\\nCounsellor: ..." lines
+    from one call (see src/live_chat.py's append_call_segment). Same
+    LlmNotConfigured/LlmError contract as respond() - the caller
+    (ws_live's call_transcript_end handling) leaves call_summary unset on
+    either, so a doctor without Ollama configured just sees the raw
+    transcript with no summary section, not an error."""
+    messages = [
+        {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+        {"role": "user", "content": raw_text},
+    ]
+    return _call_ollama(messages, SUMMARY_TIMEOUT_SECONDS)

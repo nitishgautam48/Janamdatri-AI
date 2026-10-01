@@ -101,6 +101,14 @@ def init_db():
     for stmt in (
         "ALTER TABLE conv_messages ADD COLUMN message_kind TEXT NOT NULL DEFAULT 'text'",
         "ALTER TABLE conv_messages ADD COLUMN audio_note_id TEXT",
+        # Call-transcript rows (message_kind='call') accumulate in place
+        # across a whole call rather than one row per utterance - see
+        # start_call_transcript/append_call_segment/end_call_transcript
+        # below. call_ended_at NULL means the call is still in progress
+        # (and therefore which row new segments append onto);
+        # call_summary is filled in afterward by an LLM, if configured.
+        "ALTER TABLE conv_messages ADD COLUMN call_ended_at REAL",
+        "ALTER TABLE conv_messages ADD COLUMN call_summary TEXT",
     ):
         try:
             conn.execute(stmt)
@@ -224,6 +232,126 @@ def add_message(conv_id: str, sender_kind: str, text: str, sender_id: int = None
             "message_kind, audio_note_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (conv_id, sender_kind, sender_id, text, system_kind, message_kind, audio_note_id, time.time()),
         )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# A live voice call used to add a new conv_messages row for every single
+# transcribed utterance - readable turn by turn, but a long call meant
+# dozens of bubbles stacked in the thread, which is exactly what a doctor
+# reviewing it later doesn't want. These three functions instead keep ONE
+# accumulating row per call: start_call_transcript opens it,
+# append_call_segment keeps adding "Speaker: text" lines onto the SAME
+# row as the call continues, and end_call_transcript closes it off so the
+# next call starts a fresh row rather than continuing this one. Call
+# audio comes from two independent sides (patient + counsellor), each
+# running its own streaming STT over its own WebSocket connection - both
+# sides' segments land on this one shared row keyed by conversation_id,
+# not by which side sent them, so the transcript reads as a single
+# chronological conversation rather than two separate one-sided logs.
+def get_open_call_message(conv_id: str) -> dict:
+    """The currently in-progress call-transcript row for this
+    conversation, if any. At most one at a time - a call connects exactly
+    two people, and they share this one row regardless of which side's
+    audio produced a given line."""
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT * FROM conv_messages WHERE conversation_id = ? AND message_kind = 'call' "
+            "AND call_ended_at IS NULL ORDER BY id DESC LIMIT 1",
+            (conv_id,),
+        ).fetchone()
+        return _row(row)
+    finally:
+        conn.close()
+
+
+def start_call_transcript(conv_id: str) -> dict:
+    """Opens a new call-transcript row, or returns the existing open one
+    unchanged if there already is one. Both sides of a call independently
+    notice "connected" and each sends this - without the idempotent
+    check here, a single call would race itself into two separate rows."""
+    existing = get_open_call_message(conv_id)
+    if existing:
+        return existing
+    conn = _connect()
+    try:
+        cur = conn.execute(
+            "INSERT INTO conv_messages (conversation_id, sender_kind, text, message_kind, created_at) "
+            "VALUES (?, 'call', '', 'call', ?)",
+            (conv_id, time.time()),
+        )
+        conn.commit()
+        return _row(conn.execute("SELECT * FROM conv_messages WHERE id = ?", (cur.lastrowid,)).fetchone())
+    finally:
+        conn.close()
+
+
+def append_call_segment(conv_id: str, speaker_label: str, text: str) -> dict:
+    """Appends one more "Speaker: said this" line onto the conversation's
+    currently open call-transcript row - opening one first if a segment
+    somehow arrives before start_call_transcript did (e.g. a client
+    reconnecting mid-call), so a segment is never silently dropped for
+    lack of a row to land in. Returns the updated row."""
+    open_msg = get_open_call_message(conv_id) or start_call_transcript(conv_id)
+    conn = _connect()
+    try:
+        line = f"{speaker_label}: {text}"
+        new_text = f"{open_msg['text']}\n{line}" if open_msg["text"] else line
+        conn.execute("UPDATE conv_messages SET text = ? WHERE id = ?", (new_text, open_msg["id"]))
+        conn.commit()
+        return _row(conn.execute("SELECT * FROM conv_messages WHERE id = ?", (open_msg["id"],)).fetchone())
+    finally:
+        conn.close()
+
+
+def end_call_transcript(conv_id: str) -> dict:
+    """Marks the currently open call-transcript row as finished, so the
+    NEXT call starts a fresh row instead of appending onto this one.
+    Returns the finalized row (for the caller to hand its full text to an
+    LLM for summarization), or None if nothing was open - idempotent,
+    since both sides independently notice the call ended and each sends
+    this; the second one is a harmless no-op."""
+    open_msg = get_open_call_message(conv_id)
+    if not open_msg:
+        return None
+    return end_call_transcript_by_id(conv_id, open_msg["id"])
+
+
+def end_call_transcript_by_id(conv_id: str, message_id: int) -> dict:
+    """Same as end_call_transcript, but only closes THAT SPECIFIC row -
+    and only if it's still the open one - rather than whatever happens to
+    be open right now. src/api/main.py's ws_live uses this one: a
+    call_transcript_end frame is handled after a short grace period (see
+    CALL_TRANSCRIPT_END_GRACE_SECONDS there), and by the time that grace
+    period elapses, this conversation could easily be mid-ANOTHER, newer
+    call - a stale "end" from a call that already finished (or one of the
+    harmless early connect/disconnect blips a WebRTC session can produce
+    before truly connecting) must never reach into the future and close a
+    call it was never actually about. Returns None (a safe no-op) if the
+    row isn't open anymore, including if get_open_call_message(conv_id)
+    now points at a DIFFERENT, newer row entirely."""
+    open_msg = get_open_call_message(conv_id)
+    if not open_msg or open_msg["id"] != message_id:
+        return None
+    conn = _connect()
+    try:
+        conn.execute("UPDATE conv_messages SET call_ended_at = ? WHERE id = ?", (time.time(), message_id))
+        conn.commit()
+        return _row(conn.execute("SELECT * FROM conv_messages WHERE id = ?", (message_id,)).fetchone())
+    finally:
+        conn.close()
+
+
+def set_call_summary(message_id: int, summary: str):
+    """Fills in a finished call-transcript row's summary once the LLM
+    call in src/api/main.py's ws_live finishes (it runs as a background
+    task, not inline with end_call_transcript, since summarizing a long
+    transcript can take a while and shouldn't block the websocket)."""
+    conn = _connect()
+    try:
+        conn.execute("UPDATE conv_messages SET call_summary = ? WHERE id = ?", (summary, message_id))
         conn.commit()
     finally:
         conn.close()

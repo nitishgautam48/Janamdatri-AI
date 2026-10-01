@@ -60,6 +60,10 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
   let unavailableFired = false;
   let socket = null;
   let reconnectCount = 0;
+  // Resolves stop()'s returned promise once the server's flushed final
+  // transcript has actually arrived (or it's clear none is coming) - see
+  // stop() below for why this needs to be awaitable at all.
+  let flushResolve = null;
 
   function cleanupAudio() {
     try { processor.disconnect(); } catch { /* already disconnected */ }
@@ -83,14 +87,24 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.final) onFinal?.(msg.text);
-        else onPartial?.(msg.text);
+        if (msg.final) {
+          onFinal?.(msg.text);
+          flushResolve?.(); // the awaited flush stop() promised has now actually happened
+        } else {
+          onPartial?.(msg.text);
+        }
       } catch {
         /* ignore a malformed frame */
       }
     };
     ws.onclose = (e) => {
-      if (stopped) return;
+      if (stopped) {
+        // Server closes without ever sending a final frame when there was
+        // nothing left to flush (see src/api/main.py's /ws/stt) - that's
+        // still "the flush is done", just with nothing in it.
+        flushResolve?.();
+        return;
+      }
       if (e.code === STT_WS_NOT_CONFIGURED) {
         fireUnavailable();
         return;
@@ -150,17 +164,30 @@ export async function startLiveStt({ onPartial, onFinal, onUnavailable } = {}) {
   processor.connect(silentGain);
   silentGain.connect(audioCtx.destination);
 
+  // Returns a promise that resolves once the server's flushed final
+  // transcript (if any) has actually arrived - a caller that needs to
+  // know THIS side's transcription is truly done (not just "the stop
+  // signal was sent") has to await it, rather than treating stop() as
+  // fire-and-forget. Concretely: src/api/main.py's ws_live only closes
+  // off a call's shared transcript row once {"type": "call_transcript_
+  // end"} arrives, so sending that before the trailing segment has
+  // actually landed opens a NEW row for it instead of including it in
+  // the one just closed - awaiting this is what prevents that race.
   function stop() {
-    if (stopped) return;
+    if (stopped) return Promise.resolve();
     stopped = true;
     cleanupAudio();
     if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send("stop");
-      // Give the flushed final result a moment to arrive before closing.
-      setTimeout(() => socket.close(), 300);
-    } else {
-      socket?.close();
+      return new Promise((resolve) => {
+        flushResolve = resolve;
+        socket.send("stop");
+        // Safety net in case the server never responds (dropped
+        // connection mid-flush, etc.) - never wait forever.
+        setTimeout(resolve, 1500);
+      });
     }
+    socket?.close();
+    return Promise.resolve();
   }
 
   return { stop };

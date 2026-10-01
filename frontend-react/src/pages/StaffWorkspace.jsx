@@ -271,8 +271,53 @@ function ContextRail({ conv }) {
   );
 }
 
+// One call's transcript now accumulates into a SINGLE conv_messages row
+// (message_kind='call') instead of one row per utterance - see
+// src/live_chat.py's append_call_segment. Rendered full-width (not a
+// left/right chat bubble, since the text inside is both sides' turns
+// interleaved, not one person's message) with the summary an LLM
+// generated front and center once the call ends, and the full raw
+// "Patient: .../Counsellor: ..." text behind a toggle - the fix for a
+// transcript that otherwise just keeps growing for as long as the call
+// runs, with no way to see what mattered without reading all of it.
+function CallTranscriptCard({ m }) {
+  const { t } = useLang();
+  const [expanded, setExpanded] = useState(!m.call_summary);
+  const inProgress = !m.call_ended_at;
+  const timeLabel = inProgress
+    ? t("chat.callTranscriptInProgress")
+    : `${new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} – ${new Date(m.call_ended_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  return (
+    <div style={{ borderRadius: 12, border: "1px solid var(--color-border-strong)", background: "var(--color-surface-hover)", padding: 10, fontSize: 13 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, opacity: 0.85 }}>
+          <i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}
+        </div>
+        <span style={{ fontSize: 11, color: "var(--color-faint)" }}>{timeLabel}</span>
+      </div>
+      {m.call_summary && <div style={{ whiteSpace: "pre-wrap" }}>{m.call_summary}</div>}
+      {(expanded || !m.call_summary) && (
+        <div style={{
+          whiteSpace: "pre-wrap",
+          ...(m.call_summary ? { marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--color-border-strong)", color: "var(--color-faint)" } : {}),
+        }}>
+          {m.text || (inProgress ? t("chat.callTranscriptWaiting") : "")}
+        </div>
+      )}
+      {m.call_summary && (
+        <button type="button" onClick={() => setExpanded((v) => !v)} style={{ marginTop: 6, background: "none", border: 0, padding: 0, fontSize: 12, fontWeight: 500, color: "var(--color-primary)", cursor: "pointer" }}>
+          {expanded ? t("chat.callTranscriptHideFull") : t("chat.callTranscriptViewFull")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Bubble({ m, convId }) {
   const { t } = useLang();
+  if (m.message_kind === "call") {
+    return <CallTranscriptCard m={m} />;
+  }
   if (m.sender_kind === "system") {
     const map = {
       esc: t("counsellor.sysEscalated"), join: t("counsellor.sysJoined"),
@@ -303,13 +348,6 @@ function Bubble({ m, convId }) {
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <audio controls src={`/live/${convId}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 260 }} />
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text || t("chat.voiceNoteNoTranscript")}</div>
-            </div>
-          ) : m.message_kind === "call" ? (
-            <div style={{ display: "grid", gap: 2 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, opacity: 0.7 }}>
-                <i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}
-              </div>
-              <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
             </div>
           ) : (
             <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
@@ -485,14 +523,18 @@ function TranscriptDrawer({ conv, onClose, onAdvice }) {
             <div style={{ fontSize: 11, color: "var(--color-muted)" }}>{t("counsellor.handoffNoteLabel")}</div>
             <div style={{ fontSize: 14, lineHeight: 1.5 }}>{conv.handoff_note}</div>
           </div>
-          {(conv.messages || []).filter((m) => m.sender_kind !== "system").map((m) => (
-            <div key={m.id} style={{ display: "flex", justifyContent: m.sender_kind === "patient" || m.sender_kind === "bot" ? "flex-start" : "flex-end" }}>
-              <div style={{ maxWidth: "84%", display: "grid", gap: 3 }}>
-                <span style={{ fontSize: 11, color: "var(--color-faint)" }}>{m.sender_kind === "patient" ? t("counsellor.senderPatient") : m.sender_kind === "bot" ? t("doctor.senderAssistant") : m.sender_kind === "doctor" ? t("counsellor.senderDoctor") : t("chat.counsellorLabel")}</span>
-                <div style={{ padding: "8px 11px", borderRadius: 12, fontSize: 13, lineHeight: 1.45, background: m.sender_kind === "patient" ? "#2a2d3d" : m.sender_kind === "bot" ? "transparent" : "var(--color-primary-soft)", border: m.sender_kind === "bot" ? "1px dashed var(--color-border-strong)" : "1px solid transparent" }}>{m.text}</div>
+          {(conv.messages || []).filter((m) => m.sender_kind !== "system").map((m) =>
+            m.message_kind === "call" ? (
+              <CallTranscriptCard key={m.id} m={m} />
+            ) : (
+              <div key={m.id} style={{ display: "flex", justifyContent: m.sender_kind === "patient" || m.sender_kind === "bot" ? "flex-start" : "flex-end" }}>
+                <div style={{ maxWidth: "84%", display: "grid", gap: 3 }}>
+                  <span style={{ fontSize: 11, color: "var(--color-faint)" }}>{m.sender_kind === "patient" ? t("counsellor.senderPatient") : m.sender_kind === "bot" ? t("doctor.senderAssistant") : m.sender_kind === "doctor" ? t("counsellor.senderDoctor") : t("chat.counsellorLabel")}</span>
+                  <div style={{ padding: "8px 11px", borderRadius: 12, fontSize: 13, lineHeight: 1.45, background: m.sender_kind === "patient" ? "#2a2d3d" : m.sender_kind === "bot" ? "transparent" : "var(--color-primary-soft)", border: m.sender_kind === "bot" ? "1px dashed var(--color-border-strong)" : "1px solid transparent" }}>{m.text}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
         <div style={{ borderTop: "1px solid var(--color-neutral-800)", padding: 16, display: "grid", gap: 8 }}>
           {conv.advice ? (
@@ -640,6 +682,12 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     });
 
     async function startCallTranscription() {
+      // voice-call.js fires onStateChange("connected") twice per call on
+      // the caller's side (once on receiving the answer, again when the
+      // RTCPeerConnection's own connectionState later confirms it) - this
+      // guard against an already-running session is what keeps that from
+      // silently opening a second overlapping mic/STT session each call.
+      if (callSttRef.current) return;
       if (!callConsentGivenRef.current) {
         if (!window.confirm(t("chat.callTranscriptConsent"))) return;
         callConsentGivenRef.current = true;
@@ -656,26 +704,47 @@ export default function StaffWorkspace({ initialSection = "queue" }) {
     }
     async function stopCallTranscription() {
       const controller = await callSttRef.current;
-      controller?.stop();
+      await controller?.stop(); // waits for the trailing segment's round trip - see live-stt.js's stop()
       callSttRef.current = null;
     }
 
     voiceCallRef.current = createVoiceCall({
       wsSend: disconnectWs.send,
       onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
-      onStateChange: (state) => {
+      onStateChange: async (state) => {
         setCallState(state);
-        if (state === "connected") startCallTranscription();
-        else stopCallTranscription();
+        // Sent regardless of THIS side's own consent (unlike the actual
+        // segments above) - either side alone is enough to open/close the
+        // shared transcript row, and the server-side handling is
+        // idempotent, so sending "end" on every non-connected transition
+        // is harmless even if nothing was ever opened.
+        //
+        // The "end" send MUST wait for stopCallTranscription() to finish,
+        // not just fire right after it - stop() doesn't just discard the
+        // mic, it waits for this side's trailing STT segment to actually
+        // round-trip back from the server first. Sending "end" before
+        // that lands would close the shared row out from under it:
+        // append_call_segment finds no open row left to append the late
+        // segment onto, so it opens a stray new one instead.
+        if (state === "connected") {
+          disconnectWs.send({ type: "call_transcript_start" });
+          startCallTranscription();
+        } else {
+          await stopCallTranscription();
+          disconnectWs.send({ type: "call_transcript_end" });
+        }
       },
     });
     return () => {
       cancelled = true;
       clearInterval(iv);
-      disconnectWs();
       voiceCallRef.current?.hangUp();
       voiceCallRef.current = null;
-      stopCallTranscription();
+      (async () => {
+        await stopCallTranscription();
+        disconnectWs.send({ type: "call_transcript_end" }); // before disconnectWs() closes the socket below
+        disconnectWs();
+      })();
     };
   }, [activeId]);
 

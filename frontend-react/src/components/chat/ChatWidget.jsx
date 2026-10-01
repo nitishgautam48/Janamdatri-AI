@@ -15,6 +15,46 @@ function joinParts(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+// One call's transcript now accumulates into a SINGLE conv_messages row
+// (message_kind='call') instead of one row per utterance - see
+// src/live_chat.py's append_call_segment. Rendered as its own full-width
+// card (not a left/right chat bubble, since the text inside is both
+// sides' turns interleaved, not one person's message) with the summary
+// an LLM generated front and center once the call ends, and the full raw
+// "Patient: .../Counsellor: ..." text behind a toggle - exactly the fix
+// for a transcript that otherwise just keeps growing for as long as the
+// call runs.
+function CallTranscriptCard({ m, t }) {
+  const [expanded, setExpanded] = useState(!m.call_summary);
+  const inProgress = !m.call_ended_at;
+  const timeLabel = inProgress
+    ? t("chat.callTranscriptInProgress")
+    : `${new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} – ${new Date(m.call_ended_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  return (
+    <div className="rounded-2xl border border-border-strong bg-surface-hover p-3 text-sm text-ink">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs font-semibold opacity-80"><i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}</div>
+        <span className="text-[11px] text-muted">{timeLabel}</span>
+      </div>
+      {m.call_summary && <p className="whitespace-pre-wrap text-sm">{m.call_summary}</p>}
+      {(expanded || !m.call_summary) && (
+        <p className={`whitespace-pre-wrap text-sm ${m.call_summary ? "mt-2 border-t border-border-strong pt-2 text-muted" : ""}`}>
+          {m.text || (inProgress ? t("chat.callTranscriptWaiting") : "")}
+        </p>
+      )}
+      {m.call_summary && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 text-xs font-medium text-primary hover:underline"
+        >
+          {expanded ? t("chat.callTranscriptHideFull") : t("chat.callTranscriptViewFull")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Same set the backend uses to decide a reply was a clarifying question or
 // generic fallback rather than a real answer - mirrors the vanilla-JS
 // widget's UNRESOLVED_CHAT_INTENTS so the follow-up-context behavior is
@@ -297,6 +337,12 @@ export default function ChatWidget() {
     // their OWN speech only (declining just means that side's turns
     // aren't transcribed; the call itself is unaffected either way).
     async function startCallTranscription() {
+      // voice-call.js fires onStateChange("connected") twice per call on
+      // the caller's side (once on receiving the answer, again when the
+      // RTCPeerConnection's own connectionState later confirms it) - this
+      // guard against an already-running session is what keeps that from
+      // silently opening a second overlapping mic/STT session each call.
+      if (callSttRef.current) return;
       if (!callConsentGivenRef.current) {
         if (!window.confirm(t("chat.callTranscriptConsent"))) return;
         callConsentGivenRef.current = true;
@@ -315,26 +361,49 @@ export default function ChatWidget() {
     }
     async function stopCallTranscription() {
       const controller = await callSttRef.current;
-      controller?.stop();
+      await controller?.stop(); // waits for the trailing segment's round trip - see live-stt.js's stop()
       callSttRef.current = null;
     }
 
     voiceCallRef.current = createVoiceCall({
       wsSend: disconnectWs.send,
       onRemoteStream: (stream) => { if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream; },
-      onStateChange: (state) => {
+      onStateChange: async (state) => {
         setCallState(state);
-        if (state === "connected") startCallTranscription();
-        else stopCallTranscription();
+        // Sent regardless of THIS side's own consent (unlike the actual
+        // segments below) - either side alone is enough to open/close the
+        // shared transcript row, and the server-side handling is
+        // idempotent either way, so there's no harm sending "end" on
+        // every non-connected transition even if nothing was ever opened
+        // (declined consent, or a call that never connected at all).
+        //
+        // The "end" send MUST wait for stopCallTranscription() to finish,
+        // not just fire right after it - stop() doesn't just discard the
+        // mic, it waits for this side's trailing STT segment to actually
+        // round-trip back from the server first (see live-stt.js's own
+        // stop()). Sending "end" before that lands would close the
+        // shared row out from under it: append_call_segment finds no
+        // open row left to append the late segment onto, so it opens a
+        // stray new one instead of including it in the one just closed.
+        if (state === "connected") {
+          disconnectWs.send({ type: "call_transcript_start" });
+          startCallTranscription();
+        } else {
+          await stopCallTranscription();
+          disconnectWs.send({ type: "call_transcript_end" });
+        }
       },
       onIncomingCall: () => {}, // the "ringing" state alone drives the incoming-call UI below
     });
     return () => {
       clearInterval(iv);
-      disconnectWs();
       voiceCallRef.current?.hangUp();
       voiceCallRef.current = null;
-      stopCallTranscription();
+      (async () => {
+        await stopCallTranscription();
+        disconnectWs.send({ type: "call_transcript_end" }); // before disconnectWs() closes the socket below
+        disconnectWs();
+      })();
     };
   }, [liveConv?.id, liveConv?.status]);
 
@@ -609,11 +678,13 @@ export default function ChatWidget() {
                 }
                 return null;
               }
+              if (m.message_kind === "call") {
+                return <CallTranscriptCard key={m.id} m={m} t={t} />;
+              }
               const mine = m.sender_kind === "patient";
               const isBot = m.sender_kind === "bot";
               const isCounsellor = m.sender_kind === "counsellor";
               const isVoice = m.message_kind === "voice";
-              const isCallSegment = m.message_kind === "call";
               return (
                 <div key={m.id}>
                   {isCounsellor && <div className="mb-0.5 text-[11px] font-medium text-primary">{t("chat.counsellorLabel")}</div>}
@@ -627,11 +698,6 @@ export default function ChatWidget() {
                           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                           <audio controls src={`/live/${liveConv.id}/voice-note/${m.audio_note_id}`} style={{ height: 32, maxWidth: 220 }} />
                           <p className="whitespace-pre-wrap text-sm">{m.text || t("chat.voiceNoteNoTranscript")}</p>
-                        </div>
-                      ) : isCallSegment ? (
-                        <div className="grid gap-0.5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-semibold opacity-70"><i className="ph ph-phone-call" /> {t("chat.callTranscriptLabel")}</div>
-                          <p className="whitespace-pre-wrap">{m.text}</p>
                         </div>
                       ) : (
                         <p className="whitespace-pre-wrap">{m.text}</p>

@@ -52,9 +52,11 @@ Endpoints reflect the layered architecture:
   WS   /ws/live/{id}, /ws/staff        - push invalidation for the above instead of fixed-interval
                                         polling (see src/ws_manager.py); each frontend poll loop also
                                         keeps a slow backstop interval in case a socket drops silently.
-                                        /ws/live/{id} also carries WebRTC call signaling and, once a
-                                        call connects, each side's own streaming transcript of what
-                                        THEY said (message_kind='call') - see the endpoint's docstring
+                                        /ws/live/{id} also carries WebRTC call signaling and, for the
+                                        duration of a call, both sides' streaming transcript merged into
+                                        one accumulating conv_messages row (message_kind='call'),
+                                        summarized by an LLM when the call ends if one's configured -
+                                        see the endpoint's docstring
   POST /stt/transcribe                 - self-hosted speech-to-text (see src/stt.py), record-then-
                                         upload path: 503s (frontend falls back to the browser's own
                                         SpeechRecognition) until a model is actually provisioned
@@ -67,6 +69,7 @@ Endpoints reflect the layered architecture:
 
 import asyncio
 import json
+import logging
 import uuid
 from pathlib import Path
 from typing import List, Optional
@@ -76,10 +79,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src import auth, document_extractor, gis, live_chat, stt
+from src import auth, document_extractor, gis, live_chat, llm_chat, stt
 from src.dynamic_eval import chat_assistant, nutrition_eval, postpartum_guide, pregnancy_guide, psych_eval, report_analyzer, triage
 from src.ml.predict import get_classifier
 from src.ws_manager import hub
+
+logger = logging.getLogger("janamdatri.api")
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 # The deployed frontend as of this cutover - a Vite+React rewrite of
@@ -1027,6 +1032,58 @@ async def doctor_advice(conv_id: str, req: DoctorAdviceRequest, x_user_token: Op
 # ============================================================
 
 
+# How long to wait after a {"type": "call_transcript_end"} frame before
+# actually closing the shared call-transcript row - NOT the instant it
+# arrives. Both sides' trailing STT segments (see frontend-react/src/lib/
+# live-stt.js's stop()) take a moment to round-trip back from the server
+# after a hangup, and the two sides' network timing isn't synchronized:
+# whichever side's flush happens to land first would otherwise close the
+# row before the OTHER side's final segment has arrived, which then finds
+# no open row left to append onto and opens a stray new one instead -
+# caught by this session's own end-to-end test. Letting
+# end_call_transcript's existing idempotency handle a second "end"
+# arriving during (or after) this wait is simpler and more robust than
+# trying to perfectly sequence two independent browser tabs over two
+# independent network connections.
+CALL_TRANSCRIPT_END_GRACE_SECONDS = 2.0
+
+
+async def _end_call_transcript_after_grace(conv_id: str, message_id: int):
+    """message_id is the row that WAS open at the moment this particular
+    "end" frame arrived (captured by the caller before scheduling this
+    task) - NOT re-looked-up here. A stray "end" with nothing open yet
+    (e.g. a harmless early connect/disconnect blip before a call truly
+    connects - WebRTC produces these) must never be allowed to reach into
+    the future this many seconds later and close whatever DIFFERENT,
+    newer call happens to be open by the time its grace period elapses;
+    end_call_transcript_by_id enforces that it's still this exact row."""
+    await asyncio.sleep(CALL_TRANSCRIPT_END_GRACE_SECONDS)
+    finished = live_chat.end_call_transcript_by_id(conv_id, message_id)
+    if not finished:
+        return  # already closed (by the other side's own "end"), or this was a stale/stray signal
+    await hub.notify_conv(conv_id)
+    if finished["text"].strip() and llm_chat.is_configured():
+        asyncio.create_task(_summarize_call_transcript(conv_id, finished["id"], finished["text"]))
+
+
+async def _summarize_call_transcript(conv_id: str, message_id: int, raw_text: str):
+    """Runs after a call ends (see ws_live's call_transcript_end handling),
+    as a background task rather than inline - llm_chat.summarize_call_
+    transcript() is a blocking HTTP call that can take up to
+    llm_chat.SUMMARY_TIMEOUT_SECONDS, and awaiting it directly in the
+    websocket's own message loop would stall that connection's heartbeat
+    and any further messages for that whole time. Logged like
+    chat_assistant's own LLM failures - a doctor seeing no summary on a
+    finished call should be diagnosable from the logs, not a mystery."""
+    try:
+        summary = await asyncio.to_thread(llm_chat.summarize_call_transcript, raw_text)
+    except llm_chat.LlmError as exc:
+        logger.warning("Call transcript summarization failed for conv %s: %s", conv_id, exc)
+        return
+    live_chat.set_call_summary(message_id, summary)
+    await hub.notify_conv(conv_id)
+
+
 @app.websocket("/ws/live/{conv_id}")
 async def ws_live(websocket: WebSocket, conv_id: str, token: Optional[str] = None):
     """Patient (or a counsellor/doctor viewing that same conversation) -
@@ -1045,15 +1102,32 @@ async def ws_live(websocket: WebSocket, conv_id: str, token: Optional[str] = Non
     people a call would be between, so it doubles as the signaling
     channel rather than standing up a separate one.
 
-    A {"type": "call_transcript_segment", "text": ...} frame (Phase 2 -
-    transcribing the call itself, not just signaling it) is different:
-    it gets PERSISTED as a real conv_messages row (message_kind='call'),
-    not just relayed, since it needs to survive reload and be visible to
-    a doctor later. Who it's attributed to is resolved here server-side
-    from `token` matching this conversation's actual assigned counsellor
-    - not from a client-supplied field - since unlike everything else on
-    this "id is the capability" socket, fabricated content here would
-    read as an authoritative clinical transcript rather than just noise."""
+    Three frame types carry the call-transcription feature (Phase 2, then
+    revised to stop producing one conv_messages row per utterance - a long
+    call meant dozens of bubbles stacked in the thread, unreadable for a
+    doctor reviewing it later). Together they bracket one call into ONE
+    accumulating row (message_kind='call') via src/live_chat.py's
+    start_call_transcript/append_call_segment/end_call_transcript:
+      - {"type": "call_transcript_start"} - opens the row the moment the
+        call connects (idempotent: both sides send this independently).
+      - {"type": "call_transcript_segment", "text": ...} - appends one
+        "Speaker: text" line as each side's streaming STT finalizes an
+        utterance. Who it's attributed to is resolved here server-side
+        from `token` matching this conversation's actual assigned
+        counsellor - not from a client-supplied field - since unlike
+        everything else on this "id is the capability" socket, fabricated
+        content here would read as an authoritative clinical transcript
+        rather than just noise.
+      - {"type": "call_transcript_end"} - closes the row a short grace
+        period after the call ends, not instantly (see
+        CALL_TRANSCRIPT_END_GRACE_SECONDS - both sides' trailing segments
+        take a moment to round-trip back, and closing the instant ONE
+        side's "end" arrives can beat the OTHER side's final segment to
+        the row), also idempotent, then - if an LLM is configured - kicks
+        off a background summarization task (see _summarize_call_
+        transcript) so a doctor sees a short summary by default with the
+        full raw transcript still available to expand into, rather than
+        having to read the whole thing to find what mattered."""
     await hub.conv_connect(conv_id, websocket)
     try:
         while True:
@@ -1064,9 +1138,13 @@ async def ws_live(websocket: WebSocket, conv_id: str, token: Optional[str] = Non
                 continue
             if not isinstance(msg, dict):
                 continue
-            if msg.get("type") == "webrtc_signal":
+            msg_type = msg.get("type")
+            if msg_type == "webrtc_signal":
                 await hub.relay_conv_signal(conv_id, websocket, msg)
-            elif msg.get("type") == "call_transcript_segment":
+            elif msg_type == "call_transcript_start":
+                live_chat.start_call_transcript(conv_id)
+                await hub.notify_conv(conv_id)
+            elif msg_type == "call_transcript_segment":
                 text = (msg.get("text") or "").strip()
                 if not text:
                     continue
@@ -1076,11 +1154,18 @@ async def ws_live(websocket: WebSocket, conv_id: str, token: Optional[str] = Non
                     conv_row and staff_user and staff_user["role"] in STAFF_ROLES
                     and conv_row["counsellor_id"] == staff_user["id"]
                 )
-                if is_assigned_counsellor:
-                    live_chat.add_message(conv_id, "counsellor", text, sender_id=staff_user["id"], message_kind="call")
-                else:
-                    live_chat.add_message(conv_id, "patient", text, message_kind="call")
+                label = "Counsellor" if is_assigned_counsellor else "Patient"
+                live_chat.append_call_segment(conv_id, label, text)
                 await hub.notify_conv(conv_id)
+            elif msg_type == "call_transcript_end":
+                open_msg = live_chat.get_open_call_message(conv_id)
+                if open_msg:
+                    asyncio.create_task(_end_call_transcript_after_grace(conv_id, open_msg["id"]))
+                # else: nothing open - a harmless early "end" from a call
+                # that hadn't actually started transcribing yet. Nothing
+                # to schedule; see _end_call_transcript_after_grace's
+                # docstring for why this check can't just happen inside
+                # that delayed task instead.
     except WebSocketDisconnect:
         pass
     finally:
