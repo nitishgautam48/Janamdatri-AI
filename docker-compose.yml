@@ -1,7 +1,9 @@
-# Local-only dev setup for self-hosted chat responses via Ollama (see
-# src/llm_chat.py once Phase 2 adds it). Just the Ollama runtime for now -
-# Phase 1 is "get a GPU-accelerated model answering on localhost:11434",
-# nothing from the app wired to it yet.
+# Local-only dev setup: the app (this repo's existing Dockerfile) plus a
+# GPU-accelerated Ollama instance it talks to for general chat responses
+# (src/llm_chat.py) - the danger-sign/self-harm safety gate in
+# src/dynamic_eval/chat_assistant.py stays rule-based regardless; see that
+# module's docstring. Not meant for a real deployment - see Dockerfile's
+# own comments for the production/Hindi-STT build path, which is separate.
 #
 # Needs Docker Desktop's WSL2 GPU support turned on (Settings -> Resources
 # -> WSL Integration, and Settings -> General -> "Use the WSL 2 based
@@ -9,9 +11,18 @@
 # containers with no separate driver install inside WSL. Verify it works
 # BEFORE relying on it:
 #   docker run --rm --gpus=all nvidia/cuda:12.3.1-base-ubuntu22.04 nvidia-smi
-# If that doesn't show your RTX 4060, Ollama will silently fall back to
-# CPU inference - fix the GPU passthrough first rather than debugging slow
+# If that doesn't show your GPU, Ollama will silently fall back to CPU
+# inference - fix the GPU passthrough first rather than debugging slow
 # responses later.
+#
+# Usage:
+#   docker compose up -d ollama
+#   docker exec -it janamdatri-ai-ollama-1 ollama pull deepseek-r1:7b
+#   docker compose up -d app
+# (pulling the model before starting `app` isn't required - app just calls
+# whatever model OLLAMA_MODEL names at request time - but doing it first
+# means your first chat message in the UI isn't the one eating the
+# multi-GB download.)
 services:
   ollama:
     image: ollama/ollama:latest
@@ -26,6 +37,19 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=deepseek-r1:7b
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - ollama
     restart: unless-stopped
 
 volumes:

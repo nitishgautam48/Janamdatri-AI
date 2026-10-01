@@ -1,21 +1,41 @@
 """
-Instant Help Chat Assistant - rule-based (no external LLM dependency, so
-it works offline and needs no API key), sharing the same danger-sign
-detection this app's assessment flow already uses. If a message matches a
-WHO danger sign, safety comes first: the bot responds with an emergency
-escalation and does not try to be a general FAQ bot for that turn - the
-way a trained health-worker helpline would triage a call before chatting.
+Instant Help Chat Assistant - rule-based by default (no external LLM
+dependency, so it works offline and needs no API key), sharing the same
+danger-sign detection this app's assessment flow already uses. If a
+message matches a WHO danger sign, safety comes first: the bot responds
+with an emergency escalation and does not try to be a general FAQ bot for
+that turn - the way a trained health-worker helpline would triage a call
+before chatting.
 
-This is a scripted assistant, not a real conversational AI - it matches
-keywords into a fixed set of intents. It exists to get a woman a useful,
-instant answer (or an emergency escalation) at 2am when no health worker
-is reachable, not to replace one. "Training" it means widening its
-phrase coverage and adding a graceful clarifying-question fallback for
-vague distress language ("I'm in pain", "I don't feel well") that isn't
-specific enough to match a category on its own - asking a follow-up
-question is far more useful than a flat "I didn't understand that."
+The danger-sign ladder, the self-harm ladder, and the symptom-scoring
+check (_check_symptom_signal, below) are ALWAYS deterministic, regardless
+of whether an LLM is configured - they run first in respond() and short-
+circuit before src/llm_chat.py is ever consulted. An LLM is deliberately
+kept out of "is this person describing a maternal emergency / a
+self-harm risk" decisions; see llm_chat.py's own docstring for why.
+
+What an LLM (via llm_chat.py / Ollama) DOES replace, when configured and
+reachable: everything downstream of that safety gate - general questions,
+small talk, anything that used to just be FAQ_INTENTS/VAGUE_TOPICS keyword
+matching. When llm_chat isn't configured (the default - no OLLAMA_HOST/
+OLLAMA_MODEL set), or the Ollama server errors or is unreachable, this
+module falls back to exactly the same scripted FAQ/clarifying-question
+matching it always had - so behavior is unchanged for anyone not running
+Ollama, and the chat never goes silent just because the LLM service is
+down for someone who is.
+
+The scripted layer itself: a fixed set of intents matched by keyword/
+phrase. It exists to get a woman a useful, instant answer (or an
+emergency escalation) at 2am when no health worker is reachable, not to
+replace one - and now also serves as the safety net under the LLM layer.
+"Training" it means widening its phrase coverage and adding a graceful
+clarifying-question fallback for vague distress language ("I'm in pain",
+"I don't feel well") that isn't specific enough to match a category on
+its own - asking a follow-up question is far more useful than a flat
+"I didn't understand that."
 """
 
+from .. import llm_chat
 from . import danger_ladder, expert_system, self_harm_ladder, text_analyzer
 from .phrase_match import contains_phrase, normalize
 
@@ -1085,6 +1105,18 @@ def respond(message: str, context_message: str = None, unresolved_rounds: int = 
             signal = reversed_signal
     if signal:
         return signal
+
+    # Everything above this line is the deterministic safety gate and has
+    # already run unconditionally. From here down is the "general
+    # conversation" layer - handed to the LLM when one's configured and
+    # reachable, with the scripted matching below kept as the exact
+    # fallback it always was (not configured, or Ollama errored/timed out).
+    if llm_chat.is_configured():
+        try:
+            llm_history = [{"role": "user", "content": context_message}] if context_message else None
+            return {"reply": llm_chat.respond(text, history=llm_history), "isEmergency": False, "intent": "llm"}
+        except (llm_chat.LlmNotConfigured, llm_chat.LlmError):
+            pass  # falls through to the scripted layer below, same as if Ollama were never configured
 
     intent = _match_faq(normalized)
     if intent:

@@ -24,7 +24,10 @@ Endpoints reflect the layered architecture:
   GET  /nutrition/items                - the personalized nutrition questionnaire
   POST /nutrition-assess               - food-group frequency -> per-nutrient adequacy + food suggestions
   GET  /nutrition-checks/mine          - a logged-in user's nutrition check history
-  POST /chat                           - rule-based instant-help assistant
+  POST /chat                           - instant-help assistant: danger-sign/self-harm detection is
+                                        always rule-based and deterministic; general Q&A is handed to
+                                        a self-hosted LLM via Ollama when configured (src/llm_chat.py),
+                                        falling back to the original scripted FAQ matching otherwise
   POST /documents/analyze              - upload/paste a prescription or lab report ->
                                          medication schedule + flagged findings
   GET  /helplines                      - India helplines and scheme references
