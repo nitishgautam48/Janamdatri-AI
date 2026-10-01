@@ -1,0 +1,32 @@
+# Local-only dev setup for self-hosted chat responses via Ollama (see
+# src/llm_chat.py once Phase 2 adds it). Just the Ollama runtime for now -
+# Phase 1 is "get a GPU-accelerated model answering on localhost:11434",
+# nothing from the app wired to it yet.
+#
+# Needs Docker Desktop's WSL2 GPU support turned on (Settings -> Resources
+# -> WSL Integration, and Settings -> General -> "Use the WSL 2 based
+# engine") - recent Docker Desktop passes an NVIDIA GPU through to WSL2
+# containers with no separate driver install inside WSL. Verify it works
+# BEFORE relying on it:
+#   docker run --rm --gpus=all nvidia/cuda:12.3.1-base-ubuntu22.04 nvidia-smi
+# If that doesn't show your RTX 4060, Ollama will silently fall back to
+# CPU inference - fix the GPU passthrough first rather than debugging slow
+# responses later.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  ollama-models:
