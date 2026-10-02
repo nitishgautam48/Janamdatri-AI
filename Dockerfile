@@ -36,9 +36,18 @@ COPY --from=frontend-build /app/frontend-react/dist ./frontend-react/dist
 # way tesseract-ocr-hin above is - not fetched lazily at request time,
 # so the first voice message doesn't pay a download.
 #
-# Override VOSK_MODEL_URL to swap in the larger/more accurate
-# vosk-model-hi-0.22 (~1.8GB, needs more memory at runtime) instead of the
-# ~50MB small model, or to point at an internal mirror.
+# Using the full vosk-model-hi-0.22 (~1.8GB) rather than the ~50MB small
+# model - noticeably more accurate, especially on Hinglish code-switching,
+# at the cost of more build-time download and more runtime memory (see
+# src/stt.py's docstring for the accuracy tradeoff). Override VOSK_MODEL_URL
+# to go back to the small model or point at an internal mirror.
+#
+# --retry/-C - resume a dropped connection instead of restarting the whole
+# download from zero - this file is ~36x bigger than the small model, so a
+# transient drop near the end is far more costly to redo from scratch.
+# --max-time is generous (2h) for the same reason: on a slow link, this is
+# a one-time cost paid once per Docker layer cache invalidation, not per
+# build.
 #
 # This step is best-effort: an image built somewhere without a route to
 # alphacephei.com still builds and runs - src/stt.py's own "not
@@ -48,10 +57,10 @@ COPY --from=frontend-build /app/frontend-react/dist ./frontend-react/dist
 # sandbox is exactly that case: its network policy allows PyPI/npm but not
 # alphacephei.com, so this step was never exercised there - see the
 # session notes in src/stt.py.)
-ARG VOSK_MODEL_URL=https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip
+ARG VOSK_MODEL_URL=https://alphacephei.com/vosk/models/vosk-model-hi-0.22.zip
 RUN set -e; \
     mkdir -p /app/models/vosk-hi; \
-    if curl -fL --max-time 120 "$VOSK_MODEL_URL" -o /tmp/vosk-model.zip; then \
+    if curl -fL --retry 3 --retry-delay 5 -C - --max-time 7200 "$VOSK_MODEL_URL" -o /tmp/vosk-model.zip; then \
       unzip -q /tmp/vosk-model.zip -d /tmp/vosk-extract && \
       mv /tmp/vosk-extract/*/* /app/models/vosk-hi/ && \
       rm -rf /tmp/vosk-model.zip /tmp/vosk-extract && \

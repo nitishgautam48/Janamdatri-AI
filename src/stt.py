@@ -43,13 +43,15 @@ checkpoint (github.com/AI4Bharat/vistaar) can be swapped in the same way -
 this module only needs a directory Vosk's Model() class can load.
 
 The Dockerfile now does steps 1-3 automatically at build time (see its
-"Self-hosted Hindi speech-to-text model" stage): it downloads
-vosk-model-small-hi-0.22.zip, unzips it to /app/models/vosk-hi, and sets
-VOSK_MODEL_PATH accordingly - so any real deployment built with normal
-internet access ships with self-hosted Hindi STT out of the box. That step
-is best-effort: if the fetch fails (offline build, mirror moved, corporate
-proxy), the image still builds and the app falls back to the browser's own
-SpeechRecognition, same as if VOSK_MODEL_PATH were never set.
+"Self-hosted Hindi speech-to-text model" stage): it downloads the full
+vosk-model-hi-0.22.zip (~1.8GB - swapped in from the ~50MB small model for
+noticeably better accuracy, especially on Hinglish code-switching), unzips
+it to /app/models/vosk-hi, and sets VOSK_MODEL_PATH accordingly - so any
+real deployment built with normal internet access ships with self-hosted
+Hindi STT out of the box. That step is best-effort: if the fetch fails
+(offline build, mirror moved, corporate proxy), the image still builds and
+the app falls back to the browser's own SpeechRecognition, same as if
+VOSK_MODEL_PATH were never set.
 
 Session notes on verifying this (2026-09-29): this repo's own dev sandbox
 cannot reach a Hindi model directly - its network policy allows PyPI/npm/
