@@ -106,6 +106,19 @@ export default function ChatWidget() {
   // configured there.
   const [sttMode, setSttMode] = useState("browser");
   const [liveConv, setLiveConv] = useState(null);
+  // Which panel is actually DISPLAYED - independent of whether a live
+  // conversation exists at all (that's hasLiveConv, derived below). Once
+  // a counsellor is in the picture, the patient can freely switch back
+  // to the plain assistant and back again; the live conversation itself
+  // keeps running in the background regardless (same WS connection, same
+  // polling, same call/STT machinery - none of that is gated on this),
+  // so nothing about it is lost or missed by looking away from it.
+  // Defaults true and gets reset to true in the effect below whenever a
+  // genuinely NEW live conversation starts, so "Talk to someone" still
+  // jumps straight to the live view like before - it just doesn't trap
+  // the patient there anymore.
+  const [viewingLive, setViewingLive] = useState(true);
+  const lastSeenLiveCountRef = useRef(0); // for the unread-reply dot on the "Live help" tab
   const contextRef = useRef("");
   const roundsRef = useRef(0);
   const scrollRef = useRef(null);
@@ -232,7 +245,12 @@ export default function ChatWidget() {
   }
 
   async function toggleListening() {
-    const inLiveChat = liveConv && liveConv.status !== "closed";
+    // Keyed on the DISPLAYED panel, not just whether a live conversation
+    // exists - the mic button records a voice note for the counsellor
+    // only while the live panel is actually what's showing; viewing the
+    // assistant always dictates into its own textbox, even with a live
+    // conversation still open in the background.
+    const inLiveChat = showingLive;
 
     if (inLiveChat) {
       if (listening) {
@@ -307,6 +325,17 @@ export default function ChatWidget() {
     roundsRef.current = 0;
     api.liveMine().then((conv) => setLiveConv(conv)).catch(() => {});
   }, [identityKey]);
+
+  // Jumps the DISPLAYED panel to "live" the moment a genuinely new live
+  // conversation shows up (a fresh id - either just started, or an
+  // already-open one restored on reload via liveMine() above) - but only
+  // then. Later updates to the SAME conversation (new messages, status
+  // changes) must NOT yank the patient back to it if they've deliberately
+  // switched to the assistant - that's exactly the "help chat traps you"
+  // behavior this whole toggle exists to fix.
+  useEffect(() => {
+    if (liveConv?.id) setViewingLive(true);
+  }, [liveConv?.id]);
 
   // Refetch the active live conversation the instant something changes
   // (WebSocket push), plus a slow backstop poll in case a socket drops
@@ -431,6 +460,12 @@ export default function ChatWidget() {
     try {
       const conv = await api.liveStart({ reason, lang });
       setLiveConv(conv);
+      // Explicit, not left to the conv-id-change effect above: escalating
+      // an ALREADY-open conversation (same id, just a raised severity/
+      // reason - see live_chat.start_or_escalate) wouldn't trigger that
+      // effect, but asking to talk to someone is always a request to see
+      // the live view right now, new conversation or not.
+      setViewingLive(true);
     } catch {
       setMessages((m) => [...m, { sender: "bot", text: "Couldn't reach a counsellor right now - please call 108/102 if this is urgent." }]);
     }
@@ -485,7 +520,11 @@ export default function ChatWidget() {
     if (!message || sending) return;
     setInput("");
 
-    if (liveConv && liveConv.status !== "closed") {
+    // Routes by which panel is DISPLAYED, not just whether a live
+    // conversation exists - typing while viewing the assistant panel
+    // must reach the assistant even with a live conversation open in the
+    // background, not get silently redirected to the counsellor.
+    if (showingLive) {
       setSending(true);
       await sendLive(message);
       setSending(false);
@@ -522,7 +561,27 @@ export default function ChatWidget() {
     }
   }
 
-  const liveMode = !!liveConv && liveConv.status !== "closed";
+  // hasLiveConv: does an active (non-closed) live conversation exist AT
+  // ALL, regardless of what's on screen - this is what the background WS
+  // connection, polling, and call/STT machinery stay keyed on (see the
+  // effects above), so none of that stops just because the patient is
+  // looking at the assistant panel instead.
+  // showingLive: is the LIVE PANEL what's actually displayed right now -
+  // everything about which messages/controls render is keyed on this,
+  // not on hasLiveConv, so the assistant is always reachable once a live
+  // conversation exists, not just before one starts.
+  const hasLiveConv = !!liveConv && liveConv.status !== "closed";
+  const showingLive = hasLiveConv && viewingLive;
+  const liveUnreadCount = hasLiveConv ? Math.max(0, liveConv.messages.length - lastSeenLiveCountRef.current) : 0;
+
+  // Marks the live conversation "read" for badge purposes only while its
+  // panel is the one actually displayed - switching to the assistant
+  // view freezes the count right where it was, so a reply that arrives
+  // while the patient isn't looking still shows as unread once they
+  // switch back, instead of silently marking itself read in the background.
+  useEffect(() => {
+    if (showingLive && liveConv) lastSeenLiveCountRef.current = liveConv.messages.length;
+  }, [showingLive, liveConv?.messages?.length]);
 
   return (
     <>
@@ -546,7 +605,7 @@ export default function ChatWidget() {
           <div className="flex items-center justify-between border-b border-border bg-bg-soft px-4 py-3">
             <span className="text-sm font-semibold text-ink">✨ {t("chat.title")}</span>
             <div className="flex items-center gap-3">
-              {!liveMode && (
+              {!hasLiveConv && (
                 <button type="button" onClick={() => startLive("Asked to talk to a person")} className="text-xs font-semibold text-primary hover:underline">
                   <i className="ph ph-headset" /> {t("chat.talkToSomeone")}
                 </button>
@@ -555,7 +614,34 @@ export default function ChatWidget() {
             </div>
           </div>
 
-          {liveMode && (
+          {/* Once a live conversation exists, the patient can freely switch
+              between it and the plain assistant - neither one ever closes
+              the other; switching panels is purely a display choice (see
+              showingLive above). A dot on "Live help" marks a reply that
+              arrived while viewing the assistant. */}
+          {hasLiveConv && (
+            <div className="flex border-b border-border text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setViewingLive(false)}
+                className={`flex-1 border-b-2 px-3 py-2 ${!showingLive ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"}`}
+              >
+                {t("chat.assistantTab")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingLive(true)}
+                className={`relative flex-1 border-b-2 px-3 py-2 ${showingLive ? "border-primary text-primary" : "border-transparent text-muted hover:text-ink"}`}
+              >
+                {t("chat.liveHelpTab")}
+                {!showingLive && liveUnreadCount > 0 && (
+                  <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-critical" aria-label={t("chat.liveHelpUnreadAriaLabel")} />
+                )}
+              </button>
+            </div>
+          )}
+
+          {hasLiveConv && (
             <div className="flex flex-wrap items-center gap-1.5 border-b border-critical/30 bg-critical-soft px-3 py-1.5 text-xs text-critical">
               <span className="flex-1">{t("chat.emergencyStrip")}</span>
               <a href="tel:108" className="rounded-full bg-critical px-2 py-0.5 font-bold text-white">108</a>
@@ -567,7 +653,7 @@ export default function ChatWidget() {
           {/* Voice call - hearing the counsellor directly, separate from
               the mic button below (which only ever turns speech into chat
               text). Only offered once a counsellor has actually joined. */}
-          {liveMode && liveConv.status === "claimed" && callState === "idle" && (
+          {showingLive && liveConv.status === "claimed" && callState === "idle" && (
             <button
               type="button"
               onClick={() => voiceCallRef.current?.startCall()}
@@ -576,20 +662,20 @@ export default function ChatWidget() {
               <i className="ph ph-phone-call" /> {t("chat.voiceCall")}
             </button>
           )}
-          {liveMode && callState === "calling" && (
+          {showingLive && callState === "calling" && (
             <div className="flex items-center justify-center gap-2 border-b border-border bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
               <span className="animate-pulse"><i className="ph ph-phone-outgoing" /></span> {t("chat.callCalling")}
               <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="ml-2 rounded-full bg-critical px-2 py-0.5 text-white">{t("chat.callHangUp")}</button>
             </div>
           )}
-          {liveMode && callState === "ringing" && (
+          {showingLive && callState === "ringing" && (
             <div className="flex flex-wrap items-center justify-center gap-2 border-b border-border bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary">
               <i className="ph ph-phone-incoming animate-pulse" /> {t("chat.callIncoming")}
               <button type="button" onClick={() => voiceCallRef.current?.acceptCall()} className="rounded-full bg-primary px-2 py-0.5 text-paper-ink">{t("chat.callAccept")}</button>
               <button type="button" onClick={() => voiceCallRef.current?.declineCall()} className="rounded-full border border-critical/50 px-2 py-0.5 text-critical">{t("chat.callDecline")}</button>
             </div>
           )}
-          {liveMode && callState === "connected" && (
+          {showingLive && callState === "connected" && (
             <div className="flex items-center justify-center gap-2 border-b border-border bg-good-soft px-3 py-1.5 text-xs font-semibold text-good">
               <i className="ph ph-phone-call" /> {t("chat.callConnected")}
               <button type="button" onClick={() => voiceCallRef.current?.hangUp()} className="ml-2 rounded-full bg-critical px-2 py-0.5 text-white">{t("chat.callHangUp")}</button>
@@ -599,7 +685,7 @@ export default function ChatWidget() {
           <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {!liveMode && messages.map((m, i) => (
+            {!showingLive && messages.map((m, i) => (
               <div key={i}>
                 <div className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
                   <p
@@ -614,7 +700,7 @@ export default function ChatWidget() {
                     {m.text}
                   </p>
                 </div>
-                {i === messages.length - 1 && m.sender === "bot" && !sending && m.offerHuman && (
+                {i === messages.length - 1 && m.sender === "bot" && !sending && m.offerHuman && !hasLiveConv && (
                   <div className="mt-2">
                     <button type="button" onClick={() => startLive("Asked for a person after a symptom question")} className="rounded-full border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary-soft">
                       <i className="ph ph-headset" /> {t("chat.talkToSomeone")}
@@ -633,7 +719,7 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {liveMode && liveConv.status === "waiting" && (() => {
+            {showingLive && liveConv.status === "waiting" && (() => {
               const noOneOnDuty = liveConv.counsellors_on_duty === 0;
               const waitedTooLong = Date.now() - liveConv.created_at * 1000 > LIVE_WAIT_WARNING_MS;
               const waitingText = noOneOnDuty
@@ -657,7 +743,7 @@ export default function ChatWidget() {
               );
             })()}
 
-            {liveMode && liveConv.messages.map((m) => {
+            {showingLive && liveConv.messages.map((m) => {
               if (m.sender_kind === "system") {
                 if (m.system_kind === "join") {
                   return (
@@ -716,7 +802,7 @@ export default function ChatWidget() {
               </p>
             )}
 
-            {!liveMode && messages.length === 1 && !sending && (
+            {!showingLive && messages.length === 1 && !sending && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {SUGGESTED_PROMPTS.map((p) => (
                   <button key={p} type="button" onClick={() => send(p)} className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-muted hover:border-primary hover:text-primary">
