@@ -38,6 +38,7 @@ access and a GPU, same caveat as Hindi STT accuracy.
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 
@@ -66,8 +67,9 @@ SYSTEM_PROMPT = (
     "be a medical emergency (heavy bleeding, severe pain, convulsions, reduced baby movement, thoughts "
     "of self-harm, etc.), tell them to seek in-person medical care or call 108 immediately rather than "
     "answering in chat. Always end with a reminder to confirm anything important with their ANC provider "
-    "or ASHA/ANM worker. Reply in the same language/script the user wrote in (English, Hindi, or "
-    "Hinglish)."
+    "or ASHA/ANM worker. Reply ONLY in the same language/script the user wrote in - English, Hindi "
+    "(Devanagari), or Hinglish (Hindi in Latin script). Never include any Chinese, or any other "
+    "language or script, anywhere in your reply."
 )
 
 # For condensing a finished voice-call transcript (src/live_chat.py's
@@ -112,6 +114,23 @@ def _strip_think_tags(text: str) -> str:
     return text.strip()
 
 
+# DeepSeek-R1's distilled models (distilled from a Qwen base, trained on a
+# Chinese-heavy corpus) occasionally leak Chinese characters into an
+# otherwise English/Hindi/Hinglish reply, regardless of what SYSTEM_PROMPT
+# asks for - a known quirk of this model family, not something prompting
+# alone reliably prevents. Rather than ever show a patient a reply that's
+# half Hindi half Mandarin, treat it the same as any other bad response:
+# raise LlmError so the caller falls back to the rule-based reply instead.
+# Matches CJK Unified Ideographs (the common Chinese character block) and
+# its Extension A block - deliberately narrow to actual Chinese script, not
+# e.g. Devanagari or Latin-script punctuation.
+_CJK_RE = re.compile(r"[一-鿿㐀-䶿]")
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(_CJK_RE.search(text))
+
+
 def _call_ollama(messages: list[dict], timeout_seconds: int) -> str:
     """Shared HTTP plumbing for respond() and summarize_call_transcript() -
     both just assemble a different messages list and want the same
@@ -147,6 +166,8 @@ def _call_ollama(messages: list[dict], timeout_seconds: int) -> str:
     text = _strip_think_tags(text)
     if not text:
         raise LlmError("Ollama returned an empty response after stripping <think> tags.")
+    if _contains_cjk(text):
+        raise LlmError(f"Ollama response contained unexpected Chinese characters: {text!r}")
     return text
 
 
