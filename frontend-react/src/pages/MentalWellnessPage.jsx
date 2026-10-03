@@ -207,7 +207,7 @@ const CLASSIFICATION_LABEL_KEY = {
 };
 
 export default function MentalWellnessPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [items, setItems] = useState(null);
   const [responses, setResponses] = useState({});
   const [savedEpds, setSavedEpds] = useState(() => scopedGet(KEYS.EPDS));
@@ -233,7 +233,7 @@ export default function MentalWellnessPage() {
 
     setBusy(true);
     try {
-      const data = await api.psychAssess(orderedResponses);
+      const data = await api.psychAssess(orderedResponses, lang);
       setResult(data);
       const saved = { responses: orderedResponses, result: data, savedAt: new Date().toISOString() };
       scopedSet(KEYS.EPDS, saved);
@@ -319,6 +319,15 @@ export default function MentalWellnessPage() {
               <a href="tel:1800-599-0019" className="mt-2 inline-block rounded-full bg-critical px-4 py-2 text-sm font-bold text-white">
                 📞 {t("wellness.callKiran")}
               </a>
+            </div>
+          )}
+
+          {result.llmReflection && (
+            <div className="mb-3 rounded-md border border-primary/40 bg-primary-soft p-3 text-sm text-ink">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                <i className="ph ph-sparkle" /> {t("results.personalizedNote")}
+              </p>
+              <p className="italic">{result.llmReflection}</p>
             </div>
           )}
 

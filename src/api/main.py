@@ -167,6 +167,11 @@ class AssessRequest(BaseModel):
 
 class PsychAssessRequest(BaseModel):
     responses: List[int] = Field(..., min_length=10, max_length=10)
+    language: Optional[str] = Field(
+        default="en",
+        description="UI language code (en/hi/hinglish) - affects ONLY the optional LLM-generated "
+                    "reflection text (llmReflection in the response), never the EPDS score itself.",
+    )
 
 
 class NutritionAssessRequest(BaseModel):
@@ -538,6 +543,17 @@ def psych_assess(req: PsychAssessRequest):
         result = psych_eval.score(req.responses)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Optional, additive only - see llm_chat.reflect_on_epds's docstring:
+    # the classification/selfHarmFlagged/scores above are the validated
+    # EPDS algorithm's output, computed BEFORE this and completely
+    # unaffected by it.
+    if llm_chat.is_configured():
+        try:
+            result["llmReflection"] = llm_chat.reflect_on_epds(result, req.language)
+        except llm_chat.LlmError as exc:
+            logger.warning("llm_chat.reflect_on_epds() failed, omitting llmReflection: %s", exc)
+
     return {"success": True, "data": result}
 
 

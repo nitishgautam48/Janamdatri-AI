@@ -167,6 +167,33 @@ REPORT_EXPLAIN_SYSTEM_PROMPT = (
     "Chinese, or any other language or script, anywhere in your reply."
 )
 
+# For reflecting on an already-scored EPDS result (src/dynamic_eval/
+# psych_eval.py's score()) - the validated depression/anxiety screening
+# instrument's scoring algorithm itself is NEVER touched by this, same
+# principle as EXPLAIN_SYSTEM_PROMPT. The one critical difference: when
+# selfHarmFlagged is true, item 10 (thoughts of self-harm) has already
+# been raised regardless of the total score - the SAME maximum-urgency
+# signal chat_assistant.py's CRISIS_REPLY treats as overriding everything
+# else. This prompt is told explicitly never to write a softer reflection
+# than that in the self-harm-flagged case, and to always include the
+# KIRAN helpline there - it must not be the one deciding whether this is
+# urgent (the deterministic selfHarmFlagged flag already decided that),
+# only how to phrase acknowledging it.
+EPDS_REFLECT_SYSTEM_PROMPT = (
+    "You are Janamdatri's assistant, helping a pregnant or postpartum woman in India understand her "
+    "own EPDS (Edinburgh Postnatal Depression Scale) screening result. You will be given the result as "
+    "already-computed facts: a classification, score, and whether a self-harm item was flagged. Your "
+    "ONLY job is to reflect on these facts warmly and supportively in plain language - you must NOT "
+    "add a new finding, change the classification, or claim anything beyond what's given. Write 3-5 "
+    "short sentences. This is a SCREENING result, not a diagnosis - never say she 'has depression', "
+    "only that the screening suggests following up. If selfHarmFlagged is true, this is a serious "
+    "safety signal: be direct and caring, validate that these feelings are taken seriously, and ALWAYS "
+    "include the KIRAN helpline (1800-599-0019, toll-free, 24x7) in your reply - do not write a soft or "
+    "minimizing reflection in this case. Otherwise, always end by encouraging her to talk to her ANC "
+    "provider or a counsellor about how she's been feeling. Reply ONLY in the requested language/"
+    "script. Never include any Chinese, or any other language or script, anywhere in your reply."
+)
+
 
 class LlmNotConfigured(Exception):
     pass
@@ -335,6 +362,36 @@ def explain_report(report_result: dict, language: str = "en") -> str:
 
     messages = [
         {"role": "system", "content": REPORT_EXPLAIN_SYSTEM_PROMPT},
+        {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
+    ]
+    return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)
+
+
+def reflect_on_epds(psych_result: dict, language: str = "en") -> str:
+    """psych_result is the dict src/dynamic_eval/psych_eval.py's score()
+    returns - reads only its own already-computed fields (classification,
+    total, selfHarmFlagged, anxiety subscale). The validated EPDS scoring
+    algorithm itself runs entirely before this and is never touched by
+    it. See EPDS_REFLECT_SYSTEM_PROMPT's docstring for why selfHarmFlagged
+    gets special handling - that flag, not this function, is what decides
+    urgency. Same LlmNotConfigured/LlmError contract as respond() - the
+    caller (POST /psych-assess) leaves llmReflection unset on either, so
+    the existing classification/score already shown in the UI (and any
+    self-harm escalation UI driven directly by selfHarmFlagged, not by
+    this text) is unaffected."""
+    anxiety = psych_result.get("anxietySubscale") or {}
+
+    facts_lines = [
+        f"Classification: {psych_result.get('classification')}",
+        f"Total score: {psych_result.get('total')}/{psych_result.get('maxScore', 30)}",
+        f"Self-harm item flagged: {psych_result.get('selfHarmFlagged')}",
+    ]
+    if anxiety.get("flagged"):
+        facts_lines.append(f"Anxiety subscale also flagged: {anxiety.get('classification')}")
+    facts = "\n".join(facts_lines)
+
+    messages = [
+        {"role": "system", "content": EPDS_REFLECT_SYSTEM_PROMPT},
         {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
     ]
     return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)
