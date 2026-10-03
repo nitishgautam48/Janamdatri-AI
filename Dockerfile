@@ -24,13 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
-COPY scripts/ ./scripts/
-COPY frontend/ ./frontend/
-COPY data/ ./data/
-COPY models/ ./models/
-COPY --from=frontend-build /app/frontend-react/dist ./frontend-react/dist
-
 # Self-hosted Hindi speech-to-text model for src/stt.py (see its docstring
 # for the full rationale). Baked into the image at build time, the same
 # way tesseract-ocr-hin above is - not fetched lazily at request time,
@@ -57,6 +50,16 @@ COPY --from=frontend-build /app/frontend-react/dist ./frontend-react/dist
 # sandbox is exactly that case: its network policy allows PyPI/npm but not
 # alphacephei.com, so this step was never exercised there - see the
 # session notes in src/stt.py.)
+#
+# Placed BEFORE the COPY steps below, deliberately: this RUN's only real
+# inputs are the VOSK_MODEL_URL build-arg and the network, neither of
+# which change when application code changes - but Docker's layer cache
+# invalidates every layer AFTER the first one whose input changed, so if
+# this ran after `COPY src/` (as it used to), any ordinary source-only
+# change forced a full model re-download on every rebuild even though
+# nothing about the model fetch itself was different. Keeping it this
+# early means it stays cached across source changes and only re-runs when
+# VOSK_MODEL_URL itself changes or the cache is wiped with --no-cache.
 ARG VOSK_MODEL_URL=https://alphacephei.com/vosk/models/vosk-model-hi-0.22.zip
 RUN set -e; \
     mkdir -p /app/models/vosk-hi; \
@@ -77,6 +80,13 @@ RUN set -e; \
 # so an unprovisioned image just falls back to the browser recognizer
 # instead of erroring on a path that isn't there.
 ENV VOSK_MODEL_PATH=/app/models/vosk-hi
+
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY frontend/ ./frontend/
+COPY data/ ./data/
+COPY models/ ./models/
+COPY --from=frontend-build /app/frontend-react/dist ./frontend-react/dist
 
 EXPOSE 8000
 
