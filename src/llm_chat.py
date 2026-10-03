@@ -142,6 +142,32 @@ def _language_instruction(language: str | None) -> str:
     return f"Reply in {name}."
 
 
+# For explaining an already-extracted report (src/dynamic_eval/
+# report_analyzer.py's analyze()) in plain language. Deliberately grounded
+# ONLY on that module's own structured output (summary/medications/
+# findings), never on the raw OCR'd text directly - report_analyzer.py's
+# pattern-matching extraction is the one thing allowed to read the messy
+# source text, same reasoning as EXPLAIN_SYSTEM_PROMPT above: an LLM must
+# never be the one deciding what a drug name/dose/lab value actually is,
+# only explain what the deterministic extractor already found. A
+# hallucinated dose is a real harm a hallucinated risk-level explanation
+# isn't, so this is intentionally more conservative than
+# EXPLAIN_SYSTEM_PROMPT - it's told to flatly refuse to state a specific
+# drug/dose itself and point back to the structured list instead.
+REPORT_EXPLAIN_SYSTEM_PROMPT = (
+    "You are Janamdatri's assistant, helping a pregnant or postpartum woman in India understand a "
+    "medical report (prescription or lab report) that has already been analyzed. You will be given the "
+    "analysis as already-computed facts: a summary, a list of medications found, and a list of "
+    "findings (some flagged as needing attention). Your ONLY job is to explain these facts warmly and "
+    "clearly in plain language - you must NOT name a specific drug or dose yourself (refer her to the "
+    "medication list already shown instead), add a new finding, or claim anything beyond what's given. "
+    "Write 2-4 short sentences. If any finding is flagged, keep that clear and say it's worth asking "
+    "her provider about. Always end by reminding her that this reading doesn't replace following what "
+    "her actual prescriber wrote. Reply ONLY in the requested language/script. Never include any "
+    "Chinese, or any other language or script, anywhere in your reply."
+)
+
+
 class LlmNotConfigured(Exception):
     pass
 
@@ -279,6 +305,36 @@ def explain_assessment(triage_result: dict, language: str = "en") -> str:
 
     messages = [
         {"role": "system", "content": EXPLAIN_SYSTEM_PROMPT},
+        {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
+    ]
+    return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)
+
+
+def explain_report(report_result: dict, language: str = "en") -> str:
+    """report_result is the dict src/dynamic_eval/report_analyzer.py's
+    analyze() returns - reads only its own structured output (summary/
+    medications/findings), NEVER the raw OCR'd text directly (see
+    REPORT_EXPLAIN_SYSTEM_PROMPT's docstring for why: the pattern-matching
+    extractor is the only thing allowed to read messy source text and
+    decide what a drug/dose/lab value is). Same LlmNotConfigured/LlmError
+    contract as respond() - the caller (POST /documents/analyze) leaves
+    llmExplanation unset on either, so the existing summary/medications/
+    findings fields already shown in the UI are unaffected."""
+    medications = report_result.get("medications") or []
+    findings = report_result.get("findings") or []
+
+    facts_lines = [f"Summary: {report_result.get('summary', '')}"]
+    if medications:
+        med_names = [m.get("name", "") for m in medications if m.get("name")]
+        facts_lines.append(f"Medications found ({len(medications)}): " + "; ".join(med_names))
+    flagged = [f for f in findings if f.get("flag")]
+    if flagged:
+        flagged_text = "; ".join(f"{f.get('label', '')} ({f.get('value', '')}): {f.get('flag', '')}" for f in flagged)
+        facts_lines.append(f"Flagged findings needing attention: {flagged_text}")
+    facts = "\n".join(facts_lines)
+
+    messages = [
+        {"role": "system", "content": REPORT_EXPLAIN_SYSTEM_PROMPT},
         {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
     ]
     return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)

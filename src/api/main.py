@@ -1352,7 +1352,7 @@ MAX_DOCUMENT_TEXT_LENGTH = 50_000
 
 
 @app.post("/documents/analyze")
-async def analyze_document(file: UploadFile = File(None), text: str = Form(None)):
+async def analyze_document(file: UploadFile = File(None), text: str = Form(None), language: str = Form("en")):
     if not file and not text:
         raise HTTPException(status_code=400, detail="Upload a file or paste the report's text.")
 
@@ -1372,6 +1372,16 @@ async def analyze_document(file: UploadFile = File(None), text: str = Form(None)
 
     extracted_text = extracted_text[:MAX_DOCUMENT_TEXT_LENGTH]
     result = report_analyzer.analyze(extracted_text)
+
+    # Optional, additive only - see llm_chat.explain_report's docstring:
+    # reads ONLY this already-computed structured result, never the raw
+    # extracted_text, so it can never introduce a drug/dose/value the
+    # deterministic pattern-matcher above didn't itself find.
+    if llm_chat.is_configured():
+        try:
+            result["llmExplanation"] = llm_chat.explain_report(result, language)
+        except llm_chat.LlmError as exc:
+            logger.warning("llm_chat.explain_report() failed, omitting llmExplanation: %s", exc)
 
     return {
         "success": True,

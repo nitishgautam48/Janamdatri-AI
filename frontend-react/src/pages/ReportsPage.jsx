@@ -26,7 +26,7 @@ function Section({ title, children }) {
 }
 
 export default function ReportsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [file, setFile] = useState(null);
   const [text, setText] = useState("");
   const [result, setResult] = useState(null);
@@ -43,6 +43,7 @@ export default function ReportsPage() {
     const formData = new FormData();
     if (file) formData.append("file", file);
     if (text.trim()) formData.append("text", text.trim());
+    formData.append("language", lang);
 
     setBusy(true);
     setConfirmed(false);
@@ -111,6 +112,15 @@ export default function ReportsPage() {
         <>
           <Section title={t("reports.summary")}>
             <p style={{ fontSize: "0.875rem", color: "var(--color-text)" }}>{result.summary}</p>
+            {result.llmExplanation && (
+              <div style={{ display: "flex", gap: 8, borderRadius: 10, background: "var(--color-accent-soft, rgba(145,132,217,0.12))", padding: 12 }}>
+                <i className="ph ph-sparkle" style={{ color: "var(--color-accent-400)", flex: "none", marginTop: 2 }} />
+                <div style={{ display: "grid", gap: 4 }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>{t("results.personalizedNote")}</p>
+                  <p style={{ fontSize: "0.875rem", lineHeight: 1.5, color: "var(--color-text)", fontStyle: "italic" }}>{result.llmExplanation}</p>
+                </div>
+              </div>
+            )}
           </Section>
 
           <Section title={t("reports.medicationSchedule")}>
