@@ -3,7 +3,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import PregnancyTimeline from "../components/ui/PregnancyTimeline";
 import { api } from "../lib/api";
-import { KEYS, scopedSet, loadKickLog, appendKickLog } from "../lib/storage";
+import { KEYS, scopedSet, loadKickLog, appendKickLog, latestRiskContext } from "../lib/storage";
 import { useLang } from "../context/LangContext";
 
 function ThisWeekAccordion({ guide }) {
@@ -120,7 +120,7 @@ function KickCounter() {
 }
 
 export default function GuidePage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [mode, setMode] = useState("lmp");
   const [lmp, setLmp] = useState("");
   const [week, setWeek] = useState(20);
@@ -140,7 +140,12 @@ export default function GuidePage() {
     if (mode === "lmp" && !lmp) return;
     setBusy(true);
     try {
-      const data = await api.pregnancyGuide(mode === "lmp" ? { lmp } : { week: Number(week) });
+      const riskContext = latestRiskContext();
+      const data = await api.pregnancyGuide({
+        ...(mode === "lmp" ? { lmp } : { week: Number(week) }),
+        language: lang,
+        ...(riskContext ? { riskFactors: riskContext.riskFactors, riskLevel: riskContext.riskLevel } : {}),
+      });
       setGuide(data);
       setBrowsedGuide(null);
       scopedSet(KEYS.GUIDE, { ...data, savedAt: new Date().toISOString() });
@@ -246,6 +251,16 @@ export default function GuidePage() {
                 <PregnancyTimeline week={shown.week} />
               </div>
             </div>
+
+            {shown === guide && guide.llmPersonalizedTip && (
+              <div style={{ display: "flex", gap: 8, borderRadius: 10, background: "var(--color-accent-soft, rgba(145,132,217,0.12))", padding: 12 }}>
+                <i className="ph ph-sparkle" style={{ color: "var(--color-accent-400)", flex: "none", marginTop: 2 }} />
+                <div style={{ display: "grid", gap: 4 }}>
+                  <p className="eyebrow" style={{ margin: 0 }}>{t("results.personalizedNote")}</p>
+                  <p style={{ fontSize: "0.875rem", lineHeight: 1.5, color: "var(--color-text)", fontStyle: "italic" }}>{guide.llmPersonalizedTip}</p>
+                </div>
+              </div>
+            )}
 
             <div style={{ background: "var(--color-surface)", borderRadius: 14, padding: 16, display: "grid", gap: 8, boxShadow: "var(--shadow-sm)" }}>
               <h3 style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-neutral-200)" }}>{t("guide.thisWeek")}</h3>

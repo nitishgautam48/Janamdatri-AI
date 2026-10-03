@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { api } from "../lib/api";
-import { KEYS, scopedGet, scopedRemove, scopedSet, loadPpVisits, togglePpVisit, loadPpVax, togglePpVax } from "../lib/storage";
+import { KEYS, scopedGet, scopedRemove, scopedSet, loadPpVisits, togglePpVisit, loadPpVax, togglePpVax, latestRiskContext } from "../lib/storage";
 import { useLang } from "../context/LangContext";
 
 // India's HBNC (Home Based Newborn Care) schedule - the standard ASHA
@@ -102,7 +102,7 @@ const NEWBORN_VACCINATION_SCHEDULE = [
 ];
 
 export default function PostpartumPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [guide, setGuide] = useState(() => scopedGet(KEYS.POSTPARTUM_GUIDE));
   const [deliveryDate, setDeliveryDate] = useState(guide?.deliveryDate || "");
   const [error, setError] = useState("");
@@ -113,7 +113,11 @@ export default function PostpartumPage() {
     setError("");
     setBusy(true);
     try {
-      const data = await api.postpartumGuide(deliveryDate);
+      const riskContext = latestRiskContext();
+      const data = await api.postpartumGuide(deliveryDate, {
+        language: lang,
+        ...(riskContext ? { riskFactors: riskContext.riskFactors, riskLevel: riskContext.riskLevel } : {}),
+      });
       scopedSet(KEYS.POSTPARTUM_GUIDE, { ...data, savedAt: new Date().toISOString() });
       setGuide(data);
     } catch (err) {
@@ -170,6 +174,15 @@ export default function PostpartumPage() {
               <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min((guide.daysPostpartum / 42) * 100, 100)}%` }} />
             </div>
           </Card>
+
+          {guide.llmPersonalizedTip && (
+            <div className="rounded-md border border-primary/40 bg-primary-soft p-3 text-sm text-ink">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                <i className="ph ph-sparkle" /> {t("results.personalizedNote")}
+              </p>
+              <p className="italic">{guide.llmPersonalizedTip}</p>
+            </div>
+          )}
 
           <Card>
             <h3 className="mb-2 text-sm font-bold text-ink">{t("postpartum.recovery")}</h3>

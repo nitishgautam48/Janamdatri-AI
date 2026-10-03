@@ -183,10 +183,21 @@ class NutritionAssessRequest(BaseModel):
 class PregnancyGuideRequest(BaseModel):
     lmp: Optional[str] = Field(None, description="Last menstrual period date, ISO format e.g. 2026-01-15")
     week: Optional[int] = Field(None, description="Current gestational week, if known directly")
+    riskFactors: Optional[List[str]] = Field(
+        default=None,
+        description="Risk factor names from the patient's most recent Assessment (read client-side "
+                    "from local history), if any - used ONLY to let the optional LLM personalization "
+                    "note decide what to emphasize, never to alter the guide's own static content.",
+    )
+    riskLevel: Optional[str] = Field(default=None, description="Most recent Assessment's risk level, if any - same LLM-only use as riskFactors.")
+    language: Optional[str] = Field(default="en", description="UI language code (en/hi/hinglish) for the optional llmPersonalizedTip field.")
 
 
 class PostpartumGuideRequest(BaseModel):
     deliveryDate: str = Field(..., description="ISO date the baby was delivered, e.g. 2026-01-15")
+    riskFactors: Optional[List[str]] = Field(default=None, description="Same as PregnancyGuideRequest.riskFactors.")
+    riskLevel: Optional[str] = Field(default=None, description="Same as PregnancyGuideRequest.riskLevel.")
+    language: Optional[str] = Field(default="en", description="Same as PregnancyGuideRequest.language.")
 
 
 class NearbyFacilitiesRequest(BaseModel):
@@ -569,6 +580,22 @@ def pregnancy_guide_endpoint(req: PregnancyGuideRequest):
     else:
         raise HTTPException(status_code=400, detail="Provide either 'lmp' (ISO date) or 'week'.")
 
+    # Optional, additive only - see llm_chat.personalize_guide's docstring:
+    # the tips/dangerSigns flattened below are ALREADY-WRITTEN static
+    # content, untouched; riskFactors/riskLevel (if sent) just tell the
+    # LLM what to emphasize from them, never add a new one.
+    if llm_chat.is_configured():
+        try:
+            tips = list(guide.get("nutrition") or [])
+            if guide.get("note"):
+                tips.append(guide["note"])
+            guide["llmPersonalizedTip"] = llm_chat.personalize_guide(
+                "pregnancy", tips, guide.get("dangerSigns") or [],
+                risk_factors=req.riskFactors, risk_level=req.riskLevel, language=req.language,
+            )
+        except llm_chat.LlmError as exc:
+            logger.warning("llm_chat.personalize_guide() failed, omitting llmPersonalizedTip: %s", exc)
+
     return {"success": True, "data": guide}
 
 
@@ -578,6 +605,19 @@ def postpartum_guide_endpoint(req: PostpartumGuideRequest):
         guide = postpartum_guide.get_postpartum_guide(req.deliveryDate)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="deliveryDate must be an ISO date string, e.g. 2026-01-15") from exc
+
+    if llm_chat.is_configured():
+        try:
+            tips = list(guide.get("recovery") or []) + list(guide.get("breastfeeding") or [])
+            if guide.get("mentalHealthNote"):
+                tips.append(guide["mentalHealthNote"])
+            guide["llmPersonalizedTip"] = llm_chat.personalize_guide(
+                "postpartum", tips, guide.get("dangerSigns") or [],
+                risk_factors=req.riskFactors, risk_level=req.riskLevel, language=req.language,
+            )
+        except llm_chat.LlmError as exc:
+            logger.warning("llm_chat.personalize_guide() failed, omitting llmPersonalizedTip: %s", exc)
+
     return {"success": True, "data": guide}
 
 

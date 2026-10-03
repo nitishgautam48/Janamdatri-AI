@@ -62,7 +62,7 @@ export const api = {
   psychAssess: (responses, language) => request("/psych-assess", { method: "POST", body: { responses, language } }),
 
   pregnancyGuide: (body) => request("/pregnancy-guide", { method: "POST", body }),
-  postpartumGuide: (deliveryDate) => request("/postpartum-guide", { method: "POST", body: { deliveryDate } }),
+  postpartumGuide: (deliveryDate, extra) => request("/postpartum-guide", { method: "POST", body: { deliveryDate, ...extra } }),
 
   nutritionItems: () => request("/nutrition/items"),
   nutritionAssess: (body) => request("/nutrition-assess", { method: "POST", body, auth: true }),

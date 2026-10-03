@@ -194,6 +194,31 @@ EPDS_REFLECT_SYSTEM_PROMPT = (
     "script. Never include any Chinese, or any other language or script, anywhere in your reply."
 )
 
+# For personalizing a pregnancy/postpartum guide's static, week-appropriate
+# tips (src/dynamic_eval/pregnancy_guide.py / postpartum_guide.py) using
+# the patient's own risk factors from her MOST RECENT Assessment, if any
+# (read client-side from local history - see src/api/main.py's /pregnancy-
+# guide and /postpartum-guide handlers for where this is called). Grounded
+# strictly on the guide's own already-written tips/danger-signs list PLUS
+# the already-computed risk-factor names - this must never invent a new
+# danger sign or piece of advice not already present in one of those two
+# inputs, only decide which of the EXISTING tips to emphasize given the
+# EXISTING risk factors. Same "explain/personalize, never decide or add"
+# principle as every other llm_chat function above.
+GUIDE_PERSONALIZE_SYSTEM_PROMPT = (
+    "You are Janamdatri's assistant, helping a pregnant or postpartum woman in India get the most "
+    "relevant guidance from her weekly guide. You will be given: the guide's own tips (already written, "
+    "generic for this week/stage), its danger-signs list (already written), and optionally her known "
+    "risk factors from a recent assessment. Your ONLY job is to write a short (2-4 sentence) "
+    "personalized note that highlights which of the ALREADY-GIVEN tips or danger signs matter most for "
+    "HER specifically, in warm plain language. You must NOT invent a new tip, a new danger sign, or any "
+    "medical advice not already present in what you were given - only select and emphasize from it. If "
+    "no risk factors are given, just write a warm, encouraging note about the week-appropriate tips "
+    "already listed. Always end by reminding her to raise any specific risk factor with her ANC "
+    "provider or ASHA/ANM worker. Reply ONLY in the requested language/script. Never include any "
+    "Chinese, or any other language or script, anywhere in your reply."
+)
+
 
 class LlmNotConfigured(Exception):
     pass
@@ -392,6 +417,40 @@ def reflect_on_epds(psych_result: dict, language: str = "en") -> str:
 
     messages = [
         {"role": "system", "content": EPDS_REFLECT_SYSTEM_PROMPT},
+        {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
+    ]
+    return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)
+
+
+def personalize_guide(
+    guide_kind: str, tips: list[str], danger_signs: list[str],
+    risk_factors: list[str] | None = None, risk_level: str | None = None, language: str = "en",
+) -> str:
+    """guide_kind is a short label ("pregnancy" or "postpartum") for the
+    prompt; tips/danger_signs are the ALREADY-WRITTEN static guide content
+    (src/dynamic_eval/pregnancy_guide.py / postpartum_guide.py - the
+    caller flattens whichever of that week/stage's tip fields apply,
+    e.g. nutrition+note for pregnancy, recovery+breastfeeding+
+    mentalHealthNote for postpartum). risk_factors/risk_level, if given,
+    come from the patient's own most recent Assessment (read client-side
+    from local history, passed through by src/api/main.py's guide
+    handlers) - NOT re-scored or re-derived here, just named. See
+    GUIDE_PERSONALIZE_SYSTEM_PROMPT's docstring for why this can only
+    select/emphasize from what it's given, never add to it. Same
+    LlmNotConfigured/LlmError contract as respond() - the caller leaves
+    llmPersonalizedTip unset on either, so the existing static tips/
+    danger-signs text already shown in the UI is unaffected."""
+    facts_lines = [f"Guide type: {guide_kind}", "Tips already given: " + "; ".join(tips)]
+    if danger_signs:
+        facts_lines.append("Danger signs already listed: " + "; ".join(danger_signs))
+    if risk_factors:
+        facts_lines.append("Her known risk factors: " + "; ".join(risk_factors))
+    if risk_level:
+        facts_lines.append(f"Her most recent assessment risk level: {risk_level}")
+    facts = "\n".join(facts_lines)
+
+    messages = [
+        {"role": "system", "content": GUIDE_PERSONALIZE_SYSTEM_PROMPT},
         {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
     ]
     return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)

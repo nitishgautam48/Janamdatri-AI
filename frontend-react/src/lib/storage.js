@@ -157,6 +157,23 @@ export function lastKnownWeightAssessment() {
   return null;
 }
 
+// The patient's most recent Assessment's risk factors/level, for the
+// optional LLM guide-personalization note (see api.js's pregnancyGuide/
+// postpartumGuide and src/llm_chat.py's personalize_guide) - read-only,
+// client-side only, never sent anywhere except as plain strings the LLM
+// is told to select/emphasize from, never re-score. Returns null if no
+// assessment has ever been run on this device, so callers can omit the
+// fields entirely rather than sending an empty risk context.
+export function latestRiskContext() {
+  const history = scopedGet(KEYS.HISTORY) || [];
+  const entry = history[0];
+  if (!entry?.result) return null;
+  const rf = entry.result.riskFormulation || {};
+  const riskFactors = [...(rf.staticRiskFactors || []), ...(rf.dynamicRiskFactors || [])];
+  if (!riskFactors.length && !entry.result.severity?.level) return null;
+  return { riskFactors, riskLevel: entry.result.severity?.level || null };
+}
+
 export function lastKnownHemoglobinAssessment() {
   const history = scopedGet(KEYS.HISTORY) || [];
   for (const entry of history) {
