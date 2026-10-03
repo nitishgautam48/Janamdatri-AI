@@ -58,7 +58,7 @@ export default function Results({ data, onReset }) {
   const { t } = useLang();
   const [showDetails, setShowDetails] = useState(false);
   const {
-    severity, mri, clinicalExplanation: exp, mlPrediction: ml, dangerLadder: ladder,
+    severity, mri, clinicalExplanation: exp, llmExplanation, mlPrediction: ml, dangerLadder: ladder,
     riskFormulation: rf, hemoglobinAssessment: hb, psychologicalEvaluation: psych,
     weightAssessment: weight, fetalMovementAssessment: fetal, fundalHeightAssessment: fundal,
     urineProteinAssessment: urineProtein, bmiAssessment: bmi,
@@ -117,6 +117,15 @@ export default function Results({ data, onReset }) {
       {/* B. Why This Result */}
       <Section title={t("results.whyThisResult")} icon="ph-compass" action={<ReadAloudButton text={whyText} />}>
         {exp?.recommendedNextAction && <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--color-text)" }}>{exp.recommendedNextAction}</p>}
+        {llmExplanation && (
+          <div style={{ display: "flex", gap: 8, borderRadius: 10, background: "var(--color-accent-soft, rgba(145,132,217,0.12))", padding: 12 }}>
+            <i className="ph ph-sparkle" style={{ color: "var(--color-accent-400)", flex: "none", marginTop: 2 }} />
+            <div style={{ display: "grid", gap: 4 }}>
+              <p className="eyebrow" style={{ margin: 0 }}>{t("results.personalizedNote")}</p>
+              <p style={{ fontSize: "0.875rem", lineHeight: 1.5, color: "var(--color-text)", fontStyle: "italic" }}>{llmExplanation}</p>
+            </div>
+          </div>
+        )}
         {exp?.whyThisResult?.length > 0 && (
           <div style={{ display: "grid", gap: 8 }}>
             {exp.whyThisResult.map((w, i) => (

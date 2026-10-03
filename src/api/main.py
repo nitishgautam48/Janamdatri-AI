@@ -157,6 +157,12 @@ class AssessRequest(BaseModel):
     previousPregnancies: Optional[int] = Field(
         default=None, description="Number of PRIOR pregnancies, not counting this one - used to flag grand multiparity (5th+ pregnancy)"
     )
+    language: Optional[str] = Field(
+        default="en",
+        description="UI language code (en/hi/hinglish) - affects ONLY the optional LLM-generated "
+                    "explanation text (llmExplanation in the response), never the computed risk score "
+                    "or any deterministic finding.",
+    )
 
 
 class PsychAssessRequest(BaseModel):
@@ -459,6 +465,19 @@ def assess(req: AssessRequest, x_user_token: Optional[str] = Header(None)):
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Optional, additive only: a warm, personalized restatement of the
+    # ALREADY-COMPUTED result above, in the patient's language - never
+    # re-derives or second-guesses the risk level/findings themselves (see
+    # llm_chat.explain_assessment's docstring). Left unset (not an error)
+    # when llm_chat isn't configured or the call fails - the existing
+    # static clinicalExplanation/recommendations text Results.jsx already
+    # renders covers that case exactly as it always has.
+    if llm_chat.is_configured():
+        try:
+            triage_result["llmExplanation"] = llm_chat.explain_assessment(triage_result, req.language)
+        except llm_chat.LlmError as exc:
+            logger.warning("llm_chat.explain_assessment() failed, omitting llmExplanation: %s", exc)
 
     # Carried through so a Home-dashboard-style summary can show "BP: Normal /
     # Needs Attention" etc. without re-deriving it from the ML probabilities -

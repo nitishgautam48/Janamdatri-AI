@@ -108,6 +108,40 @@ SUMMARY_SYSTEM_PROMPT = (
 )
 
 
+# For turning an already-computed Assessment result (src/dynamic_eval/
+# triage.py's synthesize()) into a warm, personalized explanation in the
+# patient's own language - see src/api/main.py's /assess handler for where
+# this is called. The risk LEVEL, MRI score, and every finding are 100%
+# deterministic rule-based output computed BEFORE this is ever called and
+# passed in as fixed facts; this prompt is told explicitly to only explain
+# what it's given, in the requested language, never to re-derive, second-
+# guess, or add to the clinical content itself - the same "never let an
+# LLM make the safety call" principle chat_assistant.py applies, just
+# applied to explaining a decision instead of making one.
+EXPLAIN_SYSTEM_PROMPT = (
+    "You are Janamdatri's assistant, helping a pregnant or postpartum woman in India understand her "
+    "own pregnancy risk assessment result. You will be given the result as already-computed facts: a "
+    "risk level, a score, and a list of findings/recommendations. Your ONLY job is to explain these "
+    "facts warmly and clearly in plain language - you must NOT add any new medical finding, change the "
+    "risk level, suggest a different course of action, or claim anything beyond what's given. Write "
+    "3-5 short sentences. If the level is Critical or Severe, keep the urgency clear and do not soften "
+    "it. Always end by reminding her to follow up with her ANC provider or ASHA/ANM worker. Reply ONLY "
+    "in the requested language/script. Never include any Chinese, or any other language or script, "
+    "anywhere in your reply."
+)
+
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi, written in Devanagari script",
+    "hinglish": "Hinglish - Hindi written in Latin/English script, not Devanagari",
+}
+
+
+def _language_instruction(language: str | None) -> str:
+    name = _LANGUAGE_NAMES.get(language, _LANGUAGE_NAMES["en"])
+    return f"Reply in {name}."
+
+
 class LlmNotConfigured(Exception):
     pass
 
@@ -214,3 +248,37 @@ def summarize_call_transcript(raw_text: str) -> str:
         {"role": "user", "content": raw_text},
     ]
     return _call_ollama(messages, SUMMARY_TIMEOUT_SECONDS)
+
+
+def explain_assessment(triage_result: dict, language: str = "en") -> str:
+    """triage_result is the dict src/dynamic_eval/triage.py's synthesize()
+    returns (same dict the API serializes as-is) - this reads only its
+    already-computed fields (severity level/MRI, the deterministic
+    clinicalExplanation, and recommendations) and asks the LLM to restate
+    them warmly in the requested language, never to recompute or add to
+    them. Same LlmNotConfigured/LlmError contract as respond(): the caller
+    (POST /assess in src/api/main.py) leaves the result's llmExplanation
+    field unset on either, so the existing static clinicalExplanation/
+    recommendations text (already shown in the UI) is all that's lost,
+    not the assessment itself."""
+    severity = triage_result.get("severity", {})
+    exp = triage_result.get("clinicalExplanation") or {}
+    recommendations = triage_result.get("recommendations") or []
+
+    facts_lines = [
+        f"Risk level: {severity.get('level')}",
+        f"Risk score (MRI): {triage_result.get('mri')}/100",
+    ]
+    if exp.get("recommendedNextAction"):
+        facts_lines.append(f"Recommended next action: {exp['recommendedNextAction']}")
+    if exp.get("whyThisResult"):
+        facts_lines.append("Findings: " + "; ".join(exp["whyThisResult"]))
+    if recommendations:
+        facts_lines.append("Recommendations: " + "; ".join(recommendations))
+    facts = "\n".join(facts_lines)
+
+    messages = [
+        {"role": "system", "content": EXPLAIN_SYSTEM_PROMPT},
+        {"role": "user", "content": f"{_language_instruction(language)}\n\n{facts}"},
+    ]
+    return _call_ollama(messages, REQUEST_TIMEOUT_SECONDS)

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Wizard from "../components/assess/Wizard";
 import Results from "../components/assess/Results";
 import { api } from "../lib/api";
+import { useLang } from "../context/LangContext";
 import {
   appendHistoryEntry, lastKnownWeight, loadSavedEpds,
   savePendingAssessment, loadPendingAssessment, clearPendingAssessment,
@@ -29,6 +30,7 @@ function collectVitals(form) {
 }
 
 export default function AssessPage() {
+  const { lang } = useLang();
   const [form, setForm] = useState(EMPTY_FORM);
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -125,6 +127,7 @@ export default function AssessPage() {
       urineProtein,
       previousPregnancies,
       epdsResponses: epdsResponses || undefined,
+      language: lang,
     };
 
     setSubmitting(true);
