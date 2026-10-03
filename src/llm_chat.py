@@ -45,7 +45,24 @@ import urllib.request
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL")
 
-REQUEST_TIMEOUT_SECONDS = 45
+# Without this, Ollama's own default (5 minutes) unloads the model from
+# GPU memory after any 5-minute gap between messages - completely normal
+# in a real chat (a patient reads, thinks, types). The NEXT message then
+# pays the full cost of reloading a multi-GB model from disk into VRAM
+# before generation can even start, which used to blow past
+# REQUEST_TIMEOUT_SECONDS and silently fall back to the scripted reply -
+# the "first few messages are rule-based, then it starts using DeepSeek"
+# pattern. Keeping it loaded for 30 minutes covers realistic gaps in an
+# active conversation; sent on every request (not just relying on a
+# server-side env default) so this is self-contained here.
+OLLAMA_KEEP_ALIVE = "30m"
+
+# Generous enough to tolerate a cold model load (see OLLAMA_KEEP_ALIVE
+# above) ON TOP OF actual generation time for a 7B model on modest
+# hardware - the old 45s was tuned for warm-model latency only, and a
+# cold call routinely exceeded it, triggering a fallback that looked like
+# a bug rather than the one-time cost it actually was.
+REQUEST_TIMEOUT_SECONDS = 90
 # A full call transcript is a lot more tokens to read and respond to than a
 # one-line chat message - same model, same connection, just needs longer
 # before this code decides "not coming back" rather than the chat's own
@@ -141,7 +158,9 @@ def _call_ollama(messages: list[dict], timeout_seconds: int) -> str:
             "OLLAMA_HOST and/or OLLAMA_MODEL are not set - see src/llm_chat.py's module docstring."
         )
 
-    payload = json.dumps({"model": OLLAMA_MODEL, "messages": messages, "stream": False}).encode("utf-8")
+    payload = json.dumps({
+        "model": OLLAMA_MODEL, "messages": messages, "stream": False, "keep_alive": OLLAMA_KEEP_ALIVE,
+    }).encode("utf-8")
     req = urllib.request.Request(
         f"{OLLAMA_HOST.rstrip('/')}/api/chat",
         data=payload,
